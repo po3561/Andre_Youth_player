@@ -12,7 +12,6 @@
 </head>
 <body>
     <div id="bg-image"></div>
-    
     <div class="app-container">
         <div class="main-content-scroll">
             <main class="player-main">
@@ -43,10 +42,7 @@
 
                 <div class="seek-bar-area">
                     <input type="range" id="progress-bar" value="0" step="0.1" min="0" max="100">
-                    <div class="time-tags">
-                        <span id="time-now">0:00</span>
-                        <span id="time-total">0:00</span>
-                    </div>
+                    <div class="time-tags"><span id="time-now">0:00</span><span id="time-total">0:00</span></div>
                 </div>
 
                 <div class="control-btns">
@@ -54,10 +50,7 @@
                     <button id="btn-prev" class="side-i"><i class="fas fa-step-backward"></i></button>
                     <button id="btn-play-pause" class="center-play"><i class="fas fa-play"></i></button>
                     <button id="btn-next" class="side-i"><i class="fas fa-step-forward"></i></button>
-                    <button id="btn-repeat" class="sub-i">
-                        <i class="fas fa-redo"></i>
-                        <span class="repeat-badge"></span>
-                    </button>
+                    <button id="btn-repeat" class="sub-i"><i class="fas fa-redo"></i><span class="repeat-badge"></span></button>
                 </div>
 
                 <div class="volume-area">
@@ -74,9 +67,7 @@
                     <span>기도 제목을 알려주세요 (실명X)</span>
                     <button id="btn-close-chat" class="close-btn"><i class="fas fa-times"></i></button>
                 </div>
-                <div id="chat-messages" class="box-content">
-                    <div class="message system">함께 기도 해주세요! 🙏</div>
-                </div>
+                <div id="chat-messages" class="box-content"></div>
                 <div class="box-input-area">
                     <input type="text" id="chat-input" placeholder="기도 올리기..." autocomplete="off">
                     <button id="btn-send-chat"><i class="fas fa-paper-plane"></i></button>
@@ -86,18 +77,14 @@
 
         <div id="copyright-overlay" class="chat-overlay">
             <div class="box-container">
-                <div class="box-header">
-                    <span>저작권 정보 확인</span>
-                    <button id="btn-close-copyright" class="close-btn"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="box-content copyright-list">
+                <div class="box-header"><span>저작권 정보 확인</span><button id="btn-close-copyright" class="close-btn"><i class="fas fa-times"></i></button></div>
+                <div class="box-content">
                     <div class="copyright-item"><strong>1. 슬픈 마음 있는 사람</strong><a href="https://youtu.be/ovDif9FwCyU" target="_blank">YouTube 보기</a></div>
                     <div class="copyright-item"><strong>2. 약할 때 강함 되시네</strong><a href="https://youtu.be/6ZLaChORt7o" target="_blank">YouTube 보기</a></div>
                     <div class="copyright-item"><strong>3. 전능하신 나의 주 하나님은</strong><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">YouTube 보기</a></div>
                     <div class="copyright-item"><strong>4. 어둔 날 다 지나고</strong><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">YouTube 보기</a></div>
                     <div class="copyright-item"><strong>5. 광야를 지나며</strong><a href="https://youtu.be/zIdppmRuluk" target="_blank">YouTube 보기</a></div>
                     <div class="copyright-item"><strong>6. 우리가 주를 더욱 사랑하고</strong><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">YouTube 보기</a></div>
-                    <p class="system" style="margin-top:20px;">모든 찬양의 저작권은 원작자 및 각 채널에 있으며, 비영리 목적으로 제작되었습니다. 🙏</p>
                 </div>
             </div>
         </div>
@@ -108,17 +95,11 @@
                 <div class="bar-info"><i class="fas fa-list-ul"></i> <span>player</span></div>
             </div>
             <div class="sheet-full-content">
-                <div class="list-top">
-                    <h3>다음 재생 곡</h3>
-                    <span class="playlist-count"><span id="total-count">0</span> 곡</span>
-                </div>
-                <div class="list-scroll-area">
-                    <ul id="song-list-ul" class="scroll-inner"></ul>
-                </div>
+                <div class="list-top"><h3>다음 재생 곡</h3><span class="playlist-count"><span id="total-count">0</span> 곡</span></div>
+                <div class="list-scroll-area"><ul id="song-list-ul" class="scroll-inner"></ul></div>
             </div>
         </section>
     </div>
-
     <audio id="audio-engine"></audio>
     <script src="script.js"></script>
 </body>
