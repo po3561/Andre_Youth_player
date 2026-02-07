@@ -58,8 +58,8 @@ body {
     backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.3); margin-top: 10px;
 }
-.text-group h2 { font-size: 1.35rem; font-weight: 800; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.text-group p { font-size: 0.85rem; color: var(--primary); font-weight: 700; margin-top: 1px; }
+.text-group h2 { font-size: 1.35rem; font-weight: 800; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: }
+.text-group p { font-size: 0.85rem; color: var(--primary); font-weight: 700; margin-top: 1px; color: rgba(0, 0, 0, 0.45)}
 .heart-btn { background: none; border: none; font-size: 1.55rem; color: #999; cursor: pointer; transition: 0.2s; }
 .heart-btn.active { color: var(--heart); transform: scale(1.1); }
 
