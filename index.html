@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Heavenly Melody - Busan Youth</title>
+    <title>Youth_player</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
     <div id="bg-image"></div>
@@ -19,8 +21,11 @@
                         <i class="fas fa-comment-dots"></i>
                         <span id="chat-badge" class="badge">0</span>
                     </div>
-                    <span class="nav-title">소성케 하소서</span>
-                    <button id="btn-share" class="icon-btn action-icon"><i class="fas fa-share-alt"></i></button>
+                    <span class="nav-title">믿음으로 기. 대하다</span>
+                    <div class="header-right-btns">
+                        <button id="btn-copyright" class="icon-btn action-icon"><i class="fas fa-copyright"></i></button>
+                        <button id="btn-share" class="icon-btn action-icon"><i class="fas fa-share-alt"></i></button>
+                    </div>
                 </header>
 
                 <div class="album-art-area">
@@ -33,7 +38,7 @@
                         <h2 id="disp-title">Loading...</h2>
                         <button id="btn-scrap" class="scrap-i action-icon"><i class="far fa-heart"></i></button>
                     </div>
-                    <p id="disp-artist">43.02.26 목 21시 연수원 6층</p>
+                    <p id="disp-artist">43.02.26 목 21시 우리가 늘 모이던 거기 6층</p>
                 </div>
 
                 <div class="seek-bar-area">
@@ -64,29 +69,48 @@
         </div>
 
         <div id="chat-overlay" class="chat-overlay">
-            <div class="chat-box-container" id="chat-box">
-                <div class="chat-box-header">
-                    <span>기도 제목 나누기</span>
-                    <button id="btn-close-chat" class="close-chat-btn"><i class="fas fa-times"></i></button>
+            <div class="box-container" id="chat-box">
+                <div class="box-header">
+                    <span>기도 제목을 알려주세요 (실명X)</span>
+                    <button id="btn-close-chat" class="close-btn"><i class="fas fa-times"></i></button>
                 </div>
-                <div id="chat-messages" class="chat-box-content">
-                    <div class="message system">함께 기도해주세요!</div>
+                <div id="chat-messages" class="box-content">
+                    <div class="message system">함께 기도 해주세요!</div>
                 </div>
-                <div class="chat-box-input-area">
+                <div class="box-input-area">
                     <input type="text" id="chat-input" placeholder="기도 올리기..." autocomplete="off">
                     <button id="btn-send-chat"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
         </div>
 
+        <div id="copyright-overlay" class="chat-overlay">
+            <div class="box-container">
+                <div class="box-header">
+                    <span>저작권 정보 확인</span>
+                    <button id="btn-close-copyright" class="close-btn"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="box-content copyright-list">
+                    <div class="copyright-item"><strong>1. 슬픈 마음 있는 사람</strong><a href="https://youtu.be/ovDif9FwCyU" target="_blank">YouTube 보기</a></div>
+                    <div class="copyright-item"><strong>2. 약할 때 강함 되시네</strong><a href="https://youtu.be/6ZLaChORt7o" target="_blank">YouTube 보기</a></div>
+                    <div class="copyright-item"><strong>3. 전능하신 나의 주 하나님은</strong><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">YouTube 보기</a></div>
+                    <div class="copyright-item"><strong>4. 어둔 날 다 지나고</strong><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">YouTube 보기</a></div>
+                    <div class="copyright-item"><strong>5. 광야를 지나며</strong><a href="https://youtu.be/zIdppmRuluk" target="_blank">YouTube 보기</a></div>
+                    <div class="copyright-item"><strong>6. 우리가 주를 더욱 사랑하고</strong><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">YouTube 보기</a></div>
+                    <p class="system" style="margin-top:20px;">모든 찬양의 저작권은 원작자 및 각 채널에 있으며, 본 앱은 부산 청년 사역을 위한 비영리 목적으로 제작되었습니다. 🙏</p>
+                </div>
+            </div>
+        </div>
+
         <section class="morphing-sheet" id="sheet">
+            <div class="sheet-handle-area" id="sheet-handle"></div>
             <div class="sheet-trigger" id="trigger">
                 <div class="indicator"></div>
-                <div class="bar-info"><i class="fas fa-list-ul"></i> <span>My Playlist</span></div>
+                <div class="bar-info"><i class="fas fa-list-ul"></i> <span>player</span></div>
             </div>
             <div class="sheet-full-content">
                 <div class="list-top">
-                    <h3>기도회 찬양 리스트</h3>
+                    <h3>다음 재생 곡</h3>
                     <span class="playlist-count"><span id="total-count">0</span> 곡</span>
                 </div>
                 <div class="list-scroll-area">
