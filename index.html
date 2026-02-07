@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Youth_player</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -12,6 +12,7 @@
 </head>
 <body>
     <div id="bg-image"></div>
+    
     <div class="app-container">
         <div class="main-content-scroll">
             <main class="player-main">
@@ -42,7 +43,10 @@
 
                 <div class="seek-bar-area">
                     <input type="range" id="progress-bar" value="0" step="0.1" min="0" max="100">
-                    <div class="time-tags"><span id="time-now">0:00</span><span id="time-total">0:00</span></div>
+                    <div class="time-tags">
+                        <span id="time-now">0:00</span>
+                        <span id="time-total">0:00</span>
+                    </div>
                 </div>
 
                 <div class="control-btns">
@@ -76,15 +80,18 @@
         </div>
 
         <div id="copyright-overlay" class="chat-overlay">
-            <div class="box-container">
+            <div class="box-container copyright-container">
                 <div class="box-header"><span>저작권 정보 확인</span><button id="btn-close-copyright" class="close-btn"><i class="fas fa-times"></i></button></div>
                 <div class="box-content">
-                    <div class="copyright-item"><strong>1. 슬픈 마음 있는 사람</strong><a href="https://youtu.be/ovDif9FwCyU" target="_blank">YouTube 보기</a></div>
-                    <div class="copyright-item"><strong>2. 약할 때 강함 되시네</strong><a href="https://youtu.be/6ZLaChORt7o" target="_blank">YouTube 보기</a></div>
-                    <div class="copyright-item"><strong>3. 전능하신 나의 주 하나님은</strong><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">YouTube 보기</a></div>
-                    <div class="copyright-item"><strong>4. 어둔 날 다 지나고</strong><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">YouTube 보기</a></div>
-                    <div class="copyright-item"><strong>5. 광야를 지나며</strong><a href="https://youtu.be/zIdppmRuluk" target="_blank">YouTube 보기</a></div>
-                    <div class="copyright-item"><strong>6. 우리가 주를 더욱 사랑하고</strong><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">YouTube 보기</a></div>
+                    <div class="copyright-list">
+                         <div class="copyright-item"><strong>1. 슬픈 마음 있는 사람</strong><a href="https://youtu.be/ovDif9FwCyU" target="_blank">YouTube 보기</a></div>
+                        <div class="copyright-item"><strong>2. 약할 때 강함 되시네</strong><a href="https://youtu.be/6ZLaChORt7o" target="_blank">YouTube 보기</a></div>
+                        <div class="copyright-item"><strong>3. 전능하신 나의 주 하나님은</strong><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">YouTube 보기</a></div>
+                        <div class="copyright-item"><strong>4. 어둔 날 다 지나고</strong><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">YouTube 보기</a></div>
+                        <div class="copyright-item"><strong>5. 광야를 지나며</strong><a href="https://youtu.be/zIdppmRuluk" target="_blank">YouTube 보기</a></div>
+                        <div class="copyright-item"><strong>6. 우리가 주를 더욱 사랑하고</strong><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">YouTube 보기</a></div>
+                        <p class="system" style="margin-top:20px;">모든 찬양의 저작권은 원작자 및 각 채널에 있으며, 비영리 목적으로 제작되었습니다. 🙏</p>
+                    </div>
                 </div>
             </div>
         </div>
