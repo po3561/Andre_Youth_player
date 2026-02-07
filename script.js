@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    // 1. Firebase 설정 (원본 유지)
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -6,20 +7,20 @@ $(document).ready(function() {
         projectId: "busan-youth-player",
         storageBucket: "busan-youth-player.firebasestorage.app",
         messagingSenderId: "406016035492",
-        appId: "1:406016035492:web:e3d03145aefa945c707431",
-        measurementId: "G-D81R7GBNG6"
+        appId: "1:406016035492:web:e3d03145aefa945c707431"
     };
 
     if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
     const audio = document.getElementById('audio-engine');
     let curIdx = -1;
+    // [중요] 하트 연동 데이터 복구
     let scrappedSongs = JSON.parse(localStorage.getItem('myScraps')) || [];
     let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('chatUserId', userId);
-    let isShuffle = false;
     let repeatMode = 0; 
 
+    // [중요] 원본 플레이리스트 6곡 복구
     const playlistData = [
         { title: "광야를 지나며", artist: "Busan Youth Praise", url: "music/pyi/광야를 지나며.mp3", cover: "music/jpg/광야를 지나며.jpg" },
         { title: "슬픈 마음 있는 사람", artist: "Busan Youth Praise", url: "music/pyi/슬픈 마음 있는 사람.mp3", cover: "music/jpg/슬픈마음있는 사람.jpg" },
@@ -29,55 +30,14 @@ $(document).ready(function() {
         { title: "전능하신 나의 주 하나님은", artist: "Busan Youth Praise", url: "music/pyi/전능하신 나의 주 하나님은.mp3", cover: "music/jpg/ddd6ed85331e167a7d9437697300ffbe.jpg" }
     ];
 
-    function escapeHtml(t) { return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-
-    // [기능] 미디어 세션 (휴대폰 연동)
-    function updateMediaSession() {
-        if ('mediaSession' in navigator) {
-            const s = playlistData[curIdx];
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: s.title, artist: s.artist, artwork: [{ src: s.cover, sizes: '512x512', type: 'image/jpeg' }]
-            });
-            navigator.mediaSession.setActionHandler('play', () => audio.play());
-            navigator.mediaSession.setActionHandler('pause', () => audio.pause());
-            navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack());
-            navigator.mediaSession.setActionHandler('previoustrack', () => prevTrack());
-        }
-    }
-
-    // [기능] 실시간 채팅
-    if (typeof firebase !== 'undefined') {
-        const db = firebase.database().ref('messages');
-        db.on('child_added', (snap) => {
-            const m = snap.val();
-            if (Date.now() - m.timestamp > 259200000) return;
-            const isMe = m.sender === userId;
-            $('#chat-messages').append(`<div class="message ${isMe?'me':'other'}">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>`);
-            $('.chat-viewport').scrollTop($('.chat-viewport')[0].scrollHeight);
-            if (!$('#chat-overlay').hasClass('active')) {
-                $('#chat-badge').text((parseInt($('#chat-badge').text()) || 0) + 1).show();
-            }
-        });
-        const now = new Date();
-        const lastAuto = localStorage.getItem('lastAutoDate');
-        if (lastAuto !== now.toDateString() && now.getHours() >= 7 && now.getMinutes() >= 30) {
-            db.push({ text: "오늘 하루도 기도로 시작해요 🙏", sender: "system", timestamp: Date.now() });
-            localStorage.setItem('lastAutoDate', now.toDateString());
-        }
-    }
-
-    // [모션] 팝업 열기/닫기
-    $('#btn-open-chat').click(() => { $('#chat-overlay').addClass('active'); $('#chat-badge').hide().text('0'); });
-    $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
-    $('.close-x, .ios-popup').click(function(e) {
-        if (e.target === this || $(e.target).closest('.close-x').length > 0) $(this).closest('.ios-popup').removeClass('active');
-    });
-
-    // [기능] 하트 연동
+    // [기능] 하트 연동 핵심 로직
     function syncHearts() {
         const curTitle = playlistData[curIdx]?.title;
         const isFav = scrappedSongs.includes(curTitle);
+        // 메인 하트 버튼 상태 업데이트
         $('#btn-scrap').toggleClass('active', isFav).find('i').attr('class', isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
+        
+        // 리스트 내 하트 상태 업데이트
         $('#song-list-ul li').each(function(i) {
             const isSet = scrappedSongs.includes(playlistData[i].title);
             $(this).find('.list-heart-btn').toggleClass('active', isSet).find('i').attr('class', isSet ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
@@ -86,84 +46,98 @@ $(document).ready(function() {
 
     function toggleFav(title) {
         const idx = scrappedSongs.indexOf(title);
-        if (idx === -1) scrappedSongs.push(title); else scrappedSongs.splice(idx, 1);
+        if (idx === -1) scrappedSongs.push(title); 
+        else scrappedSongs.splice(idx, 1);
         localStorage.setItem('myScraps', JSON.stringify(scrappedSongs));
         syncHearts();
     }
 
-    // [기능] 플레이어 엔진
+    // [기능] 플레이어 로드
     function load(i, play = false) {
         curIdx = i; const s = playlistData[i];
-        audio.src = s.url; $('#album-img').attr('src', s.cover);
+        audio.src = s.url; 
+        $('#album-img').attr('src', s.cover);
         $('#bg-image').css('background-image', `url('${s.cover}')`);
-        $('#disp-title').text(s.title); $('#disp-artist').text(s.artist);
-        render(); syncHearts(); updateMediaSession();
+        $('#disp-title').text(s.title); 
+        $('#disp-artist').text(s.artist);
+        render(); syncHearts(); 
         if (play) audio.play();
     }
 
-    function nextTrack() { load((curIdx + 1) % playlistData.length, true); }
-    function prevTrack() { load((curIdx - 1 + playlistData.length) % playlistData.length, true); }
+    // [기능] 공유하기 (Web Share API)
+    $('#btn-share').click(function() {
+        const s = playlistData[curIdx];
+        if (navigator.share) {
+            navigator.share({
+                title: 'Youth Player 찬양 공유',
+                text: `${s.title} - ${s.artist} (함께 들어요!)`,
+                url: window.location.href
+            }).catch(console.error);
+        } else {
+            alert('현재 브라우저에서는 공유 기능을 지원하지 않습니다. 링크를 복사해 주세요!');
+        }
+    });
 
-    audio.onended = () => { if (repeatMode === 2) { audio.currentTime = 0; audio.play(); } else nextTrack(); };
+    // 플레이어 기본 동작
     $('#btn-play-pause').click(() => audio.paused ? audio.play() : audio.pause());
     audio.onplay = () => $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
     audio.onpause = () => $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
-    $('#btn-next').click(nextTrack);
-    $('#btn-prev').click(prevTrack);
+    $('#btn-next').click(() => load((curIdx + 1) % playlistData.length, true));
+    $('#btn-prev').click(() => load((curIdx - 1 + playlistData.length) % playlistData.length, true));
 
-    $('#btn-shuffle').click(function() { isShuffle = !isShuffle; $(this).toggleClass('active', isShuffle); });
-    $('#btn-repeat').click(function() {
-        repeatMode = (repeatMode + 1) % 3;
-        const $dot = $(this).find('.repeat-dot');
-        if (repeatMode === 0) { $(this).removeClass('active'); $dot.hide(); }
-        else { $(this).addClass('active'); $dot.show(); }
-    });
-
-    $('#btn-send-chat').click(() => {
-        const t = $('#chat-input').val().trim();
-        if(t) { firebase.database().ref('messages').push({text:t, sender:userId, timestamp:Date.now()}); $('#chat-input').val('').focus(); }
-    });
-
-    $(document).on('click', '.list-heart-btn', function(e) { e.stopPropagation(); toggleFav(playlistData[$(this).closest('li').index()].title); });
+    // 하트 클릭 이벤트
     $('#btn-scrap').click(() => toggleFav(playlistData[curIdx].title));
-
-    // 바텀시트
-    let startY = 0;
-    $('#sheet-trigger').on('click', () => $('#sheet').toggleClass('expanded'));
-    $('#sheet-trigger').on('touchstart', e => { startY = e.originalEvent.touches[0].clientY; });
-    $('#sheet-trigger').on('touchend', e => {
-        const dist = startY - e.originalEvent.changedTouches[0].clientY;
-        if (dist > 35) $('#sheet').addClass('expanded'); else if (dist < -35) $('#sheet').removeClass('expanded');
+    $(document).on('click', '.list-heart-btn', function(e) {
+        e.stopPropagation();
+        const idx = $(this).closest('li').data('idx');
+        toggleFav(playlistData[idx].title);
     });
 
-    // [수정] 시간 포맷 에러 박멸
-    function fmt(s) { 
-        if(isNaN(s) || !isFinite(s)) return "0:00"; 
-        const m = Math.floor(s / 60); 
-        const sc = Math.floor(s % 60); 
-        return `${m}:${sc < 10 ? '0' + sc : sc}`; 
-    }
-    
-    audio.ontimeupdate = () => { 
-        if(isNaN(audio.duration)) return;
-        $('#progress-bar').val((audio.currentTime/audio.duration)*100); 
-        $('#time-now').text(fmt(audio.currentTime)); 
-        $('#time-total').text(fmt(audio.duration)); 
-    };
-    $('#progress-bar').on('change', function() { audio.currentTime = ($(this).val()/100)*audio.duration; });
-    $('#volume-bar').on('input', function() { audio.volume = $(this).val() / 100; });
+    // 팝업 제어
+    $('#btn-open-chat').click(() => $('#chat-overlay').addClass('active'));
+    $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
+    $('.close-x').click(() => $('.ios-popup').removeClass('active'));
+    $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
 
+    // 채팅 기능 (실시간 연동)
+    if (typeof firebase !== 'undefined') {
+        const db = firebase.database().ref('messages');
+        $('#btn-send-chat').click(() => {
+            const t = $('#chat-input').val().trim();
+            if(t) { db.push({text:t, sender:userId, timestamp:Date.now()}); $('#chat-input').val(''); }
+        });
+        db.limitToLast(30).on('child_added', (snap) => {
+            const m = snap.val();
+            const isMe = m.sender === userId;
+            $('#chat-messages').append(`<div class="message ${isMe?'me':'other'}">${m.text}</div>`);
+            $('.chat-viewport').scrollTop($('.chat-viewport')[0].scrollHeight);
+        });
+    }
+
+    // 리스트 렌더링
+    window.playSong = (i) => { load(i, true); $('#sheet').removeClass('expanded'); };
     function render() {
         $('#total-count').text(playlistData.length);
         const $ul = $('#song-list-ul').empty();
         playlistData.forEach((s, i) => {
-            $ul.append(`<li class="${i===curIdx?'active':''}" onclick="playSong(${i})">
+            $ul.append(`<li class="${i===curIdx?'active':''}" data-idx="${i}" onclick="playSong(${i})">
                 <img src="${s.cover}" class="mini-art">
-                <div style="flex:1; text-align:left;"><strong>${s.title}</strong><p style="font-size:0.8rem; color:var(--sub);">${s.artist}</p></div>
+                <div style="flex:1;"><strong>${s.title}</strong><p style="font-size:0.75rem;">${s.artist}</p></div>
                 <div class="list-heart-btn"><i class="fa-regular fa-heart"></i></div>
             </li>`);
         });
         syncHearts();
     }
+
+    // 시간 업데이트
+    audio.ontimeupdate = () => {
+        if(isNaN(audio.duration)) return;
+        $('#progress-bar').val((audio.currentTime/audio.duration)*100);
+        const fmt = (s) => { const m=Math.floor(s/60), sc=Math.floor(s%60); return `${m}:${sc<10?'0'+sc:sc}`; };
+        $('#time-now').text(fmt(audio.currentTime));
+        $('#time-total').text(fmt(audio.duration));
+    };
+    $('#progress-bar').on('input', function() { audio.currentTime = ($(this).val()/100)*audio.duration; });
+
     load(0);
 });
