@@ -5,105 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Youth_player</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
     <div id="bg-image"></div>
+    <div class="glass-overlay"></div>
     
     <div class="app-container">
-        <div class="main-content-scroll">
-            <main class="player-main">
-                <header class="top-nav">
-                    <div id="btn-open-chat" class="chat-icon-wrapper">
-                        <i class="fas fa-comment-dots"></i>
-                        <span id="chat-badge" class="badge">0</span>
-                    </div>
-                    <span class="nav-title">믿음으로 기. 대하다</span>
-                    <div class="header-right-btns">
-                        <button id="btn-copyright" class="icon-btn action-icon"><i class="fas fa-copyright"></i></button>
-                        <button id="btn-share" class="icon-btn action-icon"><i class="fas fa-share-alt"></i></button>
-                    </div>
-                </header>
+        <header class="top-nav">
+            <button id="btn-open-chat" class="icon-btn">
+                <i class="fa-solid fa-comment-dots"></i>
+                <span id="chat-badge" class="badge">0</span>
+            </button>
+            <div class="nav-title">
+                <span class="sub-title">NOW PLAYING</span>
+                <span class="main-title">믿음으로 기. 대하다</span>
+            </div>
+            <div class="header-right">
+                <button id="btn-copyright" class="icon-btn"><i class="fa-solid fa-circle-info"></i></button>
+                <button id="btn-share" class="icon-btn"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+            </div>
+        </header>
 
-                <div class="album-art-area">
-                    <div class="glow-box"></div>
-                    <img src="" id="album-img" class="album-img-full" alt="Album Art">
+        <div class="player-body">
+            <div class="album-section">
+                <img src="" id="album-img" class="album-art" alt="Album Art">
+            </div>
+
+            <div class="info-section">
+                <div class="text-group">
+                    <h2 id="disp-title">Loading...</h2>
+                    <p id="disp-artist">Artist Name</p>
                 </div>
+                <button id="btn-scrap" class="heart-btn"><i class="fa-regular fa-heart"></i></button>
+            </div>
 
-                <div class="song-meta">
-                    <div class="title-row">
-                        <h2 id="disp-title">Loading...</h2>
-                        <button id="btn-scrap" class="scrap-i action-icon"><i class="far fa-heart"></i></button>
-                    </div>
-                    <p id="disp-artist">43.02.26 목 21시 우리가 늘 모이던 거기 6층</p>
-                </div>
-
-                <div class="seek-bar-area">
+            <div class="playback-section">
+                <div class="range-wrapper">
                     <input type="range" id="progress-bar" value="0" step="0.1" min="0" max="100">
-                    <div class="time-tags">
-                        <span id="time-now">0:00</span>
-                        <span id="time-total">0:00</span>
+                </div>
+                <div class="time-row">
+                    <span id="time-now">0:00</span>
+                    <span id="time-total">0:00</span>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <button id="btn-shuffle" class="opt-btn"><i class="fa-solid fa-shuffle"></i></button>
+                <button id="btn-prev" class="main-btn side"><i class="fa-solid fa-backward-step"></i></button>
+                <div class="play-btn-glow">
+                    <button id="btn-play-pause" class="main-btn play"><i class="fa-solid fa-play"></i></button>
+                </div>
+                <button id="btn-next" class="main-btn side"><i class="fa-solid fa-forward-step"></i></button>
+                <button id="btn-repeat" class="opt-btn">
+                    <i class="fa-solid fa-repeat"></i>
+                    <span class="repeat-dot"></span>
+                </button>
+            </div>
+
+            <div class="volume-section">
+                <i class="fa-solid fa-volume-low"></i>
+                <input type="range" id="volume-bar" value="80" step="1" min="0" max="100">
+                <i class="fa-solid fa-volume-high"></i>
+            </div>
+        </div>
+
+        <div id="chat-overlay" class="ios-popup">
+            <div class="popup-card">
+                <div class="popup-header">
+                    <span>기도 제목 나누기</span>
+                    <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="chat-messages" class="chat-viewport"></div>
+                <div class="chat-input-row">
+                    <input type="text" id="chat-input" placeholder="함께 기도로 응원해요..." autocomplete="off">
+                    <button id="btn-send-chat" class="send-btn"><i class="fa-solid fa-arrow-up"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="copyright-overlay" class="ios-popup">
+            <div class="popup-card small">
+                <div class="popup-header">
+                    <span>저작권 정보</span>
+                    <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="popup-body">
+                    <div class="copy-list">
+                         <div class="copy-item"><span>1. 슬픈 마음 있는 사람</span><a href="https://youtu.be/ovDif9FwCyU" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
+                        <div class="copy-item"><span>2. 약할 때 강함 되시네</span><a href="https://youtu.be/6ZLaChORt7o" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
+                        <div class="copy-item"><span>3. 전능하신 나의 주 하나님은</span><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
+                        <div class="copy-item"><span>4. 어둔 날 다 지나고</span><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
+                        <div class="copy-item"><span>5. 광야를 지나며</span><a href="https://youtu.be/zIdppmRuluk" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
+                        <div class="copy-item"><span>6. 우리가 주를 더욱 사랑하고</span><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
                     </div>
                 </div>
-
-                <div class="control-btns">
-                    <button id="btn-shuffle" class="sub-i"><i class="fas fa-random"></i></button>
-                    <button id="btn-prev" class="side-i"><i class="fas fa-step-backward"></i></button>
-                    <button id="btn-play-pause" class="center-play"><i class="fas fa-play"></i></button>
-                    <button id="btn-next" class="side-i"><i class="fas fa-step-forward"></i></button>
-                    <button id="btn-repeat" class="sub-i"><i class="fas fa-redo"></i><span class="repeat-badge"></span></button>
-                </div>
-
-                <div class="volume-area">
-                    <i class="fas fa-volume-down"></i>
-                    <input type="range" id="volume-bar" value="80" step="1" min="0" max="100">
-                    <i class="fas fa-volume-up"></i>
-                </div>
-            </main>
-        </div>
-
-        <div id="chat-overlay" class="chat-overlay">
-            <div class="box-container" id="chat-box">
-                <div class="box-header">
-                    <span>기도 제목을 알려주세요 (실명X)</span>
-                    <button id="btn-close-chat" class="close-btn"><i class="fas fa-times"></i></button>
-                </div>
-                <div id="chat-messages" class="box-content"></div>
-                <div class="box-input-area">
-                    <input type="text" id="chat-input" placeholder="기도 올리기..." autocomplete="off">
-                    <button id="btn-send-chat"><i class="fas fa-paper-plane"></i></button>
-                </div>
             </div>
         </div>
 
-        <div id="copyright-overlay" class="chat-overlay">
-            <div class="box-container copyright-container">
-                <div class="box-header"><span>저작권 정보 확인</span><button id="btn-close-copyright" class="close-btn"><i class="fas fa-times"></i></button></div>
-                <div class="box-content">
-                    <div class="copyright-list">
-                         <div class="copyright-item"><strong>1. 슬픈 마음 있는 사람</strong><a href="https://youtu.be/ovDif9FwCyU" target="_blank">YouTube 보기</a></div>
-                        <div class="copyright-item"><strong>2. 약할 때 강함 되시네</strong><a href="https://youtu.be/6ZLaChORt7o" target="_blank">YouTube 보기</a></div>
-                        <div class="copyright-item"><strong>3. 전능하신 나의 주 하나님은</strong><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">YouTube 보기</a></div>
-                        <div class="copyright-item"><strong>4. 어둔 날 다 지나고</strong><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">YouTube 보기</a></div>
-                        <div class="copyright-item"><strong>5. 광야를 지나며</strong><a href="https://youtu.be/zIdppmRuluk" target="_blank">YouTube 보기</a></div>
-                        <div class="copyright-item"><strong>6. 우리가 주를 더욱 사랑하고</strong><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">YouTube 보기</a></div>
-                        <p class="system" style="margin-top:20px;">모든 찬양의 저작권은 원작자 및 각 채널에 있으며, 비영리 목적으로 제작되었습니다. 🙏</p>
-                    </div>
+        <section class="bottom-sheet" id="sheet">
+            <div class="sheet-top" id="sheet-trigger">
+                <div class="drag-pill"></div>
+                <div class="sheet-title">PLAYLIST</div>
+            </div>
+            <div class="sheet-main">
+                <div class="list-head">
+                    <h3>다음 트랙</h3>
+                    <span class="count-txt"><span id="total-count">0</span> 곡</span>
                 </div>
-            </div>
-        </div>
-
-        <section class="morphing-sheet" id="sheet">
-            <div class="sheet-touch-zone" id="sheet-touch-zone">
-                <div class="indicator"></div>
-                <div class="bar-info"><i class="fas fa-list-ul"></i> <span>player</span></div>
-            </div>
-            <div class="sheet-full-content">
-                <div class="list-top"><h3>다음 재생 곡</h3><span class="playlist-count"><span id="total-count">0</span> 곡</span></div>
-                <div class="list-scroll-area"><ul id="song-list-ul" class="scroll-inner"></ul></div>
+                <div class="list-scroll-area">
+                    <ul id="song-list-ul"></ul>
+                </div>
             </div>
         </section>
     </div>
