@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Heavenly Melody - Busan Youth</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div id="bg-image"></div>
+    
+    <div class="app-container">
+        <div class="main-content-scroll">
+            <main class="player-main">
+                <header class="top-nav">
+                    <div id="btn-open-chat" class="chat-icon-wrapper">
+                        <i class="fas fa-comment-dots"></i>
+                        <span id="chat-badge" class="badge">0</span>
+                    </div>
+                    <span class="nav-title">소성케 하소서</span>
+                    <button id="btn-share" class="icon-btn action-icon"><i class="fas fa-share-alt"></i></button>
+                </header>
+
+                <div class="album-art-area">
+                    <div class="glow-box"></div>
+                    <img src="" id="album-img" class="album-img-full" alt="Album Art">
+                </div>
+
+                <div class="song-meta">
+                    <div class="title-row">
+                        <h2 id="disp-title">Loading...</h2>
+                        <button id="btn-scrap" class="scrap-i action-icon"><i class="far fa-heart"></i></button>
+                    </div>
+                    <p id="disp-artist">43.02.26 목 21시 연수원 6층</p>
+                </div>
+
+                <div class="seek-bar-area">
+                    <input type="range" id="progress-bar" value="0" step="0.1" min="0" max="100">
+                    <div class="time-tags">
+                        <span id="time-now">0:00</span>
+                        <span id="time-total">0:00</span>
+                    </div>
+                </div>
+
+                <div class="control-btns">
+                    <button id="btn-shuffle" class="sub-i"><i class="fas fa-random"></i></button>
+                    <button id="btn-prev" class="side-i"><i class="fas fa-step-backward"></i></button>
+                    <button id="btn-play-pause" class="center-play"><i class="fas fa-play"></i></button>
+                    <button id="btn-next" class="side-i"><i class="fas fa-step-forward"></i></button>
+                    <button id="btn-repeat" class="sub-i">
+                        <i class="fas fa-redo"></i>
+                        <span class="repeat-badge"></span>
+                    </button>
+                </div>
+
+                <div class="volume-area">
+                    <i class="fas fa-volume-down"></i>
+                    <input type="range" id="volume-bar" value="80" step="1" min="0" max="100">
+                    <i class="fas fa-volume-up"></i>
+                </div>
+            </main>
+        </div>
+
+        <div id="chat-overlay" class="chat-overlay">
+            <div class="chat-box-container" id="chat-box">
+                <div class="chat-box-header">
+                    <span>기도 제목 나누기</span>
+                    <button id="btn-close-chat" class="close-chat-btn"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="chat-messages" class="chat-box-content">
+                    <div class="message system">함께 기도해주세요!</div>
+                </div>
+                <div class="chat-box-input-area">
+                    <input type="text" id="chat-input" placeholder="기도 올리기..." autocomplete="off">
+                    <button id="btn-send-chat"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <section class="morphing-sheet" id="sheet">
+            <div class="sheet-trigger" id="trigger">
+                <div class="indicator"></div>
+                <div class="bar-info"><i class="fas fa-list-ul"></i> <span>My Playlist</span></div>
+            </div>
+            <div class="sheet-full-content">
+                <div class="list-top">
+                    <h3>기도회 찬양 리스트</h3>
+                    <span class="playlist-count"><span id="total-count">0</span> 곡</span>
+                </div>
+                <div class="list-scroll-area">
+                    <ul id="song-list-ul" class="scroll-inner"></ul>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <audio id="audio-engine"></audio>
+    <script src="script.js"></script>
+</body>
+</html>
