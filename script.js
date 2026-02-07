@@ -33,14 +33,15 @@ $(document).ready(function() {
         { title: "전능하신 나의 주 하나님은", artist: "Busan Youth Praise", url: "music/pyi/전능하신 나의 주 하나님은.mp3", cover: "music/jpg/ddd6ed85331e167a7d9437697300ffbe.jpg" }
     ];
 
-    // ============ [기능 1] 실시간 채팅 (Firebase) ============
+    // ============ [기능 1] 실시간 채팅 ============
     if (typeof firebase !== 'undefined') {
         const dbRef = firebase.database().ref('messages');
         dbRef.on('child_added', (snapshot) => {
             const msg = snapshot.val();
             const msgClass = msg.sender === userId ? 'me' : 'other';
             $('#chat-messages').append(`<div class="message ${msgClass}">${msg.text}</div>`);
-            $('.box-content').scrollTop($('.box-content')[0].scrollHeight);
+            const scrollArea = document.getElementById('chat-messages');
+            scrollArea.scrollTop = scrollArea.scrollHeight;
             if (!$('#chat-overlay').hasClass('active')) {
                 let count = parseInt($('#chat-badge').text()) || 0;
                 $('#chat-badge').text(count + 1).show();
@@ -60,51 +61,71 @@ $(document).ready(function() {
     $('#btn-send-chat').click(sendMsg);
     $('#chat-input').keypress(e => { if(e.which==13) sendMsg(); });
 
-    // ============ [기능 2] 스와이프 제스처 (Swipe) ============
+    // ============ [기능 2] 터치 & 스와이프 통합 제어 ============
     let touchStartY = 0;
     const $sheet = $('#sheet');
+    const $touchZone = $('#sheet-touch-zone');
 
-    $sheet.on('touchstart', e => { touchStartY = e.originalEvent.touches[0].clientY; });
-    $sheet.on('touchend', e => {
+    $touchZone.on('click', () => { $sheet.toggleClass('expanded'); });
+    $touchZone.on('touchstart', e => { touchStartY = e.originalEvent.touches[0].clientY; });
+    $touchZone.on('touchend', e => {
         const touchEndY = e.originalEvent.changedTouches[0].clientY;
         const dist = touchStartY - touchEndY;
-        if (dist > 50) $sheet.addClass('expanded'); // Swipe Up
-        else if (dist < -50) $sheet.removeClass('expanded'); // Swipe Down
+        if (dist > 30) $sheet.addClass('expanded');
+        else if (dist < -30) $sheet.removeClass('expanded');
     });
 
-    // ============ [기능 3] 하트 연동 및 UI 업데이트 ============
+    // ============ [기능 3] 하트(스크랩) 완벽 연동 로직 ============
     function updateScrapUI() {
+        if (curIdx === -1) return;
+        
+        // 1. 메인 화면 하트 갱신
         const curTitle = playlistData[curIdx].title;
         const hasScrap = scrappedSongs.includes(curTitle);
         $('#btn-scrap').toggleClass('active', hasScrap).find('i').attr('class', hasScrap ? 'fas fa-heart' : 'far fa-heart');
 
+        // 2. 플레이리스트 내 모든 하트 아이콘 갱신 (실시간 동기화)
         $('#song-list-ul li').each(function(i) {
-            const isSet = scrappedSongs.includes(playlistData[i].title);
-            $(this).find('.fa-heart').css('color', isSet ? '#ff4d4d' : '#ccc').attr('class', isSet ? 'fas fa-heart' : 'far fa-heart');
+            const songTitle = playlistData[i].title;
+            const isScrapped = scrappedSongs.includes(songTitle);
+            const $heartIcon = $(this).find('.fa-heart');
+            
+            if (isScrapped) {
+                $heartIcon.addClass('active fas').removeClass('far');
+            } else {
+                $heartIcon.removeClass('active fas').addClass('far');
+            }
         });
     }
 
     function toggleScrap(title) {
         const idx = scrappedSongs.indexOf(title);
-        if (idx === -1) scrappedSongs.push(title); else scrappedSongs.splice(idx, 1);
+        if (idx === -1) {
+            scrappedSongs.push(title);
+        } else {
+            scrappedSongs.splice(idx, 1);
+        }
         localStorage.setItem('myScraps', JSON.stringify(scrappedSongs));
-        updateScrapUI();
+        updateScrapUI(); // UI 즉시 반영
     }
 
+    // 메인 하트 버튼 클릭
     $('#btn-scrap').click(() => toggleScrap(playlistData[curIdx].title));
+    
+    // 리스트 내 하트 아이콘 클릭 (이벤트 위임)
     $(document).on('click', '.fa-heart', function(e) {
-        e.stopPropagation();
-        toggleScrap(playlistData[$(this).closest('li').index()].title);
+        e.stopPropagation(); // li 클릭(곡 재생) 방지
+        const songIdx = $(this).closest('li').index();
+        toggleScrap(playlistData[songIdx].title);
     });
 
-    // ============ [모달 제어 (채팅 & 저작권)] ============
-    $('#btn-open-chat').click(() => { $('#chat-overlay').css('display','flex').hide().fadeIn(200).addClass('active'); $('#chat-badge').hide(); });
+    // ============ [기타 UI 제어] ============
+    $('#btn-open-chat').click(() => { $('#chat-overlay').css('display','flex').hide().fadeIn(200).addClass('active'); $('#chat-badge').hide().text('0'); });
     $('#btn-close-chat, #chat-overlay').click(e => { if(e.target===e.currentTarget || e.target.id==='btn-close-chat') $('#chat-overlay').removeClass('active').fadeOut(300); });
-    
     $('#btn-copyright').click(() => { $('#copyright-overlay').css('display','flex').hide().fadeIn(200).addClass('active'); });
     $('#btn-close-copyright, #copyright-overlay').click(e => { if(e.target===e.currentTarget || e.target.id==='btn-close-copyright') $('#copyright-overlay').removeClass('active').fadeOut(300); });
 
-    // ============ [플레이어 엔진 로직] ============
+    // ============ [플레이어 엔진] ============
     function load(i, forcePlay = false) {
         if (curIdx === i && !forcePlay) return;
         curIdx = i; const song = playlistData[i];
@@ -112,8 +133,8 @@ $(document).ready(function() {
         $('#album-img').attr('src', song.cover);
         $('#bg-image').css('background-image', `url('${song.cover}')`);
         $('#disp-title').text(song.title);
-        $('#disp-artist').text(song.artist);
-        render(); updateScrapUI();
+        render(); // 리스트의 active 클래스 갱신을 위해 실행
+        updateScrapUI(); // 하트 상태 갱신
         if (forcePlay) audio.play();
     }
     window.playSong = (i) => { load(i, true); };
@@ -147,7 +168,6 @@ $(document).ready(function() {
     }
     $('#btn-next').click(nextTrack);
     $('#btn-prev').click(() => playSong((curIdx - 1 + playlistData.length) % playlistData.length, true));
-    $('#trigger').on('click', () => $sheet.toggleClass('expanded'));
     $('#volume-bar').on('input', function() { audio.volume = $(this).val() / 100; });
     function fmt(s) { if(isNaN(s)||s<0) return "0:00"; const m=Math.floor(s/60), sc=Math.floor(s%60); return `${m}:${sc<10?'0'+sc:sc}`; }
     
@@ -160,7 +180,7 @@ $(document).ready(function() {
                 <div style="flex:1; text-align:left; min-width:0;"><strong style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.title}</strong><p style="font-size:0.75rem; color:#888;">${s.artist}</p></div>
                 <i class="far fa-heart" style="margin-left: 10px; cursor: pointer;"></i></li>`);
         });
-        updateScrapUI();
+        updateScrapUI(); // 렌더링 직후 하트 상태 체크
     }
     load(0);
 });
