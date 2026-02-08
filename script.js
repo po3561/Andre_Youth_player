@@ -19,7 +19,10 @@ $(document).ready(function() {
     let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('chatUserId', userId);
     let repeatMode = 0; 
-
+    
+    
+    alet('테스트');
+    
     // [중요] 원본 플레이리스트 6곡 복구
     const playlistData = [
         { title: "광야를 지나며", artist: "Busan Youth Praise", url: "music/pyi/광야를 지나며.mp3", cover: "music/jpg/광야를 지나며.jpg" },
