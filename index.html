@@ -12,13 +12,13 @@
 </head>
 <body>
     <div id="bg-image"></div>
-    <div class="glass-overlay"></div>
+    <div class="glass-background"></div>
     
     <div class="app-container">
         <header class="top-nav">
             <button id="btn-open-chat" class="icon-btn">
                 <i class="fa-solid fa-comment-dots"></i>
-                <span id="chat-badge" class="badge">0</span>
+                <span id="chat-badge" class="badge"></span>
             </button>
             <div class="nav-title">
                 <span class="sub-title">찬양 기도회</span>
@@ -30,7 +30,7 @@
             </div>
         </header>
 
-        <div class="player-body">
+        <main class="player-body">
             <div class="album-section">
                 <img src="" id="album-img" class="album-art" alt="Album Art">
             </div>
@@ -44,9 +44,7 @@
             </div>
 
             <div class="playback-section">
-                <div class="range-wrapper">
-                    <input type="range" id="progress-bar" value="0" step="0.1" min="0" max="100">
-                </div>
+                <input type="range" id="progress-bar" value="0" step="0.1" min="0" max="100">
                 <div class="time-row">
                     <span id="time-now">0:00</span>
                     <span id="time-total">0:00</span>
@@ -71,42 +69,42 @@
                     <span class="repeat-dot"></span>
                 </button>
             </div>
-        </div>
+        </main>
 
         <div id="chat-overlay" class="ios-popup">
-            <div class="popup-card">
+            <div class="popup-card glass-card">
                 <div class="popup-header">
                     <span>기도 제목 나누기</span>
                     <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div id="chat-messages" class="chat-viewport"></div>
                 <div class="chat-input-row">
-                    <input type="text" id="chat-input" placeholder="함께 기도로 응원해요..." autocomplete="off">
+                    <input type="text" id="chat-input" placeholder="마음을 나눠주세요..." autocomplete="off">
                     <button id="btn-send-chat" class="send-btn"><i class="fa-solid fa-arrow-up"></i></button>
                 </div>
             </div>
         </div>
 
         <div id="copyright-overlay" class="ios-popup">
-            <div class="popup-card small">
+            <div class="popup-card small glass-card">
                 <div class="popup-header">
                     <span>저작권 정보</span>
                     <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="popup-body">
                     <div class="copy-list">
-                         <div class="copy-item"><span>1. 슬픈 마음 있는 사람</span><a href="https://youtu.be/ovDif9FwCyU" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
-                        <div class="copy-item"><span>2. 약할 때 강함 되시네</span><a href="https://youtu.be/6ZLaChORt7o" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
-                        <div class="copy-item"><span>3. 전능하신 나의 주 하나님은</span><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
-                        <div class="copy-item"><span>4. 어둔 날 다 지나고</span><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
-                        <div class="copy-item"><span>5. 광야를 지나며</span><a href="https://youtu.be/zIdppmRuluk" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
-                        <div class="copy-item"><span>6. 우리가 주를 더욱 사랑하고</span><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">View <i class="fa-solid fa-chevron-right"></i></a></div>
+                         <div class="copy-item"><span>1. 슬픈 마음 있는 사람</span><a href="https://youtu.be/ovDif9FwCyU" target="_blank">View</a></div>
+                        <div class="copy-item"><span>2. 약할 때 강함 되시네</span><a href="https://youtu.be/6ZLaChORt7o" target="_blank">View</a></div>
+                        <div class="copy-item"><span>3. 전능하신 나의 주 하나님은</span><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">View</a></div>
+                        <div class="copy-item"><span>4. 어둔 날 다 지나고</span><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">View</a></div>
+                        <div class="copy-item"><span>5. 광야를 지나며</span><a href="https://youtu.be/zIdppmRuluk" target="_blank">View</a></div>
+                        <div class="copy-item"><span>6. 우리가 주를 더욱 사랑하고</span><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">View</a></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <section class="bottom-sheet" id="sheet">
+        <section class="bottom-sheet glass-sheet" id="sheet">
             <div class="sheet-top" id="sheet-trigger">
                 <div class="drag-pill"></div>
                 <div class="sheet-title">PLAYLIST</div>
@@ -114,7 +112,7 @@
             <div class="sheet-main">
                 <div class="list-head">
                     <h3>다음 트랙</h3>
-                    <span class="count-txt"><span id="total-count">0</span> 곡</span>
+                    <span class="count-txt">총 <span id="total-count">0</span>곡</span>
                 </div>
                 <div class="list-scroll-area">
                     <ul id="song-list-ul"></ul>
@@ -122,7 +120,7 @@
             </div>
         </section>
     </div>
-    <audio id="audio-engine"></audio>
+    <audio id="audio-engine" preload="auto"></audio>
     <script src="script.js"></script>
 </body>
 </html>
