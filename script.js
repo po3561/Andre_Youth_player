@@ -1,5 +1,4 @@
 $(document).ready(function() {
-    // 1. Firebase 설정 (원본 유지)
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -14,32 +13,25 @@ $(document).ready(function() {
 
     const audio = document.getElementById('audio-engine');
     let curIdx = -1;
-    // [중요] 하트 연동 데이터 복구
     let scrappedSongs = JSON.parse(localStorage.getItem('myScraps')) || [];
-    let userId {"path":"/tauri/C/Users/po356/Documents/GitHub/Andre_Youth_player/script.js"}= localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
+    let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('chatUserId', userId);
-    let repeatMode = 0; 
-    
+    let myLikedMsgs = JSON.parse(localStorage.getItem('myLikedMsgs')) || [];
 
-    
-    // [중요] 원본 플레이리스트 6곡 복구
+    const customArtistText = "43.02.26 목 21시 늘 모이던 곳 6층";
     const playlistData = [
-        { title: "광야를 지나며", artist: "Busan Youth Praise", url: "music/pyi/광야를 지나며.mp3", cover: "music/jpg/광야를 지나며.jpg" },
-        { title: "슬픈 마음 있는 사람", artist: "Busan Youth Praise", url: "music/pyi/슬픈 마음 있는 사람.mp3", cover: "music/jpg/슬픈마음있는 사람.jpg" },
-        { title: "약할 때 강함 되시네", artist: "Busan Youth Praise", url: "music/pyi/약할 때 강함 되시네.mp3", cover: "music/jpg/약할 때 강함 되시네.jpg" },
-        { title: "어둔날 다 지나고", artist: "Busan Youth Praise", url: "music/pyi/어둔날 다 지나고.mp3", cover: "music/jpg/어둔날 다 지나고.jpg" },
-        { title: "우리가 주를 더욱 사랑하고", artist: "Busan Youth Praise", url: "music/pyi/우리가 주를 더욱 사랑하고.mp3", cover: "music/jpg/우리가 주를 더욱 사랑하고.jpg" },
-        { title: "전능하신 나의 주 하나님은", artist: "Busan Youth Praise", url: "music/pyi/전능하신 나의 주 하나님은.mp3", cover: "music/jpg/ddd6ed85331e167a7d9437697300ffbe.jpg" }
+        { title: "광야를 지나며", artist: customArtistText, url: "music/pyi/광야를 지나며.mp3", cover: "music/jpg/광야를 지나며.jpg" },
+        { title: "슬픈 마음 있는 사람", artist: customArtistText, url: "music/pyi/슬픈 마음 있는 사람.mp3", cover: "music/jpg/슬픈마음있는 사람.jpg" },
+        { title: "약할 때 강함 되시네", artist: customArtistText, url: "music/pyi/약할 때 강함 되시네.mp3", cover: "music/jpg/약할 때 강함 되시네.jpg" },
+        { title: "어둔날 다 지나고", artist: customArtistText, url: "music/pyi/어둔날 다 지나고.mp3", cover: "music/jpg/어둔날 다 지나고.jpg" },
+        { title: "우리가 주를 더욱 사랑하고", artist: customArtistText, url: "music/pyi/우리가 주를 더욱 사랑하고.mp3", cover: "music/jpg/우리가 주를 더욱 사랑하고.jpg" },
+        { title: "전능하신 나의 주 하나님은", artist: customArtistText, url: "music/pyi/전능하신 나의 주 하나님은.mp3", cover: "music/jpg/ddd6ed85331e167a7d9437697300ffbe.jpg" }
     ];
 
-    // [기능] 하트 연동 핵심 로직
     function syncHearts() {
         const curTitle = playlistData[curIdx]?.title;
         const isFav = scrappedSongs.includes(curTitle);
-        // 메인 하트 버튼 상태 업데이트
         $('#btn-scrap').toggleClass('active', isFav).find('i').attr('class', isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
-        
-        // 리스트 내 하트 상태 업데이트
         $('#song-list-ul li').each(function(i) {
             const isSet = scrappedSongs.includes(playlistData[i].title);
             $(this).find('.list-heart-btn').toggleClass('active', isSet).find('i').attr('class', isSet ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
@@ -48,13 +40,11 @@ $(document).ready(function() {
 
     function toggleFav(title) {
         const idx = scrappedSongs.indexOf(title);
-        if (idx === -1) scrappedSongs.push(title); 
-        else scrappedSongs.splice(idx, 1);
+        if (idx === -1) scrappedSongs.push(title); else scrappedSongs.splice(idx, 1);
         localStorage.setItem('myScraps', JSON.stringify(scrappedSongs));
         syncHearts();
     }
 
-    // [기능] 플레이어 로드
     function load(i, play = false) {
         curIdx = i; const s = playlistData[i];
         audio.src = s.url; 
@@ -66,72 +56,121 @@ $(document).ready(function() {
         if (play) audio.play();
     }
 
-    // [기능] 공유하기 (Web Share API)
     $('#btn-share').click(function() {
-        const s = playlistData[curIdx];
-        if (navigator.share) {
-            navigator.share({
-                title: 'Youth Player 찬양 공유',
-                text: `${s.title} - ${s.artist} (함께 들어요!)`,
-                url: window.location.href
-            }).catch(console.error);
-        } else {
-            alert('현재 브라우저에서는 공유 기능을 지원하지 않습니다. 링크를 복사해 주세요!');
-        }
+        if (navigator.share) navigator.share({title:'Youth Player', text:`${playlistData[curIdx].title} 함께 들어요!`, url:window.location.href}).catch(console.error);
+        else alert('링크를 복사했습니다!');
     });
 
-    // 플레이어 기본 동작
     $('#btn-play-pause').click(() => audio.paused ? audio.play() : audio.pause());
     audio.onplay = () => $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
     audio.onpause = () => $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
     $('#btn-next').click(() => load((curIdx + 1) % playlistData.length, true));
     $('#btn-prev').click(() => load((curIdx - 1 + playlistData.length) % playlistData.length, true));
 
-    // 하트 클릭 이벤트
     $('#btn-scrap').click(() => toggleFav(playlistData[curIdx].title));
+
+    // [이벤트 분리] 곡 선택 구역
+    $(document).on('click', '.song-select-zone', function() {
+        const idx = $(this).closest('li').data('idx');
+        load(idx, true);
+        $('#sheet').removeClass('expanded');
+    });
+
+    // [이벤트 분리] 하트 버튼 구역
     $(document).on('click', '.list-heart-btn', function(e) {
         e.stopPropagation();
         const idx = $(this).closest('li').data('idx');
         toggleFav(playlistData[idx].title);
     });
 
-    // 팝업 제어
-    $('#btn-open-chat').click(() => $('#chat-overlay').addClass('active'));
+    $('#btn-open-chat').click(() => { $('#chat-overlay').addClass('active'); $('#chat-badge').hide(); });
     $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
-    $('.close-x').click(() => $('.ios-popup').removeClass('active'));
-    $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
+    $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
 
-    // 채팅 기능 (실시간 연동)
+    $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
+    let startY = 0;
+    $('#sheet-trigger').on('touchstart', e => { startY = e.originalEvent.touches[0].clientY; });
+    $('#sheet-trigger').on('touchend', e => {
+        const dist = startY - e.originalEvent.changedTouches[0].clientY;
+        if (dist > 35) $('#sheet').addClass('expanded'); else if (dist < -35) $('#sheet').removeClass('expanded');
+    });
+
     if (typeof firebase !== 'undefined') {
         const db = firebase.database().ref('messages');
         $('#btn-send-chat').click(() => {
             const t = $('#chat-input').val().trim();
-            if(t) { db.push({text:t, sender:userId, timestamp:Date.now()}); $('#chat-input').val(''); }
+            if(t) { db.push({text: t, sender: userId, timestamp: Date.now(), likeCount: 0}); $('#chat-input').val(''); }
         });
-        db.limitToLast(30).on('child_added', (snap) => {
-            const m = snap.val();
+
+        db.limitToLast(50).on('child_added', (snap) => {
+            const key = snap.key; const m = snap.val();
+            renderMessage(key, m);
+            if (!$('#chat-overlay').hasClass('active')) $('#chat-badge').show();
+        });
+
+        db.on('child_changed', (snap) => {
+            const $btn = $(`.msg-like-btn[data-key="${snap.key}"]`);
+            $btn.find('.like-count').text(snap.val().likeCount || 0);
+        });
+
+        function renderMessage(key, m) {
             const isMe = m.sender === userId;
-            $('#chat-messages').append(`<div class="message ${isMe?'me':'other'}">${m.text}</div>`);
+            const iLikeIt = myLikedMsgs.includes(key);
+            const html = `
+                <div class="msg-row ${isMe ? 'me' : 'other'}">
+                    <div class="message ${isMe ? 'me' : 'other'}">${m.text}</div>
+                    <button class="msg-like-btn ${iLikeIt ? 'liked' : ''}" data-key="${key}">
+                        <i class="${iLikeIt ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                        <span class="like-count">${m.likeCount > 0 ? m.likeCount : ''}</span>
+                    </button>
+                </div>`;
+            $('#chat-messages').append(html);
             $('.chat-viewport').scrollTop($('.chat-viewport')[0].scrollHeight);
+        }
+
+        $(document).on('click', '.msg-like-btn', function() {
+            const key = $(this).data('key');
+            const isLiked = myLikedMsgs.includes(key);
+            db.child(key).transaction((post) => {
+                if (post) post.likeCount = (post.likeCount || 0) + (isLiked ? -1 : 1);
+                return post;
+            }, (error, committed) => {
+                if (committed) {
+                    if (isLiked) {
+                        myLikedMsgs = myLikedMsgs.filter(k => k !== key);
+                        $(this).removeClass('liked').find('i').attr('class', 'fa-regular fa-heart');
+                    } else {
+                        myLikedMsgs.push(key);
+                        $(this).addClass('liked').find('i').attr('class', 'fa-solid fa-heart');
+                    }
+                    localStorage.setItem('myLikedMsgs', JSON.stringify(myLikedMsgs));
+                }
+            });
         });
     }
 
-    // 리스트 렌더링
-    window.playSong = (i) => { load(i, true); $('#sheet').removeClass('expanded'); };
     function render() {
         $('#total-count').text(playlistData.length);
         const $ul = $('#song-list-ul').empty();
         playlistData.forEach((s, i) => {
-            $ul.append(`<li class="${i===curIdx?'active':''}" data-idx="${i}" onclick="playSong(${i})">
-                <img src="${s.cover}" class="mini-art">
-                <div style="flex:1;"><strong>${s.title}</strong><p style="font-size:0.75rem;">${s.artist}</p></div>
-                <div class="list-heart-btn"><i class="fa-regular fa-heart"></i></div>
-            </li>`);
+            $ul.append(`
+                <li class="${i===curIdx?'active':''}" data-idx="${i}">
+                    <div class="song-select-zone">
+                        <img src="${s.cover}" class="mini-art">
+                        <div class="song-info-texts">
+                            <strong>${s.title}</strong>
+                            <p>${s.artist}</p>
+                        </div>
+                    </div>
+                    <div class="list-heart-btn">
+                        <i class="fa-regular fa-heart"></i>
+                    </div>
+                </li>
+            `);
         });
         syncHearts();
     }
 
-    // 시간 업데이트
     audio.ontimeupdate = () => {
         if(isNaN(audio.duration)) return;
         $('#progress-bar').val((audio.currentTime/audio.duration)*100);
