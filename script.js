@@ -19,8 +19,9 @@ $(document).ready(function() {
     localStorage.setItem('chatUserId', userId);
     let myLikedMsgs = JSON.parse(localStorage.getItem('myLikedMsgs')) || [];
     
+    // [수정] 셔플 및 반복 상태 변수
     let isShuffle = false;
-    let repeatMode = 0; // 0:Off, 1:All, 2:One
+    let repeatMode = 0; // 0: 반복 안함, 1: 전체 반복, 2: 1곡 반복
 
     const artistText = "2월26일 21시 기도회";
     const playlistData = [
@@ -61,18 +62,57 @@ $(document).ready(function() {
     }
 
     function nextTrack() {
-        let nextIdx = isShuffle ? Math.floor(Math.random() * playlistData.length) : (curIdx + 1) % playlistData.length;
-        if (isShuffle && nextIdx === curIdx) nextIdx = (nextIdx + 1) % playlistData.length;
+        let nextIdx;
+        if (isShuffle) {
+            nextIdx = Math.floor(Math.random() * playlistData.length);
+            if (nextIdx === curIdx) nextIdx = (nextIdx + 1) % playlistData.length;
+        } else {
+            nextIdx = (curIdx + 1) % playlistData.length;
+        }
+        
+        // 반복 모드 0일 때 마지막 곡이면 정지
+        if (repeatMode === 0 && curIdx === playlistData.length - 1) {
+            audio.pause();
+            audio.currentTime = 0;
+            return;
+        }
         load(nextIdx, true);
     }
-    
-    audio.onended = () => repeatMode === 2 ? load(curIdx, true) : nextTrack();
 
-    $('#btn-shuffle').click(function() { isShuffle = !isShuffle; $(this).toggleClass('active', isShuffle); });
+    // [수정] 반복 재생 모드에 따른 동작
+    audio.onended = () => {
+        if (repeatMode === 2) {
+            audio.currentTime = 0;
+            audio.play();
+        } else {
+            nextTrack();
+        }
+    };
+
+    $('#btn-shuffle').click(function() { 
+        isShuffle = !isShuffle; 
+        $(this).toggleClass('active', isShuffle); 
+    });
+
+    // [수정] 반복 재생 모드 순환 로직
     $('#btn-repeat').click(function() {
         repeatMode = (repeatMode + 1) % 3;
-        $(this).toggleClass('active', repeatMode !== 0);
-        $(this).find('.repeat-dot').toggle(repeatMode !== 0);
+        const $icon = $(this).find('i');
+        const $dot = $(this).find('.repeat-dot');
+
+        if (repeatMode === 0) { // 반복 안함
+            $(this).removeClass('active');
+            $icon.attr('class', 'fa-solid fa-repeat');
+            $dot.hide();
+        } else if (repeatMode === 1) { // 전체 반복
+            $(this).addClass('active');
+            $icon.attr('class', 'fa-solid fa-repeat');
+            $dot.show();
+        } else if (repeatMode === 2) { // 1곡 반복
+            $(this).addClass('active');
+            $icon.attr('class', 'fa-solid fa-rotate-right'); // 1곡 반복 전용 아이콘 느낌
+            $dot.show();
+        }
     });
 
     $('#btn-play-pause').click(() => audio.paused ? audio.play() : audio.pause());
@@ -82,23 +122,51 @@ $(document).ready(function() {
     $('#btn-prev').click(() => load((curIdx - 1 + playlistData.length) % playlistData.length, true));
     $('#btn-scrap').click(() => toggleFav(playlistData[curIdx].title));
 
-    // 팝업 제어
     $('#btn-open-chat').click(() => { $('#chat-overlay').addClass('active'); $('#chat-badge').hide(); });
     $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
     $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
-    $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
 
-    // 리스트 클릭 (영역 분리)
+    // [수정] 바텀시트 자연스러운 스와이프 및 클릭 인터렉션
+    let startY = 0;
+    let isDragging = false;
+
+    $('#sheet-trigger').on('click', function(e) {
+        if (!isDragging) {
+            $('#sheet').toggleClass('expanded');
+        }
+    });
+
+    $('#sheet-trigger').on('touchstart', function(e) {
+        startY = e.originalEvent.touches[0].clientY;
+        isDragging = false;
+    });
+
+    $('#sheet-trigger').on('touchmove', function(e) {
+        let currentY = e.originalEvent.touches[0].clientY;
+        let diff = startY - currentY;
+        
+        if (Math.abs(diff) > 10) {
+            isDragging = true;
+        }
+
+        // 위로 스와이프: 확장 / 아래로 스와이프: 축소
+        if (diff > 50) {
+            $('#sheet').addClass('expanded');
+        } else if (diff < -50) {
+            $('#sheet').removeClass('expanded');
+        }
+    });
+
     $(document).on('click', '.song-select-zone', function() {
         load($(this).closest('li').data('idx'), true);
         $('#sheet').removeClass('expanded');
     });
+
     $(document).on('click', '.list-heart-btn', function(e) {
         e.stopPropagation();
         toggleFav(playlistData[$(this).closest('li').data('idx')].title);
     });
 
-    // 실시간 채팅
     if (typeof firebase !== 'undefined') {
         const chatDb = db.ref('messages');
         $('#btn-send-chat').click(() => {
