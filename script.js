@@ -16,12 +16,11 @@ $(document).ready(function() {
     let curIdx = -1;
     // [중요] 하트 연동 데이터 복구
     let scrappedSongs = JSON.parse(localStorage.getItem('myScraps')) || [];
-    let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
+    let userId {"path":"/tauri/C/Users/po356/Documents/GitHub/Andre_Youth_player/script.js"}= localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('chatUserId', userId);
     let repeatMode = 0; 
     
-    
-    alet('테스트');
+
     
     // [중요] 원본 플레이리스트 6곡 복구
     const playlistData = [
