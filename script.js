@@ -10,6 +10,7 @@ $(document).ready(function() {
     };
 
     if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
     const audio = document.getElementById('audio-engine');
     let curIdx = -1;
@@ -56,93 +57,73 @@ $(document).ready(function() {
         if (play) audio.play();
     }
 
-    $('#btn-share').click(function() {
-        if (navigator.share) navigator.share({title:'Youth Player', text:`${playlistData[curIdx].title} 함께 들어요!`, url:window.location.href}).catch(console.error);
-        else alert('링크를 복사했습니다!');
-    });
+    // 팝업/바텀시트 핸들링
+    $('#btn-open-chat').click(() => { $('#chat-overlay').addClass('active'); $('#chat-badge').hide(); });
+    $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
+    $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
+    $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
 
-    $('#btn-play-pause').click(() => audio.paused ? audio.play() : audio.pause());
-    audio.onplay = () => $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
-    audio.onpause = () => $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
-    $('#btn-next').click(() => load((curIdx + 1) % playlistData.length, true));
-    $('#btn-prev').click(() => load((curIdx - 1 + playlistData.length) % playlistData.length, true));
-
-    $('#btn-scrap').click(() => toggleFav(playlistData[curIdx].title));
-
-    // [이벤트 분리] 곡 선택 구역
+    // [중요] 리스트 클릭 영역 분리
     $(document).on('click', '.song-select-zone', function() {
         const idx = $(this).closest('li').data('idx');
         load(idx, true);
         $('#sheet').removeClass('expanded');
     });
 
-    // [이벤트 분리] 하트 버튼 구역
     $(document).on('click', '.list-heart-btn', function(e) {
         e.stopPropagation();
         const idx = $(this).closest('li').data('idx');
         toggleFav(playlistData[idx].title);
     });
 
-    $('#btn-open-chat').click(() => { $('#chat-overlay').addClass('active'); $('#chat-badge').hide(); });
-    $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
-    $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
+    // 플레이어 기본 로직
+    $('#btn-play-pause').click(() => audio.paused ? audio.play() : audio.pause());
+    audio.onplay = () => $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
+    audio.onpause = () => $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+    $('#btn-next').click(() => load((curIdx + 1) % playlistData.length, true));
+    $('#btn-prev').click(() => load((curIdx - 1 + playlistData.length) % playlistData.length, true));
+    $('#btn-scrap').click(() => toggleFav(playlistData[curIdx].title));
 
-    $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
-    let startY = 0;
-    $('#sheet-trigger').on('touchstart', e => { startY = e.originalEvent.touches[0].clientY; });
-    $('#sheet-trigger').on('touchend', e => {
-        const dist = startY - e.originalEvent.changedTouches[0].clientY;
-        if (dist > 35) $('#sheet').addClass('expanded'); else if (dist < -35) $('#sheet').removeClass('expanded');
-    });
-
+    // 실시간 채팅 & 좋아요
     if (typeof firebase !== 'undefined') {
-        const db = firebase.database().ref('messages');
+        const chatDb = db.ref('messages');
         $('#btn-send-chat').click(() => {
             const t = $('#chat-input').val().trim();
-            if(t) { db.push({text: t, sender: userId, timestamp: Date.now(), likeCount: 0}); $('#chat-input').val(''); }
+            if(t) { chatDb.push({text: t, sender: userId, timestamp: Date.now(), likeCount: 0}); $('#chat-input').val(''); }
         });
 
-        db.limitToLast(50).on('child_added', (snap) => {
+        chatDb.limitToLast(30).on('child_added', (snap) => {
             const key = snap.key; const m = snap.val();
-            renderMessage(key, m);
-            if (!$('#chat-overlay').hasClass('active')) $('#chat-badge').show();
-        });
-
-        db.on('child_changed', (snap) => {
-            const $btn = $(`.msg-like-btn[data-key="${snap.key}"]`);
-            $btn.find('.like-count').text(snap.val().likeCount || 0);
-        });
-
-        function renderMessage(key, m) {
             const isMe = m.sender === userId;
             const iLikeIt = myLikedMsgs.includes(key);
             const html = `
                 <div class="msg-row ${isMe ? 'me' : 'other'}">
                     <div class="message ${isMe ? 'me' : 'other'}">${m.text}</div>
                     <button class="msg-like-btn ${iLikeIt ? 'liked' : ''}" data-key="${key}">
-                        <i class="${iLikeIt ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                        <span class="like-count">${m.likeCount > 0 ? m.likeCount : ''}</span>
+                        <i class="${iLikeIt ? 'fa-solid' : 'fa-heart'} fa-heart"></i>
+                        <span class="like-count">${m.likeCount || ''}</span>
                     </button>
                 </div>`;
             $('#chat-messages').append(html);
             $('.chat-viewport').scrollTop($('.chat-viewport')[0].scrollHeight);
-        }
+            if (!$('#chat-overlay').hasClass('active')) $('#chat-badge').show();
+        });
+
+        chatDb.on('child_changed', (snap) => {
+            $(`.msg-like-btn[data-key="${snap.key}"] .like-count`).text(snap.val().likeCount || '');
+        });
 
         $(document).on('click', '.msg-like-btn', function() {
             const key = $(this).data('key');
             const isLiked = myLikedMsgs.includes(key);
-            db.child(key).transaction((post) => {
+            chatDb.child(key).transaction(post => {
                 if (post) post.likeCount = (post.likeCount || 0) + (isLiked ? -1 : 1);
                 return post;
-            }, (error, committed) => {
+            }, (err, committed) => {
                 if (committed) {
-                    if (isLiked) {
-                        myLikedMsgs = myLikedMsgs.filter(k => k !== key);
-                        $(this).removeClass('liked').find('i').attr('class', 'fa-regular fa-heart');
-                    } else {
-                        myLikedMsgs.push(key);
-                        $(this).addClass('liked').find('i').attr('class', 'fa-solid fa-heart');
-                    }
+                    if (isLiked) myLikedMsgs = myLikedMsgs.filter(k => k !== key);
+                    else myLikedMsgs.push(key);
+                    $(this).toggleClass('liked', !isLiked).find('i').attr('class', !isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
                     localStorage.setItem('myLikedMsgs', JSON.stringify(myLikedMsgs));
                 }
             });
@@ -162,9 +143,7 @@ $(document).ready(function() {
                             <p>${s.artist}</p>
                         </div>
                     </div>
-                    <div class="list-heart-btn">
-                        <i class="fa-regular fa-heart"></i>
-                    </div>
+                    <div class="list-heart-btn"><i class="fa-regular fa-heart"></i></div>
                 </li>
             `);
         });
@@ -175,8 +154,7 @@ $(document).ready(function() {
         if(isNaN(audio.duration)) return;
         $('#progress-bar').val((audio.currentTime/audio.duration)*100);
         const fmt = (s) => { const m=Math.floor(s/60), sc=Math.floor(s%60); return `${m}:${sc<10?'0'+sc:sc}`; };
-        $('#time-now').text(fmt(audio.currentTime));
-        $('#time-total').text(fmt(audio.duration));
+        $('#time-now').text(fmt(audio.currentTime)); $('#time-total').text(fmt(audio.duration));
     };
     $('#progress-bar').on('input', function() { audio.currentTime = ($(this).val()/100)*audio.duration; });
 
