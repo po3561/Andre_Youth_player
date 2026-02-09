@@ -38,15 +38,16 @@
 
             <div class="nav-volume-layer">
                 <i class="fa-solid fa-volume-low"></i>
-                <input type="range" id="top-vol-slider" value="80" step="1" min="0" max="100">
+                <input type="range" id="sb-volume-slider" value="80" step="1" min="0" max="100">
                 <i class="fa-solid fa-volume-high"></i>
                 <button id="btn-vol-close" class="vol-close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </header>
 
         <main class="player-body">
-            <div class="album-section">
+            <div class="album-section" id="album-trigger">
                 <img src="" id="album-img" class="album-art" alt="Album Art">
+                <div class="lyrics-hint">TAP FOR LYRICS</div>
             </div>
 
             <div class="info-section">
@@ -79,10 +80,20 @@
             </div>
         </main>
 
+        <div id="lyrics-overlay">
+            <div class="lyrics-header">
+                <span id="lyrics-title-text">곡 제목</span>
+                <button id="btn-close-lyrics" class="icon-btn"><i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+            <div class="lyrics-container">
+                <div id="lyrics-scroll-area"></div>
+            </div>
+        </div>
+
         <div id="chat-overlay" class="ios-popup">
             <div class="popup-card glass-card">
                 <div class="popup-header">
-                    <span>기도 제목 나누기 (익명/실명X)</span>
+                    <span>기도 제목 나누기 (익명)</span>
                     <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div id="chat-messages" class="chat-viewport"></div>
@@ -109,7 +120,6 @@
                         <div class="copy-item"><span class="copy-title">5. 광야를 지나며</span><a href="https://youtu.be/zIdppmRuluk" target="_blank">출처 보기</a></div>
                         <div class="copy-item"><span class="copy-title">6. 우리가 주를 더욱 사랑하고</span><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">출처 보기</a></div>
                     </div>
-                    <div class="copyright-footer">© 2026 Andre Youth Association. All rights reserved.</div>
                 </div>
             </div>
         </div>
@@ -121,14 +131,16 @@
             </div>
             <div class="sheet-main">
                 <div class="list-head">
-                    <h3>기도회 찬양곡</h3>
+                    <h3>찬양 목록</h3>
                     <span class="count-txt">총 <span id="total-count">0</span>곡</span>
                 </div>
                 <div class="list-scroll-area"><ul id="song-list-ul"></ul></div>
             </div>
         </section>
     </div>
+
     <audio id="audio-engine" preload="auto"></audio>
+    <script src="lyrics.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
