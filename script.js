@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    // [보존] Firebase 초기화
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -8,19 +9,15 @@ $(document).ready(function() {
         messagingSenderId: "406016035492",
         appId: "1:406016035492:web:e3d03145aefa945c707431"
     };
-
     if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     const audio = document.getElementById('audio-engine');
-    let curIdx = -1;
+    let curIdx = -1, isShuffle = false, repeatMode = 0;
     let scrappedSongs = JSON.parse(localStorage.getItem('myScraps')) || [];
     let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('chatUserId', userId);
     let myLikedMsgs = JSON.parse(localStorage.getItem('myLikedMsgs')) || [];
-    
-    let isShuffle = false;
-    let repeatMode = 0; 
 
     const playlistData = [
         { title: "광야를 지나며", artist: "2월26일 21시 기도회", url: "music/pyi/광야를 지나며.mp3", cover: "music/jpg/광야를 지나며.jpg" },
@@ -31,20 +28,38 @@ $(document).ready(function() {
         { title: "전능하신 나의 주 하나님은", artist: "2월26일 21시 기도회", url: "music/pyi/전능하신 나의 주 하나님은.mp3", cover: "music/jpg/ddd6ed85331e167a7d9437697300ffbe.jpg" }
     ];
 
-    // [수정] 사운드바 활성화 로직
+    // [개선] 사운드바 활성화 로직 (클래스명 mode-volume으로 수정)
     let sbTimer;
-    function toggleSb() {
-        $('.sb-top-nav').addClass('active-vol');
+    function openSb() {
+        $('#main-header').addClass('mode-volume');
         clearTimeout(sbTimer);
-        sbTimer = setTimeout(() => $('.sb-top-nav').removeClass('active-vol'), 3500);
+        sbTimer = setTimeout(() => $('#main-header').removeClass('mode-volume'), 3500);
     }
-    $('#btn-sb-trigger').click((e) => { e.stopPropagation(); toggleSb(); });
-    $('#btn-sb-close').click(() => $('.sb-top-nav').removeClass('active-vol'));
-    $('#sb-volume-slider').on('input', function() {
-        audio.volume = $(this).val() / 100;
-        toggleSb();
+
+    // 터치/클릭 간섭 방지 처리
+    $('#btn-vol-trigger').on('click touchstart', function(e) {
+        e.stopPropagation(); // 스와이프 로직 간섭 차단
+        openSb();
     });
 
+    $('#btn-vol-close').on('click touchstart', function(e) {
+        e.stopPropagation();
+        $('#main-header').removeClass('mode-volume');
+    });
+
+    $('#sb-volume-slider').on('input', function() {
+        audio.volume = $(this).val() / 100;
+        openSb(); // 조작 중엔 타이머 리셋
+    });
+    
+    // [개선] 재생/일시정지 터치 대응
+    $('#btn-play-pause').on('click touchstart', function(e) {
+        e.preventDefault(); // 더블 클릭 방지 및 즉각 반응
+        e.stopPropagation();
+        if (audio.paused) audio.play(); else audio.pause();
+    });
+
+    // [보존] 하트 연동 로직
     function syncHearts() {
         const curTitle = playlistData[curIdx]?.title;
         const isFav = scrappedSongs.includes(curTitle);
@@ -62,66 +77,38 @@ $(document).ready(function() {
         syncHearts();
     }
 
+    // [보존] 재생 로직
     function load(i, play = false) {
         curIdx = i; const s = playlistData[i];
-        audio.src = s.url; 
-        $('#album-img').attr('src', s.cover);
+        audio.src = s.url; $('#album-img').attr('src', s.cover);
         $('#bg-image').css('background-image', `url('${s.cover}')`);
-        $('#disp-title').text(s.title); 
-        $('#disp-artist').text("늘 모이던 곳 6층");
-        render(); syncHearts(); 
+        $('#disp-title').text(s.title); render(); syncHearts();
         if (play) audio.play();
     }
-
-    function nextTrack() {
-        let nextIdx;
-        if (isShuffle) {
-            nextIdx = Math.floor(Math.random() * playlistData.length);
-            if (nextIdx === curIdx) nextIdx = (nextIdx + 1) % playlistData.length;
-        } else {
-            nextIdx = (curIdx + 1) % playlistData.length;
-        }
-        if (repeatMode === 0 && curIdx === playlistData.length - 1) {
-            audio.pause(); audio.currentTime = 0; return;
-        }
-        load(nextIdx, true);
-    }
-
-    audio.onended = () => repeatMode === 2 ? (audio.currentTime=0, audio.play()) : nextTrack();
-
-    $('#btn-shuffle').click(function() { isShuffle = !isShuffle; $(this).toggleClass('active', isShuffle); });
-    $('#btn-repeat').click(function() {
-        repeatMode = (repeatMode + 1) % 3;
-        const $icon = $(this).find('i');
-        const $dot = $(this).find('.repeat-dot');
-        $(this).toggleClass('active', repeatMode > 0);
-        if (repeatMode === 0) { $icon.attr('class', 'fa-solid fa-repeat'); $dot.hide(); }
-        else if (repeatMode === 1) { $icon.attr('class', 'fa-solid fa-repeat'); $dot.show(); }
-        else if (repeatMode === 2) { $icon.attr('class', 'fa-solid fa-rotate-right'); $dot.show(); }
-    });
-
-    $('#btn-play-pause').click(() => audio.paused ? audio.play() : audio.pause());
+    function next() { let n = isShuffle ? Math.floor(Math.random()*playlistData.length) : (curIdx+1)%playlistData.length; load(n, true); }
+    audio.onended = () => repeatMode === 2 ? (audio.currentTime=0, audio.play()) : next();
     audio.onplay = () => $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
     audio.onpause = () => $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
-    $('#btn-next').click(nextTrack);
-    $('#btn-prev').click(() => load((curIdx - 1 + playlistData.length) % playlistData.length, true));
+    $('#btn-next').click(next);
+    $('#btn-prev').click(() => load((curIdx-1+playlistData.length)%playlistData.length, true));
+    $('#btn-shuffle').click(function() { isShuffle = !isShuffle; $(this).toggleClass('active', isShuffle); });
+    $('#btn-repeat').click(function() { repeatMode = (repeatMode + 1) % 3; $(this).toggleClass('active', repeatMode > 0); });
     $('#btn-scrap').click(() => toggleFav(playlistData[curIdx].title));
 
-    $('#btn-open-chat').click(() => { $('#chat-overlay').addClass('active'); $('#chat-badge').hide(); });
+    // [보존] 팝업 및 스와이프 바텀시트
+    $('#btn-open-chat').click(() => $('#chat-overlay').addClass('active'));
     $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
     $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
+    
+    let sheetStartY = 0;
+    $('#sheet-trigger').on('touchstart', (e) => { sheetStartY = e.touches[0].clientY; });
+    $('#sheet-trigger').on('touchmove', (e) => {
+        let diff = sheetStartY - e.touches[0].clientY;
+        if(diff > 40) $('#sheet').addClass('expanded'); else if(diff < -40) $('#sheet').removeClass('expanded');
+    });
     $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
 
-    $(document).on('click', '.song-select-zone', function() {
-        load($(this).closest('li').data('idx'), true);
-        $('#sheet').removeClass('expanded');
-    });
-
-    $(document).on('click', '.list-heart-btn', function(e) {
-        e.stopPropagation();
-        toggleFav(playlistData[$(this).closest('li').data('idx')].title);
-    });
-
+    // [보존] 채팅 좋아요 기능
     if (typeof firebase !== 'undefined') {
         const chatDb = db.ref('messages');
         $('#btn-send-chat').click(() => {
@@ -129,31 +116,25 @@ $(document).ready(function() {
             if(t) { chatDb.push({text: t, sender: userId, timestamp: Date.now(), likeCount: 0}); $('#chat-input').val(''); }
         });
         chatDb.limitToLast(30).on('child_added', (snap) => {
-            const key = snap.key, m = snap.val(), isMe = m.sender === userId, iLikeIt = myLikedMsgs.includes(key);
-            // [수정] 하트 아이콘 생성 부분: unliked일 때 'fa-regular' 사용
+            const key = snap.key, m = snap.val(), isMe = m.sender === userId, iLike = myLikedMsgs.includes(key);
             $('#chat-messages').append(`
-                <div class="msg-row" style="display:flex; justify-content:${isMe?'flex-end':'flex-start'}; margin-bottom:10px;">
+                <div class="msg-row" style="display:flex; justify-content:${isMe?'flex-end':'flex-start'}; width:100%;">
                     <div style="display:flex; align-items:flex-end; max-width:85%; flex-direction:${isMe?'row-reverse':'row'};">
-                        <div class="message ${isMe?'me':'other'}">${m.text}</div>
-                        <button class="msg-like-btn ${iLikeIt ? 'liked' : ''}" data-key="${key}">
-                            <i class="${iLikeIt ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                            <span class="like-count">${m.likeCount || ''}</span>
+                        <div class="message ${isMe?'me':'other'}" style="background:${isMe?'var(--primary)':'#fff'}; color:${isMe?'#fff':'#333'}; padding:10px 15px; border-radius:15px;">${m.text}</div>
+                        <button class="msg-like-btn ${iLike?'liked':''}" data-key="${key}">
+                            <i class="${iLike?'fa-solid':'fa-regular'} fa-heart"></i>
+                            <span class="like-count">${m.likeCount||''}</span>
                         </button>
                     </div>
                 </div>`);
             $('.chat-viewport').scrollTop($('.chat-viewport')[0].scrollHeight);
-            if (!$('#chat-overlay').hasClass('active')) $('#chat-badge').show();
         });
-        chatDb.on('child_changed', (snap) => { $(`.msg-like-btn[data-key="${snap.key}"] .like-count`).text(snap.val().likeCount || ''); });
         $(document).on('click', '.msg-like-btn', function() {
-            const key = $(this).data('key'), isLiked = myLikedMsgs.includes(key);
-            chatDb.child(key).transaction(p => { if (p) p.likeCount = (p.likeCount || 0) + (isLiked ? -1 : 1); return p; }, (e, c) => {
-                if (c) {
-                    if (isLiked) myLikedMsgs = myLikedMsgs.filter(k => k !== key); else myLikedMsgs.push(key);
-                    $(this).toggleClass('liked', !isLiked).find('i').attr('class', !isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
-                    localStorage.setItem('myLikedMsgs', JSON.stringify(myLikedMsgs));
-                }
-            });
+            const key = $(this).data('key'), isLiked = $(this).hasClass('liked');
+            chatDb.child(key).transaction(p => { if (p) p.likeCount = (p.likeCount || 0) + (isLiked ? -1 : 1); return p; });
+            if (isLiked) myLikedMsgs = myLikedMsgs.filter(k => k !== key); else myLikedMsgs.push(key);
+            localStorage.setItem('myLikedMsgs', JSON.stringify(myLikedMsgs));
+            $(this).toggleClass('liked', !isLiked).find('i').attr('class', !isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
         });
     }
 
@@ -162,7 +143,7 @@ $(document).ready(function() {
         const $ul = $('#song-list-ul').empty();
         playlistData.forEach((s, i) => {
             $ul.append(`<li class="${i===curIdx?'active':''}" data-idx="${i}">
-                <div class="song-select-zone">
+                <div class="song-select-zone" style="display:flex; align-items:center; flex:1; cursor:pointer;">
                     <img src="${s.cover}" class="mini-art">
                     <div class="song-info-texts"><strong>${s.title}</strong><p>${s.artist}</p></div>
                 </div>
@@ -171,6 +152,8 @@ $(document).ready(function() {
         });
         syncHearts();
     }
+    $(document).on('click', '.song-select-zone', function() { load($(this).closest('li').data('idx'), true); $('#sheet').removeClass('expanded'); });
+    $(document).on('click', '.list-heart-btn', function(e) { e.stopPropagation(); toggleFav(playlistData[$(this).closest('li').data('idx')].title); });
 
     audio.ontimeupdate = () => {
         if(isNaN(audio.duration)) return;
@@ -179,8 +162,5 @@ $(document).ready(function() {
         $('#time-now').text(fmt(audio.currentTime)); $('#time-total').text(fmt(audio.duration));
     };
     $('#progress-bar').on('input', function() { audio.currentTime = ($(this).val()/100)*audio.duration; });
-    
-    $('#btn-share').click(() => navigator.share ? navigator.share({title:'Youth Player', text:`${playlistData[curIdx].title} 함께 들어요!`, url:window.location.href}) : alert('링크 복사 완료!'));
-
     load(0);
 });
