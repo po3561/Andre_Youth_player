@@ -15,20 +15,32 @@
     <div class="glass-background"></div>
     
     <div class="app-container">
-        <header class="top-nav">
-            <div class="nav-side">
-                <button id="btn-open-chat" class="icon-btn">
-                    <i class="fa-solid fa-comment-dots"></i>
-                    <span id="chat-badge" class="badge"></span>
-                </button>
+        <header class="sb-top-nav" id="main-header">
+            <div class="sb-normal-layer">
+                <div class="nav-side">
+                    <button id="btn-open-chat" class="icon-btn">
+                        <i class="fa-solid fa-comment-dots"></i>
+                        <span id="chat-badge" class="badge"></span>
+                    </button>
+                    <button id="btn-sb-toggle" class="icon-btn" style="margin-left: 8px;">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+                <div class="nav-title">
+                    <span class="sub-title">2월26일 21시 기도회</span>
+                    <span class="main-title">믿음으로 기. 대하다</span>
+                </div>
+                <div class="nav-side" style="justify-content: flex-end;">
+                    <button id="btn-share" class="icon-btn" style="margin-right: 8px;"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+                    <button id="btn-copyright" class="icon-btn"><i class="fa-solid fa-circle-info"></i></button>
+                </div>
             </div>
-            <div class="nav-title">
-                <span class="sub-title">2월26일 21시 기도회</span>
-                <span class="main-title">믿음으로 기. 대하다</span>
-            </div>
-            <div class="nav-side header-right">
-                <button id="btn-share" class="icon-btn"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
-                <button id="btn-copyright" class="icon-btn"><i class="fa-solid fa-circle-info"></i></button>
+
+            <div class="sb-volume-layer">
+                <i class="fa-solid fa-volume-low"></i>
+                <input type="range" id="sb-slider" value="80" step="1" min="0" max="100">
+                <i class="fa-solid fa-volume-high"></i>
+                <button id="btn-sb-close" class="vol-close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </header>
 
@@ -40,7 +52,7 @@
             <div class="info-section">
                 <div class="text-group">
                     <h2 id="disp-title">Loading...</h2>
-                    <p id="disp-artist">우리가 늘 모이던 곳 6층</p>
+                    <p id="disp-artist">43.02.26 목 21시 늘 모이던 곳 6층</p>
                 </div>
                 <button id="btn-scrap" class="heart-btn"><i class="fa-regular fa-heart"></i></button>
             </div>
@@ -51,12 +63,6 @@
                     <span id="time-now">0:00</span>
                     <span id="time-total">0:00</span>
                 </div>
-            </div>
-
-            <div class="volume-section">
-                <i class="fa-solid fa-volume-low"></i>
-                <input type="range" id="volume-bar" value="80" step="1" min="0" max="100">
-                <i class="fa-solid fa-volume-high"></i>
             </div>
 
             <div class="control-section">
@@ -76,12 +82,12 @@
         <div id="chat-overlay" class="ios-popup">
             <div class="popup-card glass-card">
                 <div class="popup-header">
-                    <span>기도 제목 나누기 (익명/이름x)</span>
+                    <span>기도 제목 나누기 (익명)</span>
                     <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div id="chat-messages" class="chat-viewport"></div>
                 <div class="chat-input-row">
-                    <input type="text" id="chat-input" placeholder="기도 올라가기..." autocomplete="off">
+                    <input type="text" id="chat-input" placeholder="함께 기도를 상달해요..." autocomplete="off">
                     <button id="btn-send-chat" class="send-btn"><i class="fa-solid fa-arrow-up"></i></button>
                 </div>
             </div>
@@ -94,21 +100,16 @@
                     <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="popup-body">
-                    <div class="copyright-notice">
-                        <p>본 플레이어는 부산 지역 청년들의 신앙 활동을 지원하기 위한 <strong>비영리 목적으로 운영</strong>됩니다.</p>
-                        <p class="source-info">모든 음원의 저작권은 해당 원작자에게 있으며, 유튜브 공식 채널의 링크를 활용하고 있습니다.</p>
+                    <div class="copyright-notice">본 플레이어는 부산 지역 청년들의 신앙 활동을 지원하기 위한 <strong>비영리 목적으로 운영</strong>됩니다.</div>
+                    <div class="copyright-item-list">
+                        <div class="copy-item-box"><span>1. 슬픈 마음 있는 사람</span><a href="https://youtu.be/ovDif9FwCyU" target="_blank">보기</a></div>
+                        <div class="copy-item-box"><span>2. 약할 때 강함 되시네</span><a href="https://youtu.be/6ZLaChORt7o" target="_blank">보기</a></div>
+                        <div class="copy-item-box"><span>3. 전능하신 나의 주 하나님은</span><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">보기</a></div>
+                        <div class="copy-item-box"><span>4. 어둔 날 다 지나고</span><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">보기</a></div>
+                        <div class="copy-item-box"><span>5. 광야를 지나며</span><a href="https://youtu.be/zIdppmRuluk" target="_blank">보기</a></div>
+                        <div class="copy-item-box"><span>6. 우리가 주를 더욱 사랑하고</span><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">보기</a></div>
                     </div>
-                    <div class="copy-list">
-                        <div class="copy-item"><span class="copy-title">1. 슬픈 마음 있는 사람</span><a href="https://youtu.be/ovDif9FwCyU" target="_blank">출처 보기</a></div>
-                        <div class="copy-item"><span class="copy-title">2. 약할 때 강함 되시네</span><a href="https://youtu.be/6ZLaChORt7o" target="_blank">출처 보기</a></div>
-                        <div class="copy-item"><span class="copy-title">3. 전능하신 나의 주 하나님은</span><a href="https://youtu.be/9vS0aGxVHjk" target="_blank">출처 보기</a></div>
-                        <div class="copy-item"><span class="copy-title">4. 어둔 날 다 지나고</span><a href="https://youtu.be/EqDL2-OW1Z4" target="_blank">출처 보기</a></div>
-                        <div class="copy-item"><span class="copy-title">5. 광야를 지나며</span><a href="https://youtu.be/zIdppmRuluk" target="_blank">출처 보기</a></div>
-                        <div class="copy-item"><span class="copy-title">6. 우리가 주를 더욱 사랑하고</span><a href="https://youtu.be/aZKVBRA_hAg" target="_blank">출처 보기</a></div>
-                    </div>
-                    <div class="copyright-footer">
-                        <p>© 2026 Andre Youth Association. All rights reserved.</p>
-                    </div>
+                    <div class="copyright-footer">© 2026 Andre Youth Association.</div>
                 </div>
             </div>
         </div>
@@ -120,7 +121,7 @@
             </div>
             <div class="sheet-main">
                 <div class="list-head">
-                    <h3>다음 트랙</h3>
+                    <h3>찬양 목록</h3>
                     <span class="count-txt">총 <span id="total-count">0</span>곡</span>
                 </div>
                 <div class="list-scroll-area">

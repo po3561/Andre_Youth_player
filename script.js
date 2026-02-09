@@ -19,19 +19,31 @@ $(document).ready(function() {
     localStorage.setItem('chatUserId', userId);
     let myLikedMsgs = JSON.parse(localStorage.getItem('myLikedMsgs')) || [];
     
-    // [수정] 셔플 및 반복 상태 변수
     let isShuffle = false;
-    let repeatMode = 0; // 0: 반복 안함, 1: 전체 반복, 2: 1곡 반복
+    let repeatMode = 0; 
 
-    const artistText = "2월26일 21시 기도회";
     const playlistData = [
-        { title: "광야를 지나며", artist: artistText, url: "music/pyi/광야를 지나며.mp3", cover: "music/jpg/광야를 지나며.jpg" },
-        { title: "슬픈 마음 있는 사람", artist: artistText, url: "music/pyi/슬픈 마음 있는 사람.mp3", cover: "music/jpg/슬픈마음있는 사람.jpg" },
-        { title: "약할 때 강함 되시네", artist: artistText, url: "music/pyi/약할 때 강함 되시네.mp3", cover: "music/jpg/약할 때 강함 되시네.jpg" },
-        { title: "어둔날 다 지나고", artist: artistText, url: "music/pyi/어둔날 다 지나고.mp3", cover: "music/jpg/어둔날 다 지나고.jpg" },
-        { title: "우리가 주를 더욱 사랑하고", artist: artistText, url: "music/pyi/우리가 주를 더욱 사랑하고.mp3", cover: "music/jpg/우리가 주를 더욱 사랑하고.jpg" },
-        { title: "전능하신 나의 주 하나님은", artist: artistText, url: "music/pyi/전능하신 나의 주 하나님은.mp3", cover: "music/jpg/ddd6ed85331e167a7d9437697300ffbe.jpg" }
+        { title: "광야를 지나며", artist: "2월26일 21시 기도회", url: "music/pyi/광야를 지나며.mp3", cover: "music/jpg/광야를 지나며.jpg" },
+        { title: "슬픈 마음 있는 사람", artist: "2월26일 21시 기도회", url: "music/pyi/슬픈 마음 있는 사람.mp3", cover: "music/jpg/슬픈마음있는 사람.jpg" },
+        { title: "약할 때 강함 되시네", artist: "2월26일 21시 기도회", url: "music/pyi/약할 때 강함 되시네.mp3", cover: "music/jpg/약할 때 강함 되시네.jpg" },
+        { title: "어둔날 다 지나고", artist: "2월26일 21시 기도회", url: "music/pyi/어둔날 다 지나고.mp3", cover: "music/jpg/어둔날 다 지나고.jpg" },
+        { title: "우리가 주를 더욱 사랑하고", artist: "2월26일 21시 기도회", url: "music/pyi/우리가 주를 더욱 사랑하고.mp3", cover: "music/jpg/우리가 주를 더욱 사랑하고.jpg" },
+        { title: "전능하신 나의 주 하나님은", artist: "2월26일 21시 기도회", url: "music/pyi/전능하신 나의 주 하나님은.mp3", cover: "music/jpg/ddd6ed85331e167a7d9437697300ffbe.jpg" }
     ];
+
+    // [수정] 사운드바 활성화 로직
+    let sbTimer;
+    function toggleSb() {
+        $('.sb-top-nav').addClass('active-vol');
+        clearTimeout(sbTimer);
+        sbTimer = setTimeout(() => $('.sb-top-nav').removeClass('active-vol'), 3500);
+    }
+    $('#btn-sb-trigger').click((e) => { e.stopPropagation(); toggleSb(); });
+    $('#btn-sb-close').click(() => $('.sb-top-nav').removeClass('active-vol'));
+    $('#sb-volume-slider').on('input', function() {
+        audio.volume = $(this).val() / 100;
+        toggleSb();
+    });
 
     function syncHearts() {
         const curTitle = playlistData[curIdx]?.title;
@@ -69,50 +81,23 @@ $(document).ready(function() {
         } else {
             nextIdx = (curIdx + 1) % playlistData.length;
         }
-        
-        // 반복 모드 0일 때 마지막 곡이면 정지
         if (repeatMode === 0 && curIdx === playlistData.length - 1) {
-            audio.pause();
-            audio.currentTime = 0;
-            return;
+            audio.pause(); audio.currentTime = 0; return;
         }
         load(nextIdx, true);
     }
 
-    // [수정] 반복 재생 모드에 따른 동작
-    audio.onended = () => {
-        if (repeatMode === 2) {
-            audio.currentTime = 0;
-            audio.play();
-        } else {
-            nextTrack();
-        }
-    };
+    audio.onended = () => repeatMode === 2 ? (audio.currentTime=0, audio.play()) : nextTrack();
 
-    $('#btn-shuffle').click(function() { 
-        isShuffle = !isShuffle; 
-        $(this).toggleClass('active', isShuffle); 
-    });
-
-    // [수정] 반복 재생 모드 순환 로직
+    $('#btn-shuffle').click(function() { isShuffle = !isShuffle; $(this).toggleClass('active', isShuffle); });
     $('#btn-repeat').click(function() {
         repeatMode = (repeatMode + 1) % 3;
         const $icon = $(this).find('i');
         const $dot = $(this).find('.repeat-dot');
-
-        if (repeatMode === 0) { // 반복 안함
-            $(this).removeClass('active');
-            $icon.attr('class', 'fa-solid fa-repeat');
-            $dot.hide();
-        } else if (repeatMode === 1) { // 전체 반복
-            $(this).addClass('active');
-            $icon.attr('class', 'fa-solid fa-repeat');
-            $dot.show();
-        } else if (repeatMode === 2) { // 1곡 반복
-            $(this).addClass('active');
-            $icon.attr('class', 'fa-solid fa-rotate-right'); // 1곡 반복 전용 아이콘 느낌
-            $dot.show();
-        }
+        $(this).toggleClass('active', repeatMode > 0);
+        if (repeatMode === 0) { $icon.attr('class', 'fa-solid fa-repeat'); $dot.hide(); }
+        else if (repeatMode === 1) { $icon.attr('class', 'fa-solid fa-repeat'); $dot.show(); }
+        else if (repeatMode === 2) { $icon.attr('class', 'fa-solid fa-rotate-right'); $dot.show(); }
     });
 
     $('#btn-play-pause').click(() => audio.paused ? audio.play() : audio.pause());
@@ -125,37 +110,7 @@ $(document).ready(function() {
     $('#btn-open-chat').click(() => { $('#chat-overlay').addClass('active'); $('#chat-badge').hide(); });
     $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
     $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
-
-    // [수정] 바텀시트 자연스러운 스와이프 및 클릭 인터렉션
-    let startY = 0;
-    let isDragging = false;
-
-    $('#sheet-trigger').on('click', function(e) {
-        if (!isDragging) {
-            $('#sheet').toggleClass('expanded');
-        }
-    });
-
-    $('#sheet-trigger').on('touchstart', function(e) {
-        startY = e.originalEvent.touches[0].clientY;
-        isDragging = false;
-    });
-
-    $('#sheet-trigger').on('touchmove', function(e) {
-        let currentY = e.originalEvent.touches[0].clientY;
-        let diff = startY - currentY;
-        
-        if (Math.abs(diff) > 10) {
-            isDragging = true;
-        }
-
-        // 위로 스와이프: 확장 / 아래로 스와이프: 축소
-        if (diff > 50) {
-            $('#sheet').addClass('expanded');
-        } else if (diff < -50) {
-            $('#sheet').removeClass('expanded');
-        }
-    });
+    $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
 
     $(document).on('click', '.song-select-zone', function() {
         load($(this).closest('li').data('idx'), true);
@@ -175,13 +130,17 @@ $(document).ready(function() {
         });
         chatDb.limitToLast(30).on('child_added', (snap) => {
             const key = snap.key, m = snap.val(), isMe = m.sender === userId, iLikeIt = myLikedMsgs.includes(key);
-            $('#chat-messages').append(`<div class="msg-row ${isMe ? 'me' : 'other'}">
-                <div class="message ${isMe ? 'me' : 'other'}">${m.text}</div>
-                <button class="msg-like-btn ${iLikeIt ? 'liked' : ''}" data-key="${key}">
-                    <i class="${iLikeIt ? 'fa-solid' : 'fa-heart'} fa-heart"></i>
-                    <span class="like-count">${m.likeCount || ''}</span>
-                </button>
-            </div>`);
+            // [수정] 하트 아이콘 생성 부분: unliked일 때 'fa-regular' 사용
+            $('#chat-messages').append(`
+                <div class="msg-row" style="display:flex; justify-content:${isMe?'flex-end':'flex-start'}; margin-bottom:10px;">
+                    <div style="display:flex; align-items:flex-end; max-width:85%; flex-direction:${isMe?'row-reverse':'row'};">
+                        <div class="message ${isMe?'me':'other'}">${m.text}</div>
+                        <button class="msg-like-btn ${iLikeIt ? 'liked' : ''}" data-key="${key}">
+                            <i class="${iLikeIt ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                            <span class="like-count">${m.likeCount || ''}</span>
+                        </button>
+                    </div>
+                </div>`);
             $('.chat-viewport').scrollTop($('.chat-viewport')[0].scrollHeight);
             if (!$('#chat-overlay').hasClass('active')) $('#chat-badge').show();
         });
@@ -220,7 +179,6 @@ $(document).ready(function() {
         $('#time-now').text(fmt(audio.currentTime)); $('#time-total').text(fmt(audio.duration));
     };
     $('#progress-bar').on('input', function() { audio.currentTime = ($(this).val()/100)*audio.duration; });
-    $('#volume-bar').on('input', function() { audio.volume = $(this).val() / 100; });
     
     $('#btn-share').click(() => navigator.share ? navigator.share({title:'Youth Player', text:`${playlistData[curIdx].title} 함께 들어요!`, url:window.location.href}) : alert('링크 복사 완료!'));
 
