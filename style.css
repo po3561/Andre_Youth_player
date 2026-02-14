@@ -6,6 +6,8 @@
     --glass-border: rgba(255, 255, 255, 0.4);
     --popup-glass: rgba(255, 255, 255, 0.95);
 }
+
+
 /* 가사 오버레이 전체 스타일 */
 #lyrics-overlay {
     position: fixed; inset: 0; z-index: 6000;
@@ -93,6 +95,12 @@ body {
 .msg-like-btn.liked { color: var(--heart); }
 .like-count { font-size: 0.7rem; font-weight: 700; color: #666; margin-top: 2px; }
 
+
+
+
+
+
+
 /* [디자인 복구] 저작권 팝업: HTML 클래스명(copy-item)과 일치시킴 */
 .popup-body { padding: 20px; color: var(--text); overflow-y: auto; flex: 1; }
 .copyright-notice { margin-bottom: 20px; font-size: 0.85rem; line-height: 1.6; color: #444; }
@@ -105,6 +113,12 @@ body {
 .copy-title { font-weight: 600; font-size: 0.85rem; color: #333; }
 .copy-item a { color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: 700; }
 .copyright-footer { margin-top: 30px; font-size: 0.7rem; color: #888; text-align: center; padding-bottom: 20px; }
+
+
+
+
+
+
 
 /* 나머지 원본 디자인 유지 (플레이리스트, 팝업, 컨트롤러 등) */
 .player-body { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 8% 18%; }
@@ -128,22 +142,94 @@ input[type=range] { width: 100%; height: 4px; accent-color: var(--primary); curs
 .repeat-dot { position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: #fff; border-radius: 50%; display: none; }
 .opt-btn.active .repeat-dot { display: block; }
 
-/* 팝업 공통 */
-.ios-popup { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.1); visibility: hidden; opacity: 0; transition: 0.3s; }
-.ios-popup.active { visibility: visible; opacity: 1; backdrop-filter: blur(8px); }
-.popup-card.glass-card { width: 92%; max-width: 400px; height: 75vh; background: var(--popup-glass); border-radius: 30px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
-.popup-header { padding: 18px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.06); font-weight: 700; color: #333; flex-shrink: 0; }
-.close-x { background: rgba(0,0,0,0.05); border: none; width: 32px; height: 32px; border-radius: 50%; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+/* [style.css 수정본] 팝업 버그 해결 */
 
-/* 채팅창 레이아웃 */
-.chat-viewport { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-.chat-input-row { padding: 15px 20px; border-top: 1px solid rgba(0,0,0,0.06); display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.6); flex-shrink: 0; }
-#chat-input { flex: 1; border: none; border-radius: 20px; padding: 12px 18px; font-size: 0.95rem; background: #fff; outline: none; }
-.send-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: #fff; border: none; cursor: pointer; }
-.msg-row { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 5px; }
-.message { padding: 10px 15px; border-radius: 18px; font-size: 0.92rem; max-width: 80%; }
-.message.me { background: var(--primary); color: #fff; border-bottom-right-radius: 4px; margin-left: auto; }
-.message.other { background: #fff; color: #333; border-bottom-left-radius: 4px; }
+/* ... (상단 기존 코드는 그대로 유지) ... */
+
+/* 1. 팝업 공통 레이아웃 수정 */
+.ios-popup { 
+    position: fixed; inset: 0; z-index: 5000; 
+    display: flex; align-items: center; justify-content: center; 
+    background: rgba(0,0,0,0.5); /* 너무 진한 블러 대신 반투명 배경 */
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    visibility: hidden; opacity: 0; transition: 0.3s; 
+    pointer-events: none; 
+}
+.ios-popup.active { visibility: visible; opacity: 1; pointer-events: auto; }
+
+/* 2. 팝업 카드 디자인 (상단 잘림 해결) */
+.popup-card.glass-card { 
+    width: 90%; max-width: 380px; 
+    height: 70vh; /* 높이 적절히 조절 */
+    max-height: 600px; /* 너무 길어지지 않게 제한 */
+    background: rgba(255, 255, 255, 0.95); 
+    border-radius: 25px; 
+    display: flex; flex-direction: column; overflow: hidden; 
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); 
+    /* 화면 중앙 정렬 보정 */
+    margin-bottom: env(safe-area-inset-bottom);
+}
+
+/* 3. 팝업 헤더 (채팅/저작권 공통) */
+.popup-header { 
+    padding: 18px 20px; 
+    display: flex; justify-content: space-between; align-items: center; 
+    border-bottom: 1px solid rgba(0,0,0,0.08); 
+    background: rgba(54, 177, 255, 0.9); /* 헤더 배경 확실하게 */
+    flex-shrink: 0; 
+}
+.popup-header span { 
+    font-weight: 800; font-size: 1.1rem; color: #ffffff; 
+    letter-spacing: -0.5px;
+}
+.close-x { 
+    background: rgba(0,0,0,0.05); border: none; 
+    width: 32px; height: 32px; border-radius: 50%; 
+    color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; 
+    font-size: 1.1rem; transition: background 0.2s;
+}
+.close-x:active { background: rgba(0,0,0,0.1); }
+
+/* 4. 채팅창 내부 레이아웃 */
+.chat-viewport { 
+    flex: 1; overflow-y: auto; padding: 20px; 
+    background: #f5f5f7; /* 채팅 배경색을 연한 회색으로 변경하여 가독성 확보 */
+    display: flex; flex-direction: column; gap: 12px; 
+}
+
+/* 말풍선 스타일 */
+.msg-row { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 8px; }
+.message { 
+    padding: 10px 14px; border-radius: 18px; font-size: 0.95rem; 
+    max-width: 75%; line-height: 1.4; word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.message.me { 
+    background: var(--primary); color: #fff; 
+    border-bottom-right-radius: 4px; margin-left: auto; 
+}
+.message.other { 
+    background: #fff; color: #333; 
+    border-bottom-left-radius: 4px; border: 1px solid rgba(0,0,0,0.03);
+}
+
+/* 채팅 입력창 */
+.chat-input-row { 
+    padding: 12px 15px; border-top: 1px solid rgba(0,0,0,0.08); 
+    display: flex; gap: 8px; align-items: center; 
+    background: #fff; flex-shrink: 0; 
+}
+#chat-input { 
+    flex: 1; border: 1px solid #ddd; border-radius: 20px; 
+    padding: 10px 15px; font-size: 0.95rem; background: #f9f9f9; outline: none; 
+}
+#chat-input:focus { border-color: var(--primary); background: #fff; }
+.send-btn { 
+    width: 38px; height: 38px; border-radius: 50%; 
+    background: var(--primary); color: #fff; border: none; 
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 5px rgba(33, 204, 249, 0.3);
+}
 
 /* 바텀시트 & 리스트 */
 .bottom-sheet.glass-sheet { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 25%; height: 25px; background: var(--popup-glass); backdrop-filter: blur(25px); border-radius: 20px; z-index: 1000; transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); border: 1px solid var(--glass-border); overflow: hidden; }
