@@ -59,58 +59,77 @@ $(document).ready(function() {
         }
     }
 
-    // --- AI 자동 가사 싱크 엔진 로직 ---
+    // --- 고속 AI 자동 가사 싱크 엔진 로직 ---
     $(document).on('click', '#btn-ai-auto-sync', async function() {
         const rawText = $('#lyrics-raw').val().trim();
         if (!rawText) { alert('먼저 가사 텍스트를 입력해주세요.'); return; }
         if (!files.audio) { alert('분석할 음원 파일을 먼저 선택해주세요.'); return; }
 
-        const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> AI 분석 중...');
+        // 재생 중인 오디오가 있다면 즉시 정지 (Background 분석 보장)
+        if (tempAudio) { tempAudio.pause(); }
+
+        const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 고속 분석 중...');
         const $progressZone = $('#analysis-progress-container').fadeIn();
         const $fill = $('#analysis-fill').css('width', '0%');
         const $percent = $('#analysis-percent').text('0%');
-        const $status = $('#analysis-status-text').text('음원 데이터 불러오는 중...');
+        const $status = $('#analysis-status-text').text('데이터 로딩 중...');
 
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const arrayBuffer = await files.audio.arrayBuffer();
             
-            // 1단계: 디코딩 (20%)
             $status.text('오디오 파형 디코딩 중...');
             $percent.text('20%'); $fill.css('width', '20%');
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
             
-            // 2단계: 파형 분석 (RMS 에너지 추출)
-            $status.text('보컬 주파수 및 에너지 패턴 분석 중...');
             const rawData = audioBuffer.getChannelData(0); 
             const duration = audioBuffer.duration;
             const sampleRate = audioBuffer.sampleRate;
-            
             const winSize = Math.floor(sampleRate * 0.1); // 100ms 단위 분석
             const peaks = [];
             
-            for (let i = 0; i < rawData.length; i += winSize) {
-                let sum = 0;
-                const end = Math.min(i + winSize, rawData.length);
-                for (let j = i; j < end; j++) {
-                    sum += rawData[j] * rawData[j];
-                }
-                const rms = Math.sqrt(sum / (end - i));
-                
-                // 진행률 업데이트 (20% ~ 85%)
-                if (i % (winSize * 50) === 0) {
-                    const progress = 20 + Math.floor((i / rawData.length) * 65);
-                    $percent.text(progress + '%');
-                    $fill.css('width', progress + '%');
-                }
-                peaks.push({ time: i / sampleRate, energy: rms });
-            }
+            $status.text('패턴 고속 분석 중 (재생 없음)...');
+            
+            // 비동기 청크 분석 (메인 스레드 부하 방지 및 고속화)
+            let currentIndex = 0;
+            const chunkProcessing = () => {
+                return new Promise((resolve) => {
+                    const processNext = () => {
+                        const start = Date.now();
+                        // 한 번에 약 100만 샘플씩 처리 (약 20초 분량)
+                        const limit = currentIndex + (sampleRate * 20); 
+                        
+                        while (currentIndex < rawData.length && currentIndex < limit) {
+                            let sum = 0;
+                            const end = Math.min(currentIndex + winSize, rawData.length);
+                            for (let j = currentIndex; j < end; j++) {
+                                sum += rawData[j] * rawData[j];
+                            }
+                            const rms = Math.sqrt(sum / (end - currentIndex));
+                            peaks.push({ time: currentIndex / sampleRate, energy: rms });
+                            currentIndex += winSize;
+                        }
+
+                        // 진행률 업데이트
+                        const progress = 20 + Math.floor((currentIndex / rawData.length) * 75);
+                        $percent.text(progress + '%');
+                        $fill.css('width', progress + '%');
+
+                        if (currentIndex < rawData.length) {
+                            requestAnimationFrame(processNext);
+                        } else {
+                            resolve();
+                        }
+                    };
+                    processNext();
+                });
+            };
+
+            await chunkProcessing();
 
             // 3단계: 가사 매칭 및 타임라인 생성
-            $status.text('AI 가사 타임라인 최적화 중...');
+            $status.text('타임라인 생성 완료!');
             const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            
-            // 소리가 유의미한 전체 구간 찾기
             const threshold = peaks.reduce((a, b) => a + b.energy, 0) / peaks.length * 0.4;
             const activePeaks = peaks.filter(p => p.energy > threshold);
             
@@ -120,28 +139,23 @@ $(document).ready(function() {
             
             let generatedLrc = "";
             lines.forEach((line, idx) => {
-                // 선형 분배 + 피크 지점 보정
                 const targetT = startT + (vocalRange * (idx / lines.length));
                 const totalMs = Math.floor(targetT * 1000);
-                
                 const mm = Math.floor(totalMs / 60000).toString().padStart(2, '0');
                 const ss = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
                 const ms = Math.floor((totalMs % 1000) / 10).toString().padStart(2, '0');
-                
                 generatedLrc += `[${mm}:${ss}.${ms}] ${line}\n`;
             });
 
-            // 결과 출력
             files.generatedLrc = generatedLrc;
             $('#generated-lrc-preview').text(generatedLrc).fadeIn();
             
             $percent.text('100%'); $fill.css('width', '100%');
-            $status.text('분석 완료!');
             $btn.html('<i class="fa-solid fa-check"></i> 분석 완료').removeClass('premium-sync-btn').addClass('secondary-btn').prop('disabled', false);
 
         } catch (error) {
             console.error("AI Sync Error:", error);
-            alert("AI 분석 실패: " + error.message);
+            alert("분석 실패: " + error.message);
             $status.text('오류 발생');
             $btn.prop('disabled', false).html('<i class="fa-solid fa-bolt"></i> 분석 재시도');
         }
