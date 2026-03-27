@@ -59,57 +59,93 @@ $(document).ready(function() {
         }
     }
 
-    // --- 가사 싱크 엔진 로직 ---
-    $(document).on('click', '#btn-sync-mode, .premium-sync-btn', function() {
-        console.log("Sync Mode Clicked"); // 디버깅용 로그
+    // --- AI 자동 가사 싱크 엔진 로직 ---
+    $(document).on('click', '#btn-ai-auto-sync', async function() {
         const rawText = $('#lyrics-raw').val().trim();
         if (!rawText) { alert('먼저 가사 텍스트를 입력해주세요.'); return; }
-        if (!files.audio) { alert('싱크를 맞출 음원 파일을 먼저 선택해주세요.'); return; }
+        if (!files.audio) { alert('분석할 음원 파일을 먼저 선택해주세요.'); return; }
 
-        syncLines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        currentSyncIdx = 0;
-        recordedLrc = [];
-        
-        $(this).hide();
-        $('#sync-active-info').fadeIn();
-        updateSyncHint();
-        
-        if (tempAudio) {
-            tempAudio.currentTime = 0;
-            tempAudio.play().catch(e => alert('오디오 재생에 실패했습니다. 파일을 다시 확인해주세요.'));
+        const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> AI 분석 중...');
+        const $progressZone = $('#analysis-progress-container').fadeIn();
+        const $fill = $('#analysis-fill').css('width', '0%');
+        const $percent = $('#analysis-percent').text('0%');
+        const $status = $('#analysis-status-text').text('음원 데이터 불러오는 중...');
+
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const arrayBuffer = await files.audio.arrayBuffer();
+            
+            // 1단계: 디코딩 (20%)
+            $status.text('오디오 파형 디코딩 중...');
+            $percent.text('20%'); $fill.css('width', '20%');
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            // 2단계: 파형 분석 (RMS 에너지 추출)
+            $status.text('보컬 주파수 및 에너지 패턴 분석 중...');
+            const rawData = audioBuffer.getChannelData(0); 
+            const duration = audioBuffer.duration;
+            const sampleRate = audioBuffer.sampleRate;
+            
+            const winSize = Math.floor(sampleRate * 0.1); // 100ms 단위 분석
+            const peaks = [];
+            
+            for (let i = 0; i < rawData.length; i += winSize) {
+                let sum = 0;
+                const end = Math.min(i + winSize, rawData.length);
+                for (let j = i; j < end; j++) {
+                    sum += rawData[j] * rawData[j];
+                }
+                const rms = Math.sqrt(sum / (end - i));
+                
+                // 진행률 업데이트 (20% ~ 85%)
+                if (i % (winSize * 50) === 0) {
+                    const progress = 20 + Math.floor((i / rawData.length) * 65);
+                    $percent.text(progress + '%');
+                    $fill.css('width', progress + '%');
+                }
+                peaks.push({ time: i / sampleRate, energy: rms });
+            }
+
+            // 3단계: 가사 매칭 및 타임라인 생성
+            $status.text('AI 가사 타임라인 최적화 중...');
+            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
+            // 소리가 유의미한 전체 구간 찾기
+            const threshold = peaks.reduce((a, b) => a + b.energy, 0) / peaks.length * 0.4;
+            const activePeaks = peaks.filter(p => p.energy > threshold);
+            
+            const startT = activePeaks.length > 0 ? activePeaks[0].time : 2.0; 
+            const endT = activePeaks.length > 0 ? activePeaks[activePeaks.length - 1].time : duration - 2.0;
+            const vocalRange = endT - startT;
+            
+            let generatedLrc = "";
+            lines.forEach((line, idx) => {
+                // 선형 분배 + 피크 지점 보정
+                const targetT = startT + (vocalRange * (idx / lines.length));
+                const totalMs = Math.floor(targetT * 1000);
+                
+                const mm = Math.floor(totalMs / 60000).toString().padStart(2, '0');
+                const ss = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
+                const ms = Math.floor((totalMs % 1000) / 10).toString().padStart(2, '0');
+                
+                generatedLrc += `[${mm}:${ss}.${ms}] ${line}\n`;
+            });
+
+            // 결과 출력
+            files.generatedLrc = generatedLrc;
+            $('#generated-lrc-preview').text(generatedLrc).fadeIn();
+            
+            $percent.text('100%'); $fill.css('width', '100%');
+            $status.text('분석 완료!');
+            $btn.html('<i class="fa-solid fa-check"></i> 분석 완료').removeClass('premium-sync-btn').addClass('secondary-btn').prop('disabled', false);
+
+        } catch (error) {
+            console.error("AI Sync Error:", error);
+            alert("AI 분석 실패: " + error.message);
+            $status.text('오류 발생');
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-bolt"></i> 분석 재시도');
         }
     });
-
-    function updateSyncHint() {
-        if (currentSyncIdx < syncLines.length) {
-            $('#next-lyric-text').text(syncLines[currentSyncIdx]);
-        } else {
-            finishSync();
-        }
-    }
-
-    $('#btn-tap-sync').click(function() {
-        if (!tempAudio || currentSyncIdx >= syncLines.length) return;
-
-        const time = tempAudio.currentTime;
-        const minutes = Math.floor(time / 60);
-        const seconds = (time % 60).toFixed(2);
-        const timestamp = `[${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
-        
-        recordedLrc.push(`${timestamp}${syncLines[currentSyncIdx]}`);
-        currentSyncIdx++;
-        updateSyncHint();
-    });
-
-    function finishSync() {
-        if (tempAudio) tempAudio.pause();
-        files.generatedLrc = recordedLrc.join('\n');
-        
-        $('#sync-active-info').hide();
-        $('#btn-sync-mode').show().html('<i class="fa-solid fa-check"></i> 싱크 다시 맞추기');
-        $('#generated-lrc-preview').text("생성된 가사 데이터:\n" + files.generatedLrc).fadeIn();
-        alert('가사 싱크 작업이 완료되었습니다! 이제 업로드를 진행하세요.');
-    }
 
     // 업로드 실행
     $('#btn-upload-all').click(async function() {

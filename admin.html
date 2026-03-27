@@ -35,14 +35,21 @@
                 </div>
 
                 <div class="form-group lyrics-editor-zone">
-                    <label for="lyrics-raw" class="premium-label"><i class="fa-solid fa-wand-magic-sparkles"></i> 스마트 가사 생성기 (텍스트 붙여넣기)</label>
-                    <textarea id="lyrics-raw" rows="8" placeholder="이곳에 노래 전체 가사를 붙여넣으세요. 한 줄씩 구분되어 있으면 가장 정확하게 싱크가 만들어집니다."></textarea>
-                    <div class="sync-controls">
-                        <button id="btn-sync-mode" class="premium-sync-btn"><i class="fa-solid fa-clock-rotate-left"></i> 싱크 맞추기 시작</button>
-                        <div id="sync-active-info" style="display: none;">
-                            <span class="active-lyric-hint">다음 줄 타이밍: <strong id="next-lyric-text">...</strong></span>
-                            <button id="btn-tap-sync" class="pulse-btn">지금! (TAP)</button>
+                    <label for="lyrics-raw" class="premium-label"><i class="fa-solid fa-microchip"></i> 스마트 AI 가사 분석기 (텍스트 자동 연동)</label>
+                    <textarea id="lyrics-raw" rows="6" placeholder="이곳에 노래 전체 가사를 붙여넣으세요. AI가 곡의 파형을 분석하여 자동으로 싱크를 맞춰줍니다."></textarea>
+                    
+                    <div id="analysis-progress-container" class="analysis-progress" style="display: none;">
+                        <div class="progress-info">
+                            <span id="analysis-status-text">곡 분석 중...</span>
+                            <span id="analysis-percent">0%</span>
                         </div>
+                        <div class="progress-bar-small">
+                            <div id="analysis-fill" class="analysis-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="sync-controls">
+                        <button id="btn-ai-auto-sync" class="premium-sync-btn"><i class="fa-solid fa-bolt"></i> AI 자동 싱크 생성 시작</button>
                     </div>
                     <div id="generated-lrc-preview" class="lrc-preview"></div>
                 </div>

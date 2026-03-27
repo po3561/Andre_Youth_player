@@ -142,3 +142,25 @@
 .premium-sync-btn:hover { background: #00ff88; color: #00552e; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
 
 .loading-spinner { text-align: center; color: rgba(255,255,255,0.5); padding: 20px; font-size: 0.9rem; }
+
+/* AI Analysis Styles */
+.analysis-progress { margin-top: 15px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; border: 1px solid rgba(160, 100, 255, 0.3); }
+.progress-bar-small { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+.analysis-fill { 
+    height: 100%; width: 0%; background: linear-gradient(90deg, #a064ff, #21ccf9); 
+    transition: width 0.3s ease; box-shadow: 0 0 10px rgba(160,100,255,0.5); 
+}
+#analysis-status-text { font-style: italic; color: #a064ff; font-weight: 700; }
+#analysis-percent { color: #fff; font-family: monospace; }
+
+.premium-sync-btn { 
+    width: 100%; padding: 18px; border-radius: 15px; border: 2.3px solid #a064ff; 
+    background: rgba(160,100,255,0.1); color: #a064ff; font-weight: 900; font-size: 1.1rem;
+    cursor: pointer; transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); 
+    text-transform: uppercase; letter-spacing: 1px;
+}
+.premium-sync-btn:hover { 
+    background: #a064ff; color: #fff; box-shadow: 0 0 30px rgba(160,100,255,0.6); 
+    transform: translateY(-2px);
+}
+.premium-sync-btn:active { transform: translateY(1px); }
