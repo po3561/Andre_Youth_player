@@ -12,7 +12,8 @@
 #lyrics-overlay {
     position: fixed; inset: 0; z-index: 6000;
     background: rgba(0, 0, 0, 0.85); /* 화면 어두워지는 효과 */
-    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    backdrop-filter: blur(25px);
     display: flex; flex-direction: column;
     transform: translateY(100%); transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
 }
@@ -45,7 +46,7 @@ body {
 }
 
 #bg-image { position: fixed; inset: 0; z-index: -2; opacity: 0.6; filter: blur(50px) saturate(1.2); background-size: cover; background-position: center; transition: 1s; transform: scale(1.1); }
-.glass-background { position: fixed; inset: 0; z-index: -1; background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.glass-background { position: fixed; inset: 0; z-index: -1; background: rgba(0, 0, 0, 0.25); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 
 .app-container { position: relative; width: 100%; max-width: 480px; height: 100%; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -80,7 +81,9 @@ body {
 .sub-title { font-size: 0.7rem; font-weight: 700; color: rgba(255, 255, 255, 0.51); display: block; }
 .main-title { font-size: 0.95rem; font-weight: 800; color: #fff; white-space: nowrap; }
 
-.icon-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #fff; cursor: pointer; backdrop-filter: blur(10px); position: relative; }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #fff; cursor: pointer; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); position: relative; }
+.ml-8 { margin-left: 8px; }
+.mr-8 { margin-right: 8px; }
 .badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ff3b30; border-radius: 50%; border: 1.5px solid #fff; display: none; }
 #top-vol-slider { flex: 1; height: 4px; accent-color: #fff; cursor: pointer; border-radius: 2px; }
 .vol-close-btn { background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; margin-left: 5px; opacity: 0.7; }
@@ -124,7 +127,7 @@ body {
 .player-body { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 8% 18%; }
 .album-section { width: 100%; aspect-ratio: 1; max-height: 35vh; border-radius: 20px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.3); align-self: center; }
 .album-art { width: 100%; height: 100%; object-fit: cover; }
-.info-section { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-radius: 18px; background: rgba(255,255,255,0.12); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); margin-top: 15px; }
+.info-section { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-radius: 18px; background: rgba(255,255,255,0.12); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); margin-top: 15px; }
 .text-group { flex: 1; min-width: 0; margin-right: 15px; }
 .text-group h2 { font-size: 1.25rem; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .text-group p { font-size: 0.85rem; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -151,7 +154,7 @@ input[type=range] { width: 100%; height: 4px; accent-color: var(--primary); curs
     position: fixed; inset: 0; z-index: 5000; 
     display: flex; align-items: center; justify-content: center; 
     background: rgba(0,0,0,0.5); /* 너무 진한 블러 대신 반투명 배경 */
-    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
     visibility: hidden; opacity: 0; transition: 0.3s; 
     pointer-events: none; 
 }
@@ -232,13 +235,13 @@ input[type=range] { width: 100%; height: 4px; accent-color: var(--primary); curs
 }
 
 /* 바텀시트 & 리스트 */
-.bottom-sheet.glass-sheet { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 25%; height: 25px; background: var(--popup-glass); backdrop-filter: blur(25px); border-radius: 20px; z-index: 1000; transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); border: 1px solid var(--glass-border); overflow: hidden; }
+.bottom-sheet.glass-sheet { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 25%; height: 25px; background: var(--popup-glass); -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px); border-radius: 20px; z-index: 1000; transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); border: 1px solid var(--glass-border); overflow: hidden; }
 .bottom-sheet.expanded { width: 100%; height: 85vh; bottom: 0; border-radius: 35px 35px 0 0; background: rgba(255,255,255,0.96); }
 .sheet-top { height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
 .drag-pill { width: 40px; height: 5px; background: rgba(0,0,0,0.1); border-radius: 3px; margin-bottom: 5px; }
 .list-head { padding: 10px 25px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); }
 .count-txt { font-weight: 800; color: var(--primary); }
-.list-scroll-area { flex: 1; overflow-y: auto; padding: 15px 20px 80px; -webkit-overflow-scrolling: touch; }
+.list-scroll-area { flex: 1; overflow-y: auto; padding: 15px 20px 80px; }
 #song-list-ul li { display: flex; align-items: center; margin-bottom: 12px; border-radius: 18px; background: #fff; border: 1px solid rgba(0,0,0,0.04); transition: 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
 #song-list-ul li.active { background: #f0fbff; border: 1.5px solid var(--primary); box-shadow: 0 5px 15px rgba(33, 204, 249, 0.1); }
 .song-select-zone { flex: 1; display: flex; align-items: center; padding: 12px 15px; cursor: pointer; min-width: 0; }
@@ -248,3 +251,20 @@ input[type=range] { width: 100%; height: 4px; accent-color: var(--primary); curs
 .song-info-texts p { font-size: 0.82rem; color: #86868b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .list-heart-btn { padding: 15px 22px; color: #ddd; font-size: 1.35rem; cursor: pointer; flex-shrink: 0; transition: 0.2s; }
 .list-heart-btn.active { color: var(--heart); }
+
+/* 업로드 UI 스타일 */
+.upload-body { padding: 25px; display: flex; flex-direction: column; gap: 20px; }
+.upload-field { display: flex; flex-direction: column; gap: 8px; }
+.upload-field label { font-size: 0.85rem; font-weight: 700; color: #666; }
+.upload-field input[type="file"] { 
+    padding: 12px; border: 1.5px dashed #ddd; border-radius: 12px; 
+    font-size: 0.85rem; background: #fafafa; cursor: pointer; transition: 0.2s;
+}
+.upload-field input[type="file"]:hover { border-color: var(--primary); background: #f0fbff; }
+.primary-btn { 
+    margin-top: 10px; padding: 15px; border-radius: 15px; border: none;
+    background: var(--primary); color: #fff; font-size: 1rem; font-weight: 800;
+    cursor: pointer; box-shadow: 0 10px 20px rgba(33, 204, 249, 0.2); transition: 0.3s;
+}
+.primary-btn:active { transform: scale(0.98); opacity: 0.9; }
+#upload-status { font-size: 0.85rem; text-align: center; color: #888; margin-top: 5px; min-height: 1.2rem; }
