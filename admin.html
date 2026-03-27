@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Andre Youth Admin - New Song Upload</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="admin-style.css">
+    <link rel="stylesheet" href="style.css?v=1.1">
+    <link rel="stylesheet" href="admin-style.css?v=1.1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -68,10 +68,13 @@
                 </button>
 
                 <div id="upload-progress-container" class="progress-container" style="display: none;">
+                    <div class="progress-info">
+                        <span id="upload-status-text">파일 처리 중...</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
                     <div class="progress-bar">
                         <div id="progress-fill" class="progress-fill"></div>
                     </div>
-                    <p id="upload-status-text">준비 중...</p>
                 </div>
             </div>
 
@@ -89,6 +92,6 @@
         </main>
     </div>
 
-    <script src="admin-script.js"></script>
+    <script src="admin-script.js?v=1.1"></script>
 </body>
 </html>

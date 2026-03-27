@@ -61,6 +61,7 @@ $(document).ready(function() {
 
     // --- 가사 싱크 엔진 로직 ---
     $(document).on('click', '#btn-sync-mode, .premium-sync-btn', function() {
+        console.log("Sync Mode Clicked"); // 디버깅용 로그
         const rawText = $('#lyrics-raw').val().trim();
         if (!rawText) { alert('먼저 가사 텍스트를 입력해주세요.'); return; }
         if (!files.audio) { alert('싱크를 맞출 음원 파일을 먼저 선택해주세요.'); return; }
@@ -118,8 +119,15 @@ $(document).ready(function() {
 
         const $btn = $(this).prop('disabled', true);
         const $progressZone = $('#upload-progress-container').show();
-        const $bar = $('#progress-fill').css('width', '5%');
+        const $bar = $('#progress-fill').css('width', '0%');
+        const $percent = $('#progress-percent').text('0%');
         const $status = $('#upload-status-text').text('파일 읽기 중...');
+
+        const updateProgress = (p, text) => {
+            $bar.css('width', p + '%');
+            $percent.text(p + '%');
+            if (text) $status.text(text);
+        };
 
         try {
             const toBase64 = file => new Promise((resolve, reject) => {
@@ -145,8 +153,7 @@ $(document).ready(function() {
                 payload.lrcData = btoa(unescape(encodeURIComponent(files.generatedLrc))); // UTF-8 Base64
             }
 
-            $bar.css('width', '50%');
-            $status.text('구글 드라이브로 전송 중...');
+            updateProgress(50, '구글 드라이브로 전송 중...');
 
             const response = await fetch(GAS_URL, {
                 method: "POST",
@@ -156,8 +163,8 @@ $(document).ready(function() {
             const result = await response.json();
 
             if (result.status === "success") {
-                $bar.css('width', '100%').css('background', '#00ff88');
-                $status.text('업로드 성공! 플레이어에 즉시 반영됩니다.');
+                updateProgress(100, '업로드 성공! 잠시 후 이동합니다.');
+                $bar.css('background', '#00ff88');
                 setTimeout(() => location.href = 'index.html', 2000);
             } else {
                 throw new Error(result.message || "Unknown error");
