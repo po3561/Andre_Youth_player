@@ -131,17 +131,15 @@ $(document).ready(function() {
         curIdx = i; const s = playlistData[i];
         
         // 음원 및 이미지 주소 정밀 변환 적용
-        const fixedAudio = MusicEngine.fixUrl(s.url, 'audio');
-        const fixedCover = MusicEngine.fixUrl(s.cover, 'image');
+        const ts = new Date().getTime();
+        const fixedAudio = MusicEngine.fixUrl(s.url, 'audio') + `?v=${ts}`;
+        const fixedCover = MusicEngine.fixUrl(s.cover, 'image') + `?v=${ts}`;
         
         audio.src = fixedAudio; 
         audio.removeAttribute('crossorigin');
-        // audio.load(); // 제거하여 즉시 재생 시도
 
         // 앨범 아트 및 배경 업데이트
-        $('#album-img').attr('src', fixedCover).on('error', function() {
-            $(this).attr('src', 'https://via.placeholder.com/500?text=No+Cover');
-        });
+        $('#album-img').attr('src', fixedCover);
         $('#bg-image').css('background-image', `url('${fixedCover}')`);
         $('#album-trigger').removeClass('show-lyrics').css('background-image', `url('${fixedCover}')`);
         $('#disp-title').text(s.title);

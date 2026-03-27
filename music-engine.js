@@ -27,9 +27,8 @@ const MusicEngine = {
         if (idMatch && idMatch[1]) {
             const id = idMatch[1];
             // 음원은 uc?export=download가 가장 안정적으로 재생되며, 이미지는 thumbnail API 사용
-            return type === 'audio' 
-                ? `https://docs.google.com/uc?id=${id}&export=download` 
-                : `https://lh3.googleusercontent.com/d/${id}`;
+            // lh3 서버는 구글의 초고속 미디어 전용 서버로, 브라우저 보안 정책(ORB/CORS)을 가장 잘 통환함
+            return `https://lh3.googleusercontent.com/d/${id}`;
         }
         return url;
     },
