@@ -28,8 +28,8 @@ const MusicEngine = {
             const id = idMatch[1];
             // 음원은 uc?export=download가 가장 안정적으로 재생되며, 이미지는 thumbnail API 사용
             return type === 'audio' 
-                ? `https://drive.google.com/uc?id=${id}&export=download` 
-                : `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+                ? `https://docs.google.com/uc?id=${id}&export=download` 
+                : `https://docs.google.com/uc?id=${id}&export=view`;
         }
         return url;
     },

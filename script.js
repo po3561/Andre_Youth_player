@@ -130,17 +130,22 @@ $(document).ready(function() {
         if(i < 0 || i >= playlistData.length) return;
         curIdx = i; const s = playlistData[i];
         
-        // 음원 재생 주소 정밀 변환 적용 및 로드
-        audio.src = MusicEngine.fixUrl(s.url, 'audio'); 
-        audio.removeAttribute('crossorigin'); // 구글 드라이브 보안 이슈 방지 (중요!)
+        // 음원 및 이미지 주소 정밀 변환 적용
+        const fixedAudio = MusicEngine.fixUrl(s.url, 'audio');
+        const fixedCover = MusicEngine.fixUrl(s.cover, 'image');
+        
+        audio.src = fixedAudio; 
+        audio.removeAttribute('crossorigin');
         audio.load(); 
 
-        $('#album-img').attr('src', s.cover);
-        $('#bg-image').css('background-image', `url('${s.cover}')`);
+        $('#album-img').attr('src', fixedCover).on('error', function() {
+            $(this).attr('src', 'https://via.placeholder.com/500?text=No+Cover');
+        });
+        $('#bg-image').css('background-image', `url('${fixedCover}')`);
         $('#disp-title').text(s.title);
         
-        // 앨범 섹션 상태 초기화 (가사 숨김)
-        $('#album-trigger').removeClass('show-lyrics');
+        // 앨범 섹션 상태 초기화 (가사 숨김) 및 배경 이미지 동기화
+        $('#album-trigger').removeClass('show-lyrics').css('background-image', `url('${fixedCover}')`);
         
         // [CORS 우회] 백엔드에서 통합된 가사 데이터를 즉시 파싱하여 렌더링
         if (s.lyricsData) {
