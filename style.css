@@ -9,26 +9,47 @@
 
 
 /* 가사 오버레이 전체 스타일 */
+/* [iOS 애플 뮤직 스타일] 가사 오버레이 */
 #lyrics-overlay {
     position: fixed; inset: 0; z-index: 6000;
-    background: rgba(0, 0, 0, 0.85); /* 화면 어두워지는 효과 */
-    -webkit-backdrop-filter: blur(25px);
-    backdrop-filter: blur(25px);
+    background: rgba(0, 0, 0, 0.4); 
+    -webkit-backdrop-filter: blur(50px) saturate(1.8);
+    backdrop-filter: blur(50px) saturate(1.8);
     display: flex; flex-direction: column;
-    transform: translateY(100%); transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    transform: translateY(100%); transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    color: #fff;
 }
 #lyrics-overlay.active { transform: translateY(0); }
 
-.lyrics-header { height: 70px; display: flex; justify-content: space-between; align-items: center; padding: 0 25px; color: #fff; }
-#lyrics-title-text { font-size: 1.1rem; font-weight: 700; opacity: 0.8; }
-
-.lyrics-container { flex: 1; overflow-y: auto; padding: 20px; scroll-behavior: smooth; }
-.lyric-line {
-    font-size: 1.4rem; font-weight: 700; color: rgba(255, 255, 255, 0.3);
-    margin-bottom: 30px; transition: 0.4s; cursor: pointer; text-align: left;
+/* 배경에 은은하게 깔리는 앨범 아트 레이어 */
+#lyrics-overlay::before {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background-image: inherit; background-size: cover; background-position: center;
+    opacity: 0.3; filter: blur(20px);
 }
-.lyric-line.active { color: #fff; transform: scale(1.05); }
-.lyric-line.no-data { text-align: center; margin-top: 30vh; font-size: 1rem; opacity: 0.5; }
+
+.lyrics-header { 
+    height: 80px; display: flex; justify-content: space-between; align-items: center; 
+    padding: 0 30px; border-bottom: 1px solid rgba(255,255,255,0.05); 
+}
+#lyrics-title-text { font-size: 1.3rem; font-weight: 900; letter-spacing: -1px; }
+
+.lyrics-container { 
+    flex: 1; overflow-y: auto; padding: 100px 30px; 
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+}
+.lyric-line {
+    font-size: 2.2rem; font-weight: 800; color: rgba(255, 255, 255, 0.25);
+    margin-bottom: 35px; transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1); 
+    text-align: left; line-height: 1.2; letter-spacing: -1.5px;
+    filter: blur(1.5px); transform: scale(0.95);
+}
+.lyric-line.active { 
+    color: #fff; transform: scale(1.05) translateX(0); 
+    filter: blur(0); opacity: 1; text-shadow: 0 0 20px rgba(255,255,255,0.2);
+}
+.lyric-line.no-data { text-align: center; margin-top: 30vh; font-size: 1.1rem; opacity: 0.5; }
 
 /* 앨범 아트 마우스 오버/터치 힌트 */
 .album-section::after {

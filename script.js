@@ -137,7 +137,13 @@ $(document).ready(function() {
         $('#lyrics-title-text').text(s.title); // 가사창 제목 동기화
         render(); 
         syncHearts();
-        fetchLyrics(s.lyricsUrl); // 가사 동적 로드
+        // 가사 URL 변환 후 로드
+        const fixedLyricsUrl = MusicEngine.fixUrl(s.lyricsUrl, 'audio'); // LRC도 audio와 동일한 download API 사용
+        fetchLyrics(fixedLyricsUrl); 
+        
+        // 가사창 배경 업데이트 (iOS 스타일)
+        $('#lyrics-overlay').css('background-image', `url('${s.cover}')`);
+        
         if (play) audio.play();
     }
 
@@ -235,8 +241,13 @@ $(document).ready(function() {
                 // 부드러운 스크롤
                 const container = $('.lyrics-container')[0];
                 if (container && $activeLine[0]) {
-                    const offset = $activeLine[0].offsetTop - container.offsetHeight / 2;
-                    container.scrollTo({ top: offset, behavior: 'smooth' });
+                    // 중앙 정렬 정밀 계산
+                    const lineOffset = $activeLine[0].offsetTop;
+                    const lineSize = $activeLine[0].offsetHeight;
+                    const containerSize = container.offsetHeight;
+                    const scrollTarget = lineOffset - (containerSize / 2) + (lineSize / 2);
+                    
+                    container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
                 }
             }
         }
