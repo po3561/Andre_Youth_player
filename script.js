@@ -130,18 +130,18 @@ $(document).ready(function() {
         if(i < 0 || i >= playlistData.length) return;
         curIdx = i; const s = playlistData[i];
         
-        // 음원 재생 주소 정밀 변환 적용
+        // 음원 재생 주소 정밀 변환 적용 및 로드
         audio.src = MusicEngine.fixUrl(s.url, 'audio'); 
-        
+        audio.load(); // 명시적 로드 호출
+
         $('#album-img').attr('src', s.cover);
         $('#bg-image').css('background-image', `url('${s.cover}')`);
         $('#disp-title').text(s.title);
-        $('#lyrics-title-text').text(s.title); // 가사창 제목 동기화
         
-        // 가사창 배경 업데이트 (iOS 스타일)
-        $('#lyrics-overlay').css('background-image', `url('${s.cover}')`);
+        // 앨범 섹션 상태 초기화 (가사 숨김)
+        $('#album-trigger').removeClass('show-lyrics');
         
-        // [CORS 우회] 백엔드에서 받은 가사 데이터를 즉시 파싱하여 렌더링
+        // [CORS 우회] 백엔드에서 통합된 가사 데이터를 즉시 파싱하여 렌더링
         if (s.lyricsData) {
             currentLyrics = MusicEngine.parseLyrics(s.lyricsData);
             renderLyrics();
@@ -153,7 +153,12 @@ $(document).ready(function() {
         render(); 
         syncHearts();
         
-        if (play) audio.play();
+        if (play) {
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(e => console.log("Autoplay blocked or load error:", e));
+            }
+        }
     }
 
     function next() { let n = isShuffle ? Math.floor(Math.random()*playlistData.length) : (curIdx+1)%playlistData.length; load(n, true); }
@@ -170,8 +175,16 @@ $(document).ready(function() {
     $('#btn-open-chat').click(() => $('#chat-overlay').addClass('active'));
     $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
     $('#btn-upload').click(() => $('#upload-overlay').addClass('active'));
-    $('#album-trigger').click(() => $('#lyrics-overlay').addClass('active')); // 앨범 클릭 시 가사창
-    $('#btn-close-lyrics').click(() => $('#lyrics-overlay').removeClass('active'));
+    
+    // [UI 개선] 앨범 클릭 시 '사진 영역 내에서만' 가사 전환
+    $('#album-trigger').click(function() {
+        $(this).toggleClass('show-lyrics');
+        // 가사로 전환될 때 현재 시간 가사로 즉시 스크롤
+        if ($(this).hasClass('show-lyrics')) {
+            updateLyricsUI(audio.currentTime);
+        }
+    });
+    
     $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
     
     let sheetStartY = 0;
@@ -229,36 +242,43 @@ $(document).ready(function() {
     $(document).on('click', '.song-select-zone', function() { load($(this).closest('li').data('idx'), true); $('#sheet').removeClass('expanded'); });
     $(document).on('click', '.list-heart-btn', function(e) { e.stopPropagation(); toggleFav(playlistData[$(this).closest('li').data('idx')].title); });
 
-    // [개선] 가사 실시간 강조 및 스크롤
+    // [개선] 가사 실시간 강조 및 스크롤 로직 분리
+    function updateLyricsUI(currentTime) {
+        if (!currentLyrics || currentLyrics.length === 0) return;
+        
+        let activeIdx = -1;
+        for (let i = 0; i < currentLyrics.length; i++) {
+            if (currentTime >= currentLyrics[i].time) {
+                activeIdx = i;
+            } else break;
+        }
+
+        if (activeIdx !== -1) {
+            $('.lyric-line').removeClass('active');
+            const $activeLine = $(`#lyric-${activeIdx}`).addClass('active');
+            
+            // 앨범 섹션 내부 컨테이너 기준 정밀 스크롤
+            const container = $('.lyrics-container')[0];
+            if (container && $activeLine[0]) {
+                const lineOffset = $activeLine[0].offsetTop;
+                const lineSize = $activeLine[0].offsetHeight;
+                const containerSize = container.offsetHeight;
+                const scrollTarget = lineOffset - (containerSize / 2) + (lineSize / 2);
+                
+                container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+            }
+        }
+    }
+
     audio.ontimeupdate = () => {
         if(isNaN(audio.duration)) return;
         $('#progress-bar').val((audio.currentTime/audio.duration)*100);
         const fmt = s => { const m=Math.floor(s/60), sc=Math.floor(s%60); return `${m}:${sc<10?'0'+sc:sc}`; };
         $('#time-now').text(fmt(audio.currentTime)); $('#time-total').text(fmt(audio.duration));
 
-        // 가사 하이라이트
-        if (currentLyrics.length > 0) {
-            let activeIdx = -1;
-            for (let i = 0; i < currentLyrics.length; i++) {
-                if (audio.currentTime >= currentLyrics[i].time) {
-                    activeIdx = i;
-                } else break;
-            }
-            if (activeIdx !== -1) {
-                $('.lyric-line').removeClass('active');
-                const $activeLine = $(`#lyric-${activeIdx}`).addClass('active');
-                // 부드러운 스크롤
-                const container = $('.lyrics-container')[0];
-                if (container && $activeLine[0]) {
-                    // 중앙 정렬 정밀 계산
-                    const lineOffset = $activeLine[0].offsetTop;
-                    const lineSize = $activeLine[0].offsetHeight;
-                    const containerSize = container.offsetHeight;
-                    const scrollTarget = lineOffset - (containerSize / 2) + (lineSize / 2);
-                    
-                    container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
-                }
-            }
+        // 가사 모드일 때만 실시간 UI 업데이트
+        if ($('#album-trigger').hasClass('show-lyrics')) {
+            updateLyricsUI(audio.currentTime);
         }
     };
     $('#progress-bar').on('input', function() { audio.currentTime = ($(this).val()/100)*audio.duration; });

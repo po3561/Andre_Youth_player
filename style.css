@@ -8,56 +8,52 @@
 }
 
 
-/* 가사 오버레이 전체 스타일 */
-/* [iOS 애플 뮤직 스타일] 가사 오버레이 */
-#lyrics-overlay {
-    position: fixed; inset: 0; z-index: 6000;
+/* [iOS 스타일] 인플레이스 가사 뷰 (앨범 섹션 내부) */
+.album-section { 
+    position: relative; width: 100%; aspect-ratio: 1; 
+    max-height: 38vh; border-radius: 20px; overflow: hidden; 
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4); align-self: center; 
+    cursor: pointer;
+}
+.album-art { width: 100%; height: 100%; object-fit: cover; transition: 0.5s cubic-bezier(0.19, 1, 0.22, 1); }
+
+.lyrics-view {
+    position: absolute; inset: 0; z-index: 10;
     background: rgba(0, 0, 0, 0.5); 
-    background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important;
-    -webkit-backdrop-filter: blur(50px) saturate(1.8);
-    backdrop-filter: blur(50px) saturate(1.8);
+    backdrop-filter: blur(25px) saturate(1.8); -webkit-backdrop-filter: blur(25px) saturate(1.8);
+    opacity: 0; pointer-events: none; transition: 0.5s cubic-bezier(0.19, 1, 0.22, 1);
     display: flex; flex-direction: column;
-    transform: translateY(100%); transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-    color: #fff;
-}
-#lyrics-overlay.active { transform: translateY(0); }
-
-/* 배경에 은은하게 깔리는 앨범 아트 레이어 */
-#lyrics-overlay::before {
-    content: ""; position: absolute; inset: 0; z-index: -1;
-    background-image: inherit; background-size: cover !important; 
-    background-position: center !important; background-repeat: no-repeat !important;
-    opacity: 0.3; filter: blur(20px);
 }
 
-.lyrics-header { 
-    height: 80px; display: flex; justify-content: space-between; align-items: center; 
-    padding: 0 30px; border-bottom: 1px solid rgba(255,255,255,0.05); 
-}
-#lyrics-title-text { font-size: 1.3rem; font-weight: 900; letter-spacing: -1px; }
+/* 가사 모드 활성화 시 */
+.album-section.show-lyrics .lyrics-view { opacity: 1; pointer-events: auto; }
+.album-section.show-lyrics .album-art { transform: scale(1.1); filter: grayscale(0.5); }
 
 .lyrics-container { 
-    flex: 1; overflow-y: auto; padding: 100px 30px; 
+    flex: 1; overflow-y: auto; padding: 40px 20px; 
     scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
     mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
 }
+
 .lyric-line {
-    font-size: 2.2rem; font-weight: 800; color: rgba(255, 255, 255, 0.25);
-    margin-bottom: 35px; transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1); 
-    text-align: left; line-height: 1.2; letter-spacing: -1.5px;
-    filter: blur(1.5px); transform: scale(0.95);
+    font-size: 1.5rem; font-weight: 800; color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 25px; transition: all 0.4s ease; 
+    text-align: center; line-height: 1.3; letter-spacing: -1px;
 }
 .lyric-line.active { 
-    color: #fff; transform: scale(1.05) translateX(0); 
-    filter: blur(0); opacity: 1; text-shadow: 0 0 20px rgba(255,255,255,0.2);
+    color: #fff; transform: scale(1.1); filter: blur(0); opacity: 1;
+    text-shadow: 0 0 15px rgba(255,255,255,0.3);
 }
-.lyric-line.no-data { text-align: center; margin-top: 30vh; font-size: 1.1rem; opacity: 0.5; }
+.lyric-line.no-data { margin-top: 100px; font-size: 1rem; opacity: 0.5; }
 
-/* 앨범 아트 마우스 오버/터치 힌트 */
-.album-section::after {
-    content: "Tap for Lyrics"; position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.4); color: #fff; padding: 5px 12px; border-radius: 12px; font-size: 0.75rem; opacity: 0.7; pointer-events: none;
+.lyrics-hint {
+    position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.5); color: #fff; padding: 6px 12px; border-radius: 12px;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; z-index: 20;
+    opacity: 0.8; pointer-events: none; transition: 0.3s;
 }
+.album-section.show-lyrics .lyrics-hint { opacity: 0; transform: translate(-50%, 20px); }
 
 .fa-solid, .fas, .fa-regular, .far { font-family: 'Font Awesome 6 Free' !important; }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -68,7 +64,12 @@ body {
     padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
 
-#bg-image { position: fixed; inset: 0; z-index: -2; opacity: 0.6; filter: blur(50px) saturate(1.2); background-size: cover; background-position: center; transition: 1s; transform: scale(1.1); }
+#bg-image { 
+    position: fixed; inset: 0; z-index: -2; opacity: 0.6; 
+    filter: blur(50px) saturate(1.2); 
+    background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important;
+    transition: 1s; transform: scale(1.1); 
+}
 .glass-background { position: fixed; inset: 0; z-index: -1; background: rgba(0, 0, 0, 0.25); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 
 .app-container { position: relative; width: 100%; max-width: 480px; height: 100%; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; }
