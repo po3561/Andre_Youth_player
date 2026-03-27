@@ -136,16 +136,15 @@ $(document).ready(function() {
         
         audio.src = fixedAudio; 
         audio.removeAttribute('crossorigin');
-        audio.load(); 
+        // audio.load(); // 제거하여 즉시 재생 시도
 
+        // 앨범 아트 및 배경 업데이트
         $('#album-img').attr('src', fixedCover).on('error', function() {
             $(this).attr('src', 'https://via.placeholder.com/500?text=No+Cover');
         });
         $('#bg-image').css('background-image', `url('${fixedCover}')`);
-        $('#disp-title').text(s.title);
-        
-        // 앨범 섹션 상태 초기화 (가사 숨김) 및 배경 이미지 동기화
         $('#album-trigger').removeClass('show-lyrics').css('background-image', `url('${fixedCover}')`);
+        $('#disp-title').text(s.title);
         
         // [CORS 우회] 백엔드에서 통합된 가사 데이터를 즉시 파싱하여 렌더링
         if (s.lyricsData) {
