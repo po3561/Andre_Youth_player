@@ -132,7 +132,8 @@ $(document).ready(function() {
         
         // 음원 재생 주소 정밀 변환 적용 및 로드
         audio.src = MusicEngine.fixUrl(s.url, 'audio'); 
-        audio.load(); // 명시적 로드 호출
+        audio.removeAttribute('crossorigin'); // 구글 드라이브 보안 이슈 방지 (중요!)
+        audio.load(); 
 
         $('#album-img').attr('src', s.cover);
         $('#bg-image').css('background-image', `url('${s.cover}')`);
@@ -154,10 +155,12 @@ $(document).ready(function() {
         syncHearts();
         
         if (play) {
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(e => console.log("Autoplay blocked or load error:", e));
-            }
+            audio.play().catch(e => {
+                console.error("Playback System Error:", e.name, e.message);
+                if (e.name === "NotAllowedError") {
+                    $('#disp-title').text("화면을 클릭하면 재생됩니다.");
+                }
+            });
         }
     }
 
