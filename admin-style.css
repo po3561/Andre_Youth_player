@@ -1,0 +1,64 @@
+/* admin-style.css */
+.admin-container { 
+    position: relative; width: 100%; max-width: 600px; height: 100%; margin: 0 auto; 
+    display: flex; flex-direction: column; overflow: hidden; 
+}
+
+.admin-header { 
+    display: flex; justify-content: space-between; align-items: center; 
+    padding: 20px 25px; z-index: 100; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.5); 
+}
+
+.admin-main { flex: 1; padding: 25px; overflow-y: auto; }
+
+.upload-card { 
+    padding: 30px; border-radius: 30px; display: flex; flex-direction: column; gap: 25px; 
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2); 
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.form-group { display: flex; flex-direction: column; gap: 10px; }
+.form-group label { font-size: 0.95rem; font-weight: 800; color: #fff; }
+.form-group input { 
+    padding: 15px 20px; border-radius: 15px; border: 1.5px solid rgba(255,255,255,0.3); 
+    background: rgba(255,255,255,0.15); color: #fff; font-size: 1.05rem; 
+    outline: none; transition: 0.3s;
+}
+.form-group input:focus { border-color: #fff; background: rgba(255,255,255,0.25); }
+
+.drop-zone-container { display: flex; flex-direction: column; gap: 15px; }
+
+.drop-zone { 
+    padding: 25px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 20px; 
+    text-align: center; color: #fff; cursor: pointer; transition: 0.3s; 
+    background: rgba(255,255,255,0.05); position: relative;
+}
+.drop-zone:hover, .drop-zone.active { border-color: #fff; background: rgba(255,255,255,0.15); }
+.drop-zone i { font-size: 1.5rem; margin-bottom: 15px; opacity: 0.8; }
+.drop-zone p { font-size: 0.9rem; font-weight: 700; opacity: 0.9; margin: 0; }
+.file-info { display: block; margin-top: 10px; font-size: 0.75rem; color: #fff; opacity: 0.6; }
+
+.upload-all-btn { 
+    margin-top: 10px; padding: 20px; border-radius: 20px; border: none; 
+    background: var(--primary); color: #fff; font-size: 1.1rem; font-weight: 900; 
+    cursor: pointer; box-shadow: 0 15px 30px rgba(33, 204, 249, 0.3); 
+    transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.upload-all-btn:active { transform: scale(0.96); opacity: 0.85; }
+.upload-all-btn:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+
+.progress-container { margin-top: 20px; text-align: center; }
+.progress-bar { 
+    width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; 
+    overflow: hidden; margin-bottom: 10px; 
+}
+.progress-fill { width: 0%; height: 100%; background: #00ff88; transition: 0.3s; }
+#upload-status-text { font-size: 0.85rem; color: #fff; opacity: 0.8; font-weight: 600; }
+
+@media (max-width: 480px) {
+    .admin-main { padding: 15px; }
+    .upload-card { padding: 20px; }
+}

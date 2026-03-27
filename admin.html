@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Andre Youth Admin - New Song Upload</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div id="bg-image" style="background-image: url('https://images.unsplash.com/photo-1514525253361-bee8718a300c?auto=format&fit=crop&q=80&w=1000');"></div>
+    <div class="glass-background"></div>
+
+    <div class="admin-container">
+        <header class="admin-header">
+            <div class="nav-side">
+                <a href="index.html" class="icon-btn" aria-label="플레이어로 돌아가기">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+            </div>
+            <div class="nav-title">
+                <span class="sub-title">관리자 전용</span>
+                <span class="main-title">새 찬양 업로드</span>
+            </div>
+            <div class="nav-side"></div>
+        </header>
+
+        <main class="admin-main">
+            <div class="upload-card glass-card">
+                <div class="form-group">
+                    <label for="song-title">곡 제목 (필수)</label>
+                    <input type="text" id="song-title" placeholder="곡 제목을 입력하세요" autocomplete="off">
+                </div>
+
+                <div class="drop-zone-container">
+                    <div class="drop-zone" id="drop-audio" data-type="audio">
+                        <input type="file" id="file-audio" accept="audio/*" hidden>
+                        <i class="fa-solid fa-music"></i>
+                        <p>음원 파일 (.mp3) 드래그 또는 클릭</p>
+                        <span class="file-info">선택된 파일 없음</span>
+                    </div>
+
+                    <div class="drop-zone" id="drop-image" data-type="image">
+                        <input type="file" id="file-image" accept="image/*" hidden>
+                        <i class="fa-solid fa-image"></i>
+                        <p>커버 이미지 (.jpg) 드래그 또는 클릭</p>
+                        <span class="file-info">선택된 파일 없음</span>
+                    </div>
+
+                    <div class="drop-zone" id="drop-lyrics" data-type="lyrics">
+                        <input type="file" id="file-lyrics" accept=".lrc" hidden>
+                        <i class="fa-solid fa-file-lines"></i>
+                        <p>가사 파일 (.lrc) 드래그 또는 클릭</p>
+                        <span class="file-info">선택된 파일 없음</span>
+                    </div>
+                </div>
+
+                <button id="btn-upload-all" class="primary-btn upload-all-btn">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> 한 번에 업로드 시작
+                </button>
+
+                <div id="upload-progress-container" class="progress-container" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                    <p id="upload-status-text">준비 중...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>
