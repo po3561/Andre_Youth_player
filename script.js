@@ -19,7 +19,7 @@ $(document).ready(function() {
     localStorage.setItem('chatUserId', userId);
     let myLikedMsgs = JSON.parse(localStorage.getItem('myLikedMsgs')) || [];
 
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbxoOke01ymn1blKICqblBgkBbq7KTV7DDGhj8n2W0r1rFckBuimToNh7J_57aD6VHJAcw/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw63hBYeLpwfACFSuF7_hZZ-tgUexY-w5yf5c__WUQhjSmjOvfqaQiYiL_8FXcV-hJqwg/exec";
     let playlistData = []; 
 
     // [자동화] 구글 드라이브에서 리스트 실시간 로드
