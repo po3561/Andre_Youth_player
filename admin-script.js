@@ -1,6 +1,6 @@
 /* admin-script.js */
 $(document).ready(function() {
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbw63hBYeLpwfACFSuF7_hZZ-tgUexY-w5yf5c__WUQhjSmjOvfqaQiYiL_8FXcV-hJqwg/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwqK78wbvPYHSxbwl6Fyu43ystWSU824EFiwM3ZJGvusGhQW99eWJBEUY1vrOub3sQTbg/exec";
     const files = { audio: null, image: null, generatedLrc: "" };
     
     // 싱크 조절용 변수

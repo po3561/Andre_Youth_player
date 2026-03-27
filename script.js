@@ -19,7 +19,7 @@ $(document).ready(function() {
     localStorage.setItem('chatUserId', userId);
     let myLikedMsgs = JSON.parse(localStorage.getItem('myLikedMsgs')) || [];
 
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbw63hBYeLpwfACFSuF7_hZZ-tgUexY-w5yf5c__WUQhjSmjOvfqaQiYiL_8FXcV-hJqwg/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwqK78wbvPYHSxbwl6Fyu43ystWSU824EFiwM3ZJGvusGhQW99eWJBEUY1vrOub3sQTbg/exec";
     let playlistData = []; 
 
     // [자동화] 구글 드라이브에서 리스트 실시간 로드
@@ -129,20 +129,29 @@ $(document).ready(function() {
     function load(i, play = false) {
         if(i < 0 || i >= playlistData.length) return;
         curIdx = i; const s = playlistData[i];
-        audio.removeAttribute('crossorigin'); // CORS 설정 초기화
-        audio.src = s.url; 
+        
+        // 음원 재생 주소 정밀 변환 적용
+        audio.src = MusicEngine.fixUrl(s.url, 'audio'); 
+        
         $('#album-img').attr('src', s.cover);
         $('#bg-image').css('background-image', `url('${s.cover}')`);
         $('#disp-title').text(s.title);
         $('#lyrics-title-text').text(s.title); // 가사창 제목 동기화
-        render(); 
-        syncHearts();
-        // 가사 URL 변환 후 로드
-        const fixedLyricsUrl = MusicEngine.fixUrl(s.lyricsUrl, 'audio'); // LRC도 audio와 동일한 download API 사용
-        fetchLyrics(fixedLyricsUrl); 
         
         // 가사창 배경 업데이트 (iOS 스타일)
         $('#lyrics-overlay').css('background-image', `url('${s.cover}')`);
+        
+        // [CORS 우회] 백엔드에서 받은 가사 데이터를 즉시 파싱하여 렌더링
+        if (s.lyricsData) {
+            currentLyrics = MusicEngine.parseLyrics(s.lyricsData);
+            renderLyrics();
+        } else {
+            $('#lyrics-scroll-area').html('<div class="lyric-line no-data">등록된 가사가 없습니다.</div>');
+            currentLyrics = [];
+        }
+
+        render(); 
+        syncHearts();
         
         if (play) audio.play();
     }
