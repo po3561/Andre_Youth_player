@@ -94,3 +94,33 @@
     margin-top: 15px; font-size: 0.8rem; color: #00ff88; white-space: pre-wrap; 
     font-family: monospace; max-height: 100px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
 }
+
+/* --- Manage Section Style --- */
+.manage-card { margin-top: 30px; padding: 25px; border-radius: 30px; margin-bottom: 50px; }
+.manage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: #fff; }
+.manage-header h3 { font-size: 1.1rem; margin: 0; }
+
+.admin-song-list { display: flex; flex-direction: column; gap: 10px; }
+.admin-song-item { 
+    display: flex; justify-content: space-between; align-items: center; 
+    padding: 15px 20px; background: rgba(255,255,255,0.08); border-radius: 15px; 
+    border: 1px solid rgba(255,255,255,0.1); transition: 0.3s;
+}
+.admin-song-item:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
+.admin-song-info { display: flex; align-items: center; gap: 15px; color: #fff; }
+.admin-song-info strong { font-size: 1rem; }
+
+.btn-delete-song { 
+    background: rgba(255,59,48,0.2); color: #ff3b30; border: none; 
+    width: 35px; height: 35px; border-radius: 10px; cursor: pointer; transition: 0.3s; 
+}
+.btn-delete-song:hover { background: #ff3b30; color: #fff; transform: scale(1.1); }
+
+.premium-label { font-size: 1rem !important; color: #00ff88 !important; margin-bottom: 12px; display: block; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+.premium-sync-btn { 
+    width: 100%; padding: 15px; border-radius: 15px; border: 1.5px solid #00ff88; 
+    background: rgba(0,255,136,0.1); color: #00ff88; font-weight: 800; cursor: pointer; transition: 0.3s; 
+}
+.premium-sync-btn:hover { background: #00ff88; color: #00552e; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+
+.loading-spinner { text-align: center; color: rgba(255,255,255,0.5); padding: 20px; font-size: 0.9rem; }

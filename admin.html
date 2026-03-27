@@ -34,41 +34,33 @@
                     <input type="text" id="song-title" placeholder="곡 제목을 입력하세요" autocomplete="off">
                 </div>
 
-                <div class="drop-zone-container">
-                    <div class="drop-zone" id="drop-audio" data-type="audio">
-                        <input type="file" id="file-audio" accept="audio/*" hidden>
-                        <i class="fa-solid fa-music"></i>
-                        <p>음원 파일 (.mp3) 드래그 또는 클릭</p>
-                        <span class="file-info">선택된 파일 없음</span>
-                    </div>
-
-                    <div class="drop-zone" id="drop-image" data-type="image">
-                        <input type="file" id="file-image" accept="image/*" hidden>
-                        <i class="fa-solid fa-image"></i>
-                        <p>커버 이미지 (.jpg) 드래그 또는 클릭</p>
-                        <span class="file-info">선택된 파일 없음</span>
-                    </div>
-
-                    <div class="drop-zone" id="drop-lyrics" data-type="lyrics">
-                        <input type="file" id="file-lyrics" accept=".lrc" hidden>
-                        <i class="fa-solid fa-file-lines"></i>
-                        <p>가사 파일 (.lrc) 드래그 또는 클릭</p>
-                        <span class="file-info">선택된 파일 없음</span>
-                    </div>
-                </div>
-
-                <!-- 가사 싱크 엔진 (New) -->
                 <div class="form-group lyrics-editor-zone">
-                    <label for="lyrics-raw">원문 가사 붙여넣기 (스마트 싱크 전용)</label>
-                    <textarea id="lyrics-raw" rows="8" placeholder="이곳에 전제 가사를 붙여넣으세요. 한 줄씩 구분되어 있으면 더 좋습니다."></textarea>
+                    <label for="lyrics-raw" class="premium-label"><i class="fa-solid fa-wand-magic-sparkles"></i> 스마트 가사 생성기 (텍스트 붙여넣기)</label>
+                    <textarea id="lyrics-raw" rows="8" placeholder="이곳에 노래 전체 가사를 붙여넣으세요. 한 줄씩 구분되어 있으면 가장 정확하게 싱크가 만들어집니다."></textarea>
                     <div class="sync-controls">
-                        <button id="btn-sync-mode" class="secondary-btn"><i class="fa-solid fa-clock-rotate-left"></i> 싱크 맞추기 시작</button>
+                        <button id="btn-sync-mode" class="premium-sync-btn"><i class="fa-solid fa-clock-rotate-left"></i> 싱크 맞추기 시작</button>
                         <div id="sync-active-info" style="display: none;">
                             <span class="active-lyric-hint">다음 줄 타이밍: <strong id="next-lyric-text">...</strong></span>
                             <button id="btn-tap-sync" class="pulse-btn">지금! (TAP)</button>
                         </div>
                     </div>
                     <div id="generated-lrc-preview" class="lrc-preview"></div>
+                </div>
+
+                <div class="drop-zone-container">
+                    <div class="drop-zone" id="drop-audio" data-type="audio">
+                        <input type="file" id="file-audio" accept="audio/*" hidden>
+                        <i class="fa-solid fa-music"></i>
+                        <p>음원 파일 (.mp3)</p>
+                        <span class="file-info">드래그 또는 클릭</span>
+                    </div>
+
+                    <div class="drop-zone" id="drop-image" data-type="image">
+                        <input type="file" id="file-image" accept="image/*" hidden>
+                        <i class="fa-solid fa-image"></i>
+                        <p>커버 이미지 (.jpg)</p>
+                        <span class="file-info">드래그 또는 클릭</span>
+                    </div>
                 </div>
 
                 <button id="btn-upload-all" class="primary-btn upload-all-btn">
@@ -81,6 +73,18 @@
                     </div>
                     <p id="upload-status-text">준비 중...</p>
                 </div>
+            </div>
+
+            <!-- 현재 곡 관리 섹션 (New) -->
+            <div class="manage-card glass-card">
+                <div class="manage-header">
+                    <h3>현재 등록된 곡 목록</h3>
+                    <button id="btn-refresh-list" class="icon-btn" aria-label="목록 갱신"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+                <div id="admin-song-list" class="admin-song-list">
+                    <div class="loading-spinner">목록 불러오는 중...</div>
+                </div>
+            </div>
             </div>
         </main>
     </div>
