@@ -1,7 +1,13 @@
 /* admin-script.js */
 $(document).ready(function() {
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw63hBYeLpwfACFSuF7_hZZ-tgUexY-w5yf5c__WUQhjSmjOvfqaQiYiL_8FXcV-hJqwg/exec";
-    const files = { audio: null, image: null, lyrics: null };
+    const files = { audio: null, image: null, lyrics: null, generatedLrc: "" };
+    
+    // 싱크 조절용 변수
+    let syncLines = [];
+    let currentSyncIdx = 0;
+    let tempAudio = null;
+    let recordedLrc = [];
 
     // 드래그 앤 드롭 방지
     $(document).on('dragover dragenter drop', function(e) {
@@ -43,6 +49,63 @@ $(document).ready(function() {
         files[type] = file;
         $zone.find('.file-info').text(`${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`).css('opacity', '1');
         $zone.find('p').text('파일 선택됨').css('color', '#00ff88');
+
+        // 음원이 선택되면 임시 오디오 객체 준비
+        if (type === 'audio') {
+            if (tempAudio) { tempAudio.pause(); tempAudio = null; }
+            tempAudio = new Audio(URL.createObjectURL(file));
+        }
+    }
+
+    // --- 가사 싱크 엔진 로직 ---
+    $('#btn-sync-mode').click(function() {
+        const rawText = $('#lyrics-raw').val().trim();
+        if (!rawText) { alert('먼저 가사 텍스트를 입력해주세요.'); return; }
+        if (!files.audio) { alert('싱크를 맞출 음원 파일을 먼저 선택해주세요.'); return; }
+
+        syncLines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        currentSyncIdx = 0;
+        recordedLrc = [];
+        
+        $(this).hide();
+        $('#sync-active-info').fadeIn();
+        updateSyncHint();
+        
+        if (tempAudio) {
+            tempAudio.currentTime = 0;
+            tempAudio.play().catch(e => alert('오디오 재생에 실패했습니다. 파일을 다시 확인해주세요.'));
+        }
+    });
+
+    function updateSyncHint() {
+        if (currentSyncIdx < syncLines.length) {
+            $('#next-lyric-text').text(syncLines[currentSyncIdx]);
+        } else {
+            finishSync();
+        }
+    }
+
+    $('#btn-tap-sync').click(function() {
+        if (!tempAudio || currentSyncIdx >= syncLines.length) return;
+
+        const time = tempAudio.currentTime;
+        const minutes = Math.floor(time / 60);
+        const seconds = (time % 60).toFixed(2);
+        const timestamp = `[${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
+        
+        recordedLrc.push(`${timestamp}${syncLines[currentSyncIdx]}`);
+        currentSyncIdx++;
+        updateSyncHint();
+    });
+
+    function finishSync() {
+        if (tempAudio) tempAudio.pause();
+        files.generatedLrc = recordedLrc.join('\n');
+        
+        $('#sync-active-info').hide();
+        $('#btn-sync-mode').show().html('<i class="fa-solid fa-check"></i> 싱크 다시 맞추기');
+        $('#generated-lrc-preview').text("생성된 가사 데이터:\n" + files.generatedLrc).fadeIn();
+        alert('가사 싱크 작업이 완료되었습니다! 이제 업로드를 진행하세요.');
     }
 
     // 업로드 실행
@@ -77,6 +140,10 @@ $(document).ready(function() {
             if (files.lyrics) {
                 payload.lrcName = `${title}.lrc`;
                 payload.lrcData = await toBase64(files.lyrics);
+            } else if (files.generatedLrc) {
+                // 스마트 싱크로 생성된 가사가 있다면 사용
+                payload.lrcName = `${title}.lrc`;
+                payload.lrcData = btoa(unescape(encodeURIComponent(files.generatedLrc))); // UTF-8 Base64
             }
 
             $bar.css('width', '50%');

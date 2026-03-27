@@ -57,6 +57,20 @@
                     </div>
                 </div>
 
+                <!-- 가사 싱크 엔진 (New) -->
+                <div class="form-group lyrics-editor-zone">
+                    <label for="lyrics-raw">원문 가사 붙여넣기 (스마트 싱크 전용)</label>
+                    <textarea id="lyrics-raw" rows="8" placeholder="이곳에 전제 가사를 붙여넣으세요. 한 줄씩 구분되어 있으면 더 좋습니다."></textarea>
+                    <div class="sync-controls">
+                        <button id="btn-sync-mode" class="secondary-btn"><i class="fa-solid fa-clock-rotate-left"></i> 싱크 맞추기 시작</button>
+                        <div id="sync-active-info" style="display: none;">
+                            <span class="active-lyric-hint">다음 줄 타이밍: <strong id="next-lyric-text">...</strong></span>
+                            <button id="btn-tap-sync" class="pulse-btn">지금! (TAP)</button>
+                        </div>
+                    </div>
+                    <div id="generated-lrc-preview" class="lrc-preview"></div>
+                </div>
+
                 <button id="btn-upload-all" class="primary-btn upload-all-btn">
                     <i class="fa-solid fa-cloud-arrow-up"></i> 한 번에 업로드 시작
                 </button>

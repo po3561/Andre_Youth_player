@@ -77,7 +77,16 @@ $(document).ready(function() {
             return;
         }
         currentLyrics.forEach((l, i) => {
-            $area.append(`<div class="lyric-line" id="lyric-${i}" data-time="${l.time}">${l.text}</div>`);
+            $area.append(`<div class="lyric-line" id="lyric-${i}" data-time="${l.time}" style="cursor:pointer;">${l.text}</div>`);
+        });
+
+        // 가사 클릭 시 해당 시간으로 이동
+        $('.lyric-line').off('click').on('click', function() {
+            const time = parseFloat($(this).data('time'));
+            if (!isNaN(time)) {
+                audio.currentTime = time;
+                if (audio.paused) audio.play();
+            }
         });
     }
 
@@ -120,6 +129,7 @@ $(document).ready(function() {
     function load(i, play = false) {
         if(i < 0 || i >= playlistData.length) return;
         curIdx = i; const s = playlistData[i];
+        audio.removeAttribute('crossorigin'); // CORS 설정 초기화
         audio.src = s.url; 
         $('#album-img').attr('src', s.cover);
         $('#bg-image').css('background-image', `url('${s.cover}')`);

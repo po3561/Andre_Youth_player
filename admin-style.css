@@ -15,8 +15,8 @@
     padding: 30px; border-radius: 30px; display: flex; flex-direction: column; gap: 25px; 
     box-shadow: 0 20px 50px rgba(0,0,0,0.2); 
     background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -61,4 +61,36 @@
 @media (max-width: 480px) {
     .admin-main { padding: 15px; }
     .upload-card { padding: 20px; }
+}
+
+/* Lyrics Sync Engine Style */
+.lyrics-editor-zone { margin-top: 10px; }
+#lyrics-raw { 
+    width: 100%; min-height: 150px; padding: 15px; border-radius: 15px; border: 1.5px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.2); color: #fff; font-family: 'Pretendard', sans-serif; resize: vertical; margin-top: 10px;
+}
+.sync-controls { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+.secondary-btn { 
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; 
+    padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s;
+}
+.secondary-btn:hover { background: rgba(255,255,255,0.3); }
+
+#sync-active-info { 
+    background: rgba(0,255,136,0.1); border: 1.5px solid #00ff88; border-radius: 15px; 
+    padding: 15px; display: flex; flex-direction: column; gap: 10px; align-items: center;
+}
+.active-lyric-hint { color: #fff; font-size: 0.95rem; text-align: center; }
+.active-lyric-hint strong { color: #00ff88; font-size: 1.1rem; }
+
+.pulse-btn { 
+    width: 100%; padding: 18px; border-radius: 12px; border: none; 
+    background: #00ff88; color: #00552e; font-weight: 900; font-size: 1.1rem;
+    cursor: pointer; box-shadow: 0 5px 20px rgba(0,255,136,0.4); 
+}
+.pulse-btn:active { transform: scale(0.95); }
+
+.lrc-preview { 
+    margin-top: 15px; font-size: 0.8rem; color: #00ff88; white-space: pre-wrap; 
+    font-family: monospace; max-height: 100px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
 }
