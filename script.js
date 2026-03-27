@@ -26,7 +26,7 @@ $(document).ready(function() {
     async function fetchPlaylist() {
         try {
             $('#disp-title').text('동기화 중...');
-            const response = await fetch(GAS_URL);
+            const response = await fetch(`${GAS_URL}?v=${Date.now()}`);
             const data = await response.json();
             if (data && data.length > 0) {
                 playlistData = data;

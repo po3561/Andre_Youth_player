@@ -10,7 +10,7 @@ const MusicEngine = {
         this.audio.id = 'audio-engine';
         this.audio.preload = "auto";
         // 구글 드라이브 보안 통과 및 스트리밍 최적화
-        this.audio.setAttribute('crossorigin', 'anonymous'); 
+        // this.audio.setAttribute('crossorigin', 'anonymous'); 
         if(!document.getElementById('audio-engine')) document.body.appendChild(this.audio);
     },
 
