@@ -132,11 +132,12 @@ $(document).ready(function() {
         
         // 음원 및 이미지 주소 정밀 변환 적용
         const ts = new Date().getTime();
-        const fixedAudio = MusicEngine.fixUrl(s.url, 'audio') + `?v=${ts}`;
-        const fixedCover = MusicEngine.fixUrl(s.cover, 'image') + `?v=${ts}`;
+        const fixedAudio = MusicEngine.fixUrl(s.url, 'audio'); // confirm=t 포함
+        const fixedCover = MusicEngine.fixUrl(s.cover, 'image'); // lh3 서버
         
         audio.src = fixedAudio; 
-        audio.removeAttribute('crossorigin');
+        audio.removeAttribute('crossorigin'); // 보안 정책 우회를 위해 필수!
+        audio.load();
 
         // 앨범 아트 및 배경 업데이트
         $('#album-img').attr('src', fixedCover);
