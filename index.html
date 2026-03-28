@@ -21,7 +21,7 @@
         <header class="top-nav" id="main-header">
             <div class="nav-normal-layer">
                 <div class="nav-side">
-                    <button id="btn-open-chat" class="icon-btn" aria-label="채팅창 열기">
+                    <button id="btn-open-chat" class="icon-btn" aria-label="채팅 열기">
                         <i class="fa-solid fa-comment-dots"></i>
                         <span id="chat-badge" class="badge"></span>
                     </button>
@@ -30,16 +30,16 @@
                     </button>
                 </div>
                 <div class="nav-title">
-                    <span class="sub-title">4월30일 기도회</span>
-                    <span class="main-title">믿음으로 기. 대하다</span>
+                    <span class="sub-title">Andre Youth Playlist</span>
+                    <span class="main-title">음악으로 길을 잇다</span>
                 </div>
                 <div class="nav-side" style="justify-content: flex-end;">
-                    <button id="btn-upload" class="icon-btn mr-8" aria-label="곡 추가"><i
-                            class="fa-solid fa-plus"></i></button>
-                    <button id="btn-share" class="icon-btn mr-8" aria-label="공유하기"><i
-                            class="fa-solid fa-arrow-up-from-bracket"></i></button>
-                    <button id="btn-copyright" class="icon-btn" aria-label="저작권 정보"><i
-                            class="fa-solid fa-circle-info"></i></button>
+                    <button id="btn-share" class="icon-btn mr-8" aria-label="공유하기">
+                        <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                    </button>
+                    <button id="btn-copyright" class="icon-btn" aria-label="저작권 정보">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                 </div>
             </div>
 
@@ -63,11 +63,14 @@
             </div>
 
             <div class="info-section">
+                <img src="" id="artist-avatar" class="artist-avatar" alt="Profile photo">
                 <div class="text-group">
                     <h2 id="disp-title">Loading...</h2>
-                    <p id="disp-artist">우리가 늘 모이던 곳 6층</p>
+                    <p id="disp-artist">Andre Youth</p>
                 </div>
-                <button id="btn-scrap" class="heart-btn" aria-label="좋아요"><i class="fa-regular fa-heart"></i></button>
+                <button id="btn-scrap" class="heart-btn" aria-label="좋아요">
+                    <i class="fa-regular fa-heart"></i>
+                </button>
             </div>
 
             <div class="playback-section">
@@ -79,15 +82,20 @@
             </div>
 
             <div class="control-section">
-                <button id="btn-shuffle" class="opt-btn" aria-label="셔플"><i class="fa-solid fa-shuffle"></i></button>
-                <button id="btn-prev" class="main-btn side" aria-label="이전 곡"><i
-                        class="fa-solid fa-backward-step"></i></button>
+                <button id="btn-shuffle" class="opt-btn" aria-label="셔플">
+                    <i class="fa-solid fa-shuffle"></i>
+                </button>
+                <button id="btn-prev" class="main-btn side" aria-label="이전 곡">
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
                 <div class="play-btn-glow">
-                    <button id="btn-play-pause" class="main-btn play" aria-label="재생/일시정지"><i
-                            class="fa-solid fa-play"></i></button>
+                    <button id="btn-play-pause" class="main-btn play" aria-label="재생/일시정지">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
                 </div>
-                <button id="btn-next" class="main-btn side" aria-label="다음 곡"><i
-                        class="fa-solid fa-forward-step"></i></button>
+                <button id="btn-next" class="main-btn side" aria-label="다음 곡">
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
                 <button id="btn-repeat" class="opt-btn" aria-label="반복">
                     <i class="fa-solid fa-repeat"></i>
                     <span class="repeat-dot"></span>
@@ -95,17 +103,15 @@
             </div>
         </main>
 
-
-
         <div id="chat-overlay" class="ios-popup">
             <div class="popup-card glass-card">
                 <div class="popup-header">
-                    <span>기도 제목 나누기 (익명)</span>
+                    <span>기도 제목 나누기</span>
                     <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div id="chat-messages" class="chat-viewport"></div>
                 <div class="chat-input-row">
-                    <input type="text" id="chat-input" placeholder="기도 상달하기..." autocomplete="off">
+                    <input type="text" id="chat-input" placeholder="기도 제목을 적어주세요..." autocomplete="off">
                     <button id="btn-send-chat" class="send-btn"><i class="fa-solid fa-arrow-up"></i></button>
                 </div>
             </div>
@@ -118,10 +124,8 @@
                     <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="popup-body">
-                    <div class="copyright-notice">본 플레이어는 비영리 목적으로 운영됩니다.</div>
-                    <div class="copy-list" id="dynamic-copy-list">
-                        <!-- 동적으로 생성됩니다 -->
-                    </div>
+                    <div class="copyright-notice">본 플레이어는 비영리 목적의 내부 재생용입니다.</div>
+                    <div class="copy-list" id="dynamic-copy-list"></div>
                 </div>
             </div>
         </div>
@@ -133,7 +137,7 @@
             </div>
             <div class="sheet-main">
                 <div class="list-head">
-                    <h3>찬양 목록</h3>
+                    <h3>곡 목록</h3>
                     <span class="count-txt">총 <span id="total-count">0</span>곡</span>
                 </div>
                 <div class="list-scroll-area">
@@ -143,11 +147,9 @@
         </section>
     </div>
 
-    <!-- 오디오 엔진 (기능 핵심) -->
     <audio id="audio-engine"></audio>
 
     <script src="music-engine.js"></script>
-
     <script src="script.js"></script>
 </body>
 

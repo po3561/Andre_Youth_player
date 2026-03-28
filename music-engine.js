@@ -1,61 +1,68 @@
 /**
  * Music Engine for Andre Youth Player
- * 담당: 오디오 재생 제어, 구글 드라이브 주소 정밀 변환, 가력 데이터 추출
+ * Shared helpers for audio playback and Google Drive URL normalization.
  */
+const PLACEHOLDER_IMAGE =
+    'data:image/svg+xml;charset=UTF-8,' +
+    encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+            <defs>
+                <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#21ccf9"/>
+                    <stop offset="100%" stop-color="#0b1220"/>
+                </linearGradient>
+            </defs>
+            <rect width="400" height="400" rx="64" fill="url(#g)"/>
+            <circle cx="200" cy="160" r="62" fill="rgba(255,255,255,0.18)"/>
+            <path d="M96 304c18-52 58-78 104-78s86 26 104 78" fill="rgba(255,255,255,0.18)"/>
+            <circle cx="200" cy="160" r="28" fill="rgba(255,255,255,0.7)"/>
+        </svg>`
+    );
+
 const MusicEngine = {
     audio: document.getElementById('audio-engine') || new Audio(),
     lyrics: [],
+    placeholderImage: PLACEHOLDER_IMAGE,
 
-    init: function() {
+    init() {
         this.audio.id = 'audio-engine';
-        this.audio.preload = "auto";
-        // 구글 드라이브 보안 통과 및 스트리밍 최적화
-        // this.audio.setAttribute('crossorigin', 'anonymous'); 
-        if(!document.getElementById('audio-engine')) document.body.appendChild(this.audio);
+        this.audio.preload = 'auto';
+        if (!document.getElementById('audio-engine')) document.body.appendChild(this.audio);
     },
 
-    /**
-     * 구글 드라이브 주소를 '재생 가능한 직접 주소'로 정밀 변환
-     * @param {string} url - 구글 드라이브 공유 링크 또는 ID 포함 URL
-     * @param {string} type - 'audio' 또는 'image'
-     */
-    fixUrl: function(url, type) {
-        if (!url) return "";
+    fixUrl(url, type) {
+        if (!url) return type === 'image' ? this.placeholderImage : '';
         if (!url.includes('drive.google.com') && !url.includes('docs.google.com')) return url;
 
         const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (idMatch && idMatch[1]) {
-            const id = idMatch[1];
-            // 음원은 uc?export=download가 가장 안정적으로 재생되며, 이미지는 thumbnail API 사용
-            // 음원은 confirm=t 파라미터를 추가하여 바이러스 검사 경고를 넘기고 바로 스트림을 시도함
-            return type === 'audio' 
-                ? `https://docs.google.com/uc?export=download&id=${id}&confirm=t` 
-                : `https://lh3.googleusercontent.com/d/${id}`;
+        if (!idMatch || !idMatch[1]) return url;
+
+        const id = idMatch[1];
+        if (type === 'audio') {
+            const gdUrl = encodeURIComponent(`https://drive.google.com/uc?export=download&id=${id}`);
+            return `https://api.codetabs.com/v1/proxy?quest=${gdUrl}`;
         }
-        return url;
+
+        return `https://drive.google.com/uc?export=view&id=${id}`;
     },
 
-    // 가사 텍스트 -> 시간 데이터로 변환 (실시간 추적용)
-    parseLyrics: function(lrcText) {
+    parseLyrics(lrcText) {
         if (!lrcText) return [];
         const lines = lrcText.split('\n');
         const result = [];
-        // [mm:ss.xx] 또는 [mm:ss] 형식 모두 지원
         const timeReg = /\[(\d{2}):(\d{2}(?:\.\d{1,3})?)\]/;
-        
+
         lines.forEach(line => {
             const match = timeReg.exec(line);
             if (match) {
-                const minutes = parseInt(match[1]);
+                const minutes = parseInt(match[1], 10);
                 const seconds = parseFloat(match[2]);
                 const time = minutes * 60 + seconds;
                 const text = line.replace(timeReg, '').trim();
-                // 가사가 빈 줄이 아닌 경우만 추가
                 if (text) result.push({ time, text });
             }
         });
-        
-        // 시간순 정렬 (혹시 모를 에러 방지)
+
         result.sort((a, b) => a.time - b.time);
         this.lyrics = result;
         return result;
