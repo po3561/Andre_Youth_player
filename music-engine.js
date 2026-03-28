@@ -43,7 +43,7 @@ const MusicEngine = {
             return `https://api.codetabs.com/v1/proxy?quest=${gdUrl}`;
         }
 
-        return `https://drive.google.com/uc?export=view&id=${id}`;
+        return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
     },
 
     parseLyrics(lrcText) {
