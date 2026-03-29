@@ -78,6 +78,27 @@ $(document).ready(function() {
             .text(message || '');
     }
 
+    async function ensureBackendOnline() {
+        if (backendOnline) return true;
+
+        try {
+            const ping = await gasJsonpGet({ action: 'ping' }, {
+                timeoutMs: 6000
+            });
+            if (ping && ping.status === 'ok') {
+                backendOnline = true;
+                updateBackendStatus(true, 'GAS backend online.');
+                return true;
+            }
+        } catch (error) {
+            console.warn('Backend ping failed:', error);
+        }
+
+        backendOnline = false;
+        updateBackendStatus(false, 'Admin backend offline. Please deploy GAS first.');
+        return false;
+    }
+
     function randomGasRequestId() {
         return `gas-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     }
@@ -712,6 +733,10 @@ $(document).ready(function() {
         if (state.audioFile.size && state.audioFile.size > 18 * 1024 * 1024) return null;
 
         try {
+            if (!(await ensureBackendOnline())) {
+                return null;
+            }
+
             const audioData = await fileToBase64(state.audioFile);
             if (!audioData) return null;
 
@@ -881,6 +906,10 @@ $(document).ready(function() {
         };
 
         try {
+            if (!(await ensureBackendOnline())) {
+                throw new Error('Admin backend offline. Upload is disabled until GAS is deployed.');
+            }
+
             const payload = {
                 title,
                 audioName: `${title}.mp3`,
@@ -927,7 +956,13 @@ $(document).ready(function() {
         $list.html('<div class="loading-spinner">목록 불러오는 중...</div>');
 
         try {
-            backendOnline = true;
+            if (!(await ensureBackendOnline())) {
+                $list.empty();
+                updateBackendStatus(false, 'Admin backend offline. Showing the public snapshot until GAS is deployed.');
+                renderPublicSnapshotFallback();
+                return;
+            }
+
             const data = await gasJsonpGet({ action: 'list' }, {
                 timeoutMs: GAS_JSONP_TIMEOUT_MS
             });
@@ -1035,6 +1070,10 @@ $(document).ready(function() {
         const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
 
         try {
+            if (!(await ensureBackendOnline())) {
+                throw new Error('Admin backend offline. Delete is disabled until GAS is deployed.');
+            }
+
             const res = await gasBridgePost({
                 action: 'delete',
                 id: song.id || '',
