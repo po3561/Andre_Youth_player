@@ -9,6 +9,9 @@ const CONFIG = {
   LRC_FOLDER_ID: 'PUT_LRC_FOLDER_ID_HERE'
 };
 
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MAX_INLINE_BYTES = 18 * 1024 * 1024;
+
 const HEADERS = [
   'id',
   'title',
@@ -58,6 +61,10 @@ function doPost(e) {
 
     if (action === 'update') {
       return json_(updateSong_(data));
+    }
+
+    if (action === 'ai-sync' || action === 'aisync' || action === 'analyze-lyrics') {
+      return json_(analyzeLyricsWithGemini_(data));
     }
 
     return json_(upsertSong_(data));
@@ -196,6 +203,109 @@ function deleteSong_(data) {
   sheet.deleteRow(existing.rowIndex);
 
   return { status: 'success', action: 'delete', id: existing.id };
+}
+
+function analyzeLyricsWithGemini_(data) {
+  const apiKey = getGeminiApiKey_();
+  if (!apiKey) {
+    return {
+      status: 'error',
+      message: 'GEMINI_API_KEY is not configured in Script Properties'
+    };
+  }
+
+  const rawLyrics = text_(data && (data.lyricsRaw || data.lyrics || data.rawText || data.lrcText || '')).trim();
+  if (!rawLyrics) {
+    return { status: 'error', message: 'lyricsRaw is required' };
+  }
+
+  const audioData = sanitizeBase64_(data && (data.audioData || data.audioBase64 || ''));
+  if (!audioData) {
+    return { status: 'error', message: 'audioData is required' };
+  }
+
+  if (estimateBase64Size_(audioData) > GEMINI_MAX_INLINE_BYTES) {
+    return {
+      status: 'error',
+      message: 'audioData is too large for inline Gemini analysis'
+    };
+  }
+
+  const mimeType = normalizeMimeType_(data && (data.audioMime || data.mimeType || 'audio/mpeg'));
+  const title = text_(data && data.title || '');
+  const artist = text_(data && data.artist || 'Andre Youth');
+  const prompt = buildGeminiOffsetPrompt_(rawLyrics, title, artist);
+
+  const payload = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: audioData
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      topP: 0.8,
+      maxOutputTokens: 256,
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'object',
+        properties: {
+          offsetSec: { type: 'number' },
+          confidence: { type: 'number' },
+          rationale: { type: 'string' }
+        },
+        required: ['offsetSec', 'confidence', 'rationale'],
+        additionalProperties: false
+      }
+    }
+  };
+
+  const response = UrlFetchApp.fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`,
+    {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        'x-goog-api-key': apiKey
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    }
+  );
+
+  const statusCode = response.getResponseCode();
+  const bodyText = response.getContentText() || '';
+
+  if (statusCode < 200 || statusCode >= 300) {
+    return {
+      status: 'error',
+      message: `Gemini request failed (${statusCode})`,
+      details: bodyText
+    };
+  }
+
+  const body = safeJsonParse_(bodyText, {});
+  const responseText = extractGeminiText_(body);
+  const parsed = parseGeminiJson_(responseText);
+
+  return {
+    status: 'success',
+    source: 'gemini',
+    model: GEMINI_MODEL,
+    offsetSec: clampNumber_(parsed.offsetSec, -30, 30, 0),
+    confidence: clampNumber_(parsed.confidence, 0, 1, 0),
+    rationale: text_(parsed.rationale || ''),
+    raw: responseText
+  };
 }
 
 function listSongs_() {
@@ -423,6 +533,105 @@ function sanitizeFileName_(name) {
     .replace(/[\\/:*?"<>|]+/g, '_')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function getGeminiApiKey_() {
+  // Set GEMINI_API_KEY in Apps Script -> Project Settings -> Script properties.
+  return text_(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY')).trim();
+}
+
+function buildGeminiOffsetPrompt_(lyricsRaw, title, artist) {
+  return [
+    'You are helping align song lyrics to audio.',
+    'Return ONLY valid JSON that matches this shape: {"offsetSec":number,"confidence":number,"rationale":string}.',
+    'offsetSec is a global shift in seconds applied to all timestamps.',
+    'Positive offsetSec means the provided lyric timestamps are too early and should be moved later.',
+    'Negative offsetSec means the provided lyric timestamps are too late and should be moved earlier.',
+    'If the lyrics have no timestamps, return offsetSec 0 and low confidence.',
+    'Do not invent per-line offsets; estimate only the global offset.',
+    `Title: ${title || 'unknown'}`,
+    `Artist: ${artist || 'unknown'}`,
+    'Lyrics:',
+    lyricsRaw
+  ].join('\n');
+}
+
+function sanitizeBase64_(value) {
+  return text_(value)
+    .replace(/^data:[^;]+;base64,/, '')
+    .replace(/\s+/g, '');
+}
+
+function estimateBase64Size_(base64Text) {
+  const safeLength = Math.max(0, text_(base64Text).length);
+  return Math.floor((safeLength * 3) / 4);
+}
+
+function normalizeMimeType_(mimeType) {
+  const value = text_(mimeType).trim().toLowerCase();
+  if (!value) return 'audio/mpeg';
+  if (value === 'audio/mp3') return 'audio/mpeg';
+  return value;
+}
+
+function safeJsonParse_(text, fallback) {
+  if (!text) return fallback;
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function parseGeminiJson_(text) {
+  if (!text) {
+    return { offsetSec: 0, confidence: 0, rationale: '' };
+  }
+
+  const cleaned = text
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+
+  const parsed = safeJsonParse_(cleaned, null);
+  if (parsed && typeof parsed === 'object') {
+    return parsed;
+  }
+
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const sliced = cleaned.slice(firstBrace, lastBrace + 1);
+    const slicedParsed = safeJsonParse_(sliced, null);
+    if (slicedParsed && typeof slicedParsed === 'object') {
+      return slicedParsed;
+    }
+  }
+
+  return { offsetSec: 0, confidence: 0, rationale: cleaned.slice(0, 240) };
+}
+
+function extractGeminiText_(body) {
+  const candidates = body && Array.isArray(body.candidates) ? body.candidates : [];
+  for (let i = 0; i < candidates.length; i++) {
+    const parts = candidates[i] && candidates[i].content && Array.isArray(candidates[i].content.parts)
+      ? candidates[i].content.parts
+      : [];
+    const text = parts.map(part => text_(part && part.text ? part.text : '')).join('').trim();
+    if (text) return text;
+  }
+
+  if (body && body.promptFeedback && body.promptFeedback.blockReason) {
+    return text_(body.promptFeedback.blockReason);
+  }
+
+  return '';
+}
+
+function clampNumber_(value, min, max, fallback) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(max, Math.max(min, num));
 }
 
 function readFileText_(fileId) {

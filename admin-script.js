@@ -57,6 +57,12 @@ $(document).ready(function() {
         return `[${mm}:${ss}.${cs}]`;
     }
 
+    function formatSignedSeconds(seconds) {
+        const safe = Number.isFinite(seconds) ? seconds : 0;
+        const sign = safe > 0 ? '+' : '';
+        return `${sign}${safe.toFixed(2)}s`;
+    }
+
     function readNumber($input, fallback) {
         const value = Number.parseFloat($input.val());
         return Number.isFinite(value) ? value : fallback;
@@ -290,6 +296,86 @@ $(document).ready(function() {
         return snappedTime;
     }
 
+    function findNearestPeak(candidateTime, peaks, searchWindow) {
+        let bestPeak = null;
+        let bestDistance = Number.POSITIVE_INFINITY;
+
+        for (const peak of peaks) {
+            const distance = Math.abs(peak.time - candidateTime);
+            if (distance > searchWindow) continue;
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestPeak = peak;
+            }
+        }
+
+        return bestPeak;
+    }
+
+    function scoreOffsetCandidate(entries, peaks, startSec, endSec, offsetSec) {
+        const seedEntries = entries.filter(entry => Number.isFinite(entry.time));
+        if (!seedEntries.length || !peaks.length) return Number.POSITIVE_INFINITY;
+
+        const range = Math.max(0.1, endSec - startSec);
+        const searchWindow = clamp(Math.max(0.24, range / Math.max(seedEntries.length * 3, 8)), 0.24, 1.1);
+        let score = 0;
+        let matched = 0;
+        let previousPeakTime = -Infinity;
+
+        for (const entry of seedEntries) {
+            const shiftedTime = clamp(entry.time + offsetSec, startSec, endSec);
+            const peak = findNearestPeak(shiftedTime, peaks, searchWindow);
+
+            if (!peak) {
+                score += 1.45;
+                continue;
+            }
+
+            const distance = Math.abs(peak.time - shiftedTime);
+            score += distance / searchWindow;
+            score -= peak.energy * 0.03 + peak.attack * 0.015;
+
+            if (peak.time < previousPeakTime) {
+                score += 0.35;
+            }
+
+            previousPeakTime = peak.time;
+            matched++;
+        }
+
+        if (!matched) return Number.POSITIVE_INFINITY;
+        return score / matched + (seedEntries.length - matched) * 0.25;
+    }
+
+    function estimateBestOffset(entries, peaks, startSec, endSec) {
+        const seedEntries = entries.filter(entry => Number.isFinite(entry.time));
+        if (!seedEntries.length || !peaks.length) return 0;
+
+        const span = Math.min(12, Math.max(4, endSec - startSec));
+        let bestOffset = 0;
+        let bestScore = Number.POSITIVE_INFINITY;
+
+        for (let offset = -span; offset <= span; offset += 0.25) {
+            const score = scoreOffsetCandidate(entries, peaks, startSec, endSec, offset);
+            if (score < bestScore) {
+                bestScore = score;
+                bestOffset = offset;
+            }
+        }
+
+        const refineStart = bestOffset - 0.6;
+        const refineEnd = bestOffset + 0.6;
+        for (let offset = refineStart; offset <= refineEnd; offset += 0.02) {
+            const score = scoreOffsetCandidate(entries, peaks, startSec, endSec, offset);
+            if (score < bestScore) {
+                bestScore = score;
+                bestOffset = offset;
+            }
+        }
+
+        return Math.round(bestOffset * 100) / 100;
+    }
+
     function buildSeededTimeline(entries, peaks, startSec, endSec, offsetSec, minGapSec) {
         const duration = Math.max(0.1, endSec - startSec);
         const total = entries.length;
@@ -420,26 +506,72 @@ $(document).ready(function() {
         return result.join('\n');
     }
 
+    async function requestGeminiOffset(rawText) {
+        if (!rawText || !state.audio) return null;
+        if (state.audio.size && state.audio.size > 18 * 1024 * 1024) return null;
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+            reader.onerror = error => reject(error);
+        });
+
+        try {
+            const audioData = await toBase64(state.audio);
+            if (!audioData) return null;
+
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'ai-sync',
+                    title: $('#song-title').val().trim(),
+                    artist: 'Andre Youth',
+                    lyricsRaw: rawText,
+                    audioName: state.audio.name,
+                    audioMime: state.audio.type || 'audio/mpeg',
+                    audioData
+                })
+            });
+
+            const result = await response.json();
+            if (result && result.status === 'success' && Number.isFinite(Number(result.offsetSec))) {
+                return result;
+            }
+        } catch (error) {
+            console.warn('Gemini offset request failed:', error);
+        }
+
+        return null;
+    }
+
     async function analyzeLyrics() {
         const rawText = $('#lyrics-raw').val().trim();
         if (!rawText) {
-            alert('먼저 가사 텍스트를 입력해주세요.');
+            alert('가사를 먼저 입력해 주세요.');
             return;
         }
         if (!state.audio) {
-            alert('분석할 음원 파일을 먼저 선택해주세요.');
+            alert('분석할 오디오 파일을 먼저 선택해 주세요.');
             return;
         }
 
-        const offsetSec = readNumber($('#sync-offset'), 0);
-        const minGapSec = clamp(readNumber($('#sync-min-gap'), 0.22), 0.12, 1.0);
-        const $btn = $('#btn-ai-auto-sync').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 고속 분석 중...');
+        const useManualSync = $('#sync-advanced-enable').length > 0 && $('#sync-advanced-enable').is(':checked');
+        const manualOffsetSec = readNumber($('#sync-offset'), 0);
+        const manualMinGapSec = clamp(readNumber($('#sync-min-gap'), 0.22), 0.12, 1.0);
+        const $btn = $('#btn-ai-auto-sync').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> AI 자동 보정 중...');
         const $progressZone = $('#analysis-progress-container').fadeIn();
         const $fill = $('#analysis-fill').css('width', '0%');
         const $percent = $('#analysis-percent').text('0%');
-        const $status = $('#analysis-status-text').text('오디오 디코딩 중...');
+        const $status = $('#analysis-status-text').text('오디오와 가사를 분석하는 중...');
         let audioCtx = null;
         const draft = parseLyricDraft(rawText);
+        const geminiOffsetPromise = (!useManualSync && draft.hasSeedTimes)
+            ? requestGeminiOffset(rawText)
+            : Promise.resolve(null);
 
         try {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -450,7 +582,7 @@ $(document).ready(function() {
             const arrayBuffer = await state.audio.arrayBuffer();
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
 
-            $status.text('파형 에너지 분석 중...');
+            $status.text('파형과 가사 기준점을 찾는 중...');
             $percent.text('15%');
             $fill.css('width', '15%');
 
@@ -468,7 +600,7 @@ $(document).ready(function() {
                 duration
             );
 
-            $status.text('발성 피크 탐지 중...');
+            $status.text('피크와 음절 간격을 계산하는 중...');
             $percent.text('70%');
             $fill.css('width', '70%');
 
@@ -480,7 +612,24 @@ $(document).ready(function() {
                 activeRegion.endSec
             );
 
-            $status.text(draft.hasSeedTimes ? '원본 타임코드 보정 중...' : '가사 타임라인 생성 중...');
+            $status.text('Gemini AI가 오프셋을 확인하는 중...');
+            const geminiOffsetResult = await geminiOffsetPromise;
+            const aiOffsetSec = geminiOffsetResult ? Number(geminiOffsetResult.offsetSec) : NaN;
+            const autoOffsetSec = draft.hasSeedTimes
+                ? (Number.isFinite(aiOffsetSec)
+                    ? aiOffsetSec
+                    : estimateBestOffset(draft.entries, peaks, activeRegion.startSec, activeRegion.endSec))
+                : 0;
+            const offsetSec = useManualSync ? manualOffsetSec : autoOffsetSec;
+            const minGapSec = useManualSync ? manualMinGapSec : 0.22;
+
+            $status.text(useManualSync
+                ? '?? ?? ?? ?... ' + formatSignedSeconds(offsetSec)
+                : (geminiOffsetResult
+                    ? 'Gemini AI? ?? ???? ?????? ' + formatSignedSeconds(offsetSec)
+                    : '?? ???? ?? ???? ?????? ' + formatSignedSeconds(offsetSec))
+            );
+
             const generatedLrc = assignLyricTimestamps(
                 draft.entries,
                 peaks,
@@ -496,16 +645,21 @@ $(document).ready(function() {
             $percent.text('100%');
             $fill.css('width', '100%');
             if (draft.hasSeedTimes) {
-                $status.text(peaks.length > 0 ? '타임코드 보정 완료' : '타임코드 보정 완료. 피크가 적어 일부 구간은 균등 보정되었습니다.');
+                $status.text(useManualSync
+                    ? '?? ?? ?? ? ' + formatSignedSeconds(offsetSec)
+                    : (geminiOffsetResult
+                        ? 'Gemini AI ?? ?? ?? ? ' + formatSignedSeconds(offsetSec)
+                        : '?? ?? ?? ?? ? ' + formatSignedSeconds(offsetSec))
+                );
             } else {
-                $status.text(peaks.length > 0 ? '싱크 생성 완료' : '싱크 생성 완료. 피크가 적어 균등 보정이 일부 사용되었습니다.');
+                $status.text(useManualSync ? '?? ?? ??' : 'AI ?? ?? ??');
             }
-            $btn.html('<i class="fa-solid fa-check"></i> 분석 완료').removeClass('premium-sync-btn').addClass('secondary-btn').prop('disabled', false);
+            $btn.html('<i class="fa-solid fa-check"></i> 보정 완료').removeClass('premium-sync-btn').addClass('secondary-btn').prop('disabled', false);
         } catch (error) {
-            console.error("AI Sync Error:", error);
-            alert("분석 실패: " + error.message);
-            $status.text('오류 발생');
-            $btn.prop('disabled', false).html('<i class="fa-solid fa-bolt"></i> 분석 재시도');
+            console.error('AI Sync Error:', error);
+            alert('분석 실패: ' + error.message);
+            $status.text('오류가 발생했습니다');
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-bolt"></i> AI 자동 싱크 생성');
         } finally {
             if (audioCtx) {
                 await audioCtx.close().catch(() => {});

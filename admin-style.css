@@ -213,3 +213,42 @@
     line-height: 1.5;
     color: rgba(255,255,255,0.72);
 }
+
+.sync-note {
+    margin-top: 14px;
+}
+
+.sync-advanced {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(0,0,0,0.18);
+}
+
+.sync-advanced summary {
+    cursor: pointer;
+    list-style: none;
+    color: #fff;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+
+.sync-advanced summary::-webkit-details-marker {
+    display: none;
+}
+
+.sync-advanced-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    color: rgba(255,255,255,0.9);
+    font-weight: 700;
+}
+
+.sync-advanced-toggle input {
+    width: 18px;
+    height: 18px;
+    accent-color: #a064ff;
+}
