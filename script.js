@@ -10,7 +10,7 @@ $(document).ready(function() {
     };
 
     const audio = document.getElementById('audio-engine');
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwqK78wbvPYHSxbwl6Fyu43ystWSU824EFiwM3ZJGvusGhQW99eWJBEUY1vrOub3sQTbg/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec";
     const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v2';
     const PLAYLIST_CACHE_TTL = 1000 * 60 * 30;
 
@@ -27,6 +27,10 @@ $(document).ready(function() {
     let firebaseLoadPromise = null;
     let chatDb = null;
     let chatListenersReady = false;
+    let lyricsAutoScrollEnabled = true;
+    let lyricsAutoScrollTimer = null;
+    let lyricsProgrammaticScrollLock = false;
+    let lyricsProgrammaticScrollTimer = null;
 
     localStorage.setItem('chatUserId', userId);
 
@@ -129,6 +133,47 @@ $(document).ready(function() {
         updateLyricsUI(audio.currentTime);
     }
 
+    function setLyricsAutoScrollEnabled(enabled) {
+        lyricsAutoScrollEnabled = enabled;
+        clearTimeout(lyricsAutoScrollTimer);
+        if (!enabled) {
+            lyricsAutoScrollTimer = setTimeout(() => {
+                lyricsAutoScrollEnabled = true;
+                updateLyricsUI(audio.currentTime);
+            }, 4000);
+        }
+    }
+
+    function markLyricsManualInteraction() {
+        if (lyricsProgrammaticScrollLock) return;
+        setLyricsAutoScrollEnabled(false);
+    }
+
+    function beginProgrammaticLyricsScroll() {
+        lyricsProgrammaticScrollLock = true;
+        clearTimeout(lyricsProgrammaticScrollTimer);
+        lyricsProgrammaticScrollTimer = setTimeout(() => {
+            lyricsProgrammaticScrollLock = false;
+        }, 1200);
+    }
+
+    function formatTime(s) {
+        const safe = Number.isFinite(s) ? s : 0;
+        const m = Math.floor(safe / 60);
+        const sc = Math.floor(safe % 60);
+        return `${m}:${sc < 10 ? '0' + sc : sc}`;
+    }
+
+    function seekByProgress(percent) {
+        if (!Number.isFinite(percent) || Number.isNaN(audio.duration) || audio.duration <= 0) return;
+        const nextTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
+        audio.currentTime = nextTime;
+        $('#time-now').text(formatTime(nextTime));
+        if ($('#album-trigger').hasClass('show-lyrics')) {
+            updateLyricsUI(nextTime);
+        }
+    }
+
     setImageWithFallback($('#album-img'), fallbackImage);
     setImageWithFallback($('#artist-avatar'), fallbackImage);
 
@@ -188,7 +233,10 @@ $(document).ready(function() {
         $('.lyric-line').off('click').on('click', function(e) {
             e.stopPropagation();
             const time = parseFloat($(this).data('time'));
-            if (!isNaN(time)) jumpToLyric(time);
+            if (!isNaN(time)) {
+                markLyricsManualInteraction();
+                jumpToLyric(time);
+            }
         });
     }
 
@@ -206,11 +254,12 @@ $(document).ready(function() {
         const $activeLine = $(`#lyric-${activeIdx}`).addClass('active');
 
         const container = $('.lyrics-container')[0];
-        if (container && $activeLine[0]) {
+        if (lyricsAutoScrollEnabled && container && $activeLine[0]) {
             const lineOffset = $activeLine[0].offsetTop;
             const lineSize = $activeLine[0].offsetHeight;
             const containerSize = container.offsetHeight;
             const scrollTarget = lineOffset - (containerSize / 2) + (lineSize / 2);
+            beginProgrammaticLyricsScroll();
             container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
         }
     }
@@ -259,6 +308,7 @@ $(document).ready(function() {
         setImageWithFallback($('#artist-avatar'), fixedCover);
         $('#bg-image').css('background-image', `url('${fixedCover}')`);
         $('#album-trigger').removeClass('show-lyrics').css('background-image', `url('${fixedCover}')`);
+        setLyricsAutoScrollEnabled(true);
         $('#disp-title').text(s.title || 'Untitled');
         $('#disp-artist').text(s.artist || 'Andre Youth');
 
@@ -478,9 +528,8 @@ $(document).ready(function() {
     audio.ontimeupdate = () => {
         if (isNaN(audio.duration)) return;
         $('#progress-bar').val((audio.currentTime / audio.duration) * 100);
-        const fmt = s => { const m = Math.floor(s / 60), sc = Math.floor(s % 60); return `${m}:${sc < 10 ? '0' + sc : sc}`; };
-        $('#time-now').text(fmt(audio.currentTime));
-        $('#time-total').text(fmt(audio.duration));
+        $('#time-now').text(formatTime(audio.currentTime));
+        $('#time-total').text(formatTime(audio.duration));
 
         if ($('#album-trigger').hasClass('show-lyrics')) {
             updateLyricsUI(audio.currentTime);
@@ -490,6 +539,11 @@ $(document).ready(function() {
     $('#btn-vol-trigger').on('click touchstart', function(e) { e.stopPropagation(); openSb(); });
     $('#btn-vol-close').on('click touchstart', function(e) { e.stopPropagation(); $('#main-header').removeClass('mode-volume'); });
     $('#sb-volume-slider').on('input', function() { audio.volume = $(this).val() / 100; openSb(); });
+    $('#progress-bar').on('input change', function() {
+        if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
+        const percent = parseFloat($(this).val());
+        seekByProgress(percent);
+    });
     $('#btn-play-pause').on('click touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -523,8 +577,13 @@ $(document).ready(function() {
     $('#album-trigger').click(function() {
         $(this).toggleClass('show-lyrics');
         if ($(this).hasClass('show-lyrics')) {
+            setLyricsAutoScrollEnabled(true);
             updateLyricsUI(audio.currentTime);
         }
+    });
+
+    $('.lyrics-container').on('scroll wheel touchstart pointerdown', function() {
+        markLyricsManualInteraction();
     });
 
     let sheetStartY = 0;
