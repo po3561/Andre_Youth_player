@@ -733,10 +733,6 @@ $(document).ready(function() {
         if (state.audioFile.size && state.audioFile.size > 18 * 1024 * 1024) return null;
 
         try {
-            if (!(await ensureBackendOnline())) {
-                return null;
-            }
-
             const audioData = await fileToBase64(state.audioFile);
             if (!audioData) return null;
 
@@ -782,7 +778,9 @@ $(document).ready(function() {
         let audioCtx = null;
         const draft = parseLyricDraft(rawText);
         const geminiOffsetPromise = (!useManualSync && draft.hasSeedTimes)
-            ? requestGeminiOffset(rawText)
+            ? ensureBackendOnline()
+                .then(ready => ready ? requestGeminiOffset(rawText) : null)
+                .catch(() => null)
             : Promise.resolve(null);
 
         try {
