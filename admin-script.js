@@ -1,6 +1,6 @@
 /* admin-script.js */
 $(document).ready(function() {
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwhwZuBKtBNr-NaIML3-VM-WVC08yrX0lyUgdXce9L5AdJlNNzfufaWlsA3ifUE5Xmc1A/exec";
     const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
     const state = {
         audioFile: null,
