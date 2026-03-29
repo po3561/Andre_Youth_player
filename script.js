@@ -79,8 +79,10 @@ $(document).ready(function() {
 
     function hydratePlaylistCache() {
         const cached = readPlaylistCache();
-        if (!cached || !cached.length) return false;
-        playlistData = cached;
+        const fallback = Array.isArray(window.PUBLIC_PLAYLIST) ? window.PUBLIC_PLAYLIST : [];
+        const source = cached && cached.length ? cached : fallback;
+        if (!source.length) return false;
+        playlistData = source;
         render();
         renderCopyright();
         const firstPlayable = getNextPlayableIndex(0);
