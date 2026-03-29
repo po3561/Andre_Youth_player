@@ -205,67 +205,44 @@ $(document).ready(function() {
         });
     }
 
-    function gasBridgePost(fields, options) {
+    async function gasBridgePost(fields, options) {
         const timeoutMs = options && Number.isFinite(options.timeoutMs) ? options.timeoutMs : GAS_BRIDGE_TIMEOUT_MS;
-        installGasBridgeListener();
+        
+        const payload = Object.assign({}, fields || {});
+        
+        // Use AbortController for true timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-        return new Promise((resolve, reject) => {
-            const requestId = randomGasRequestId();
-            const iframeName = `gas_bridge_${requestId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-            const iframe = document.createElement('iframe');
-            iframe.name = iframeName;
-            iframe.title = 'gas-bridge';
-            iframe.setAttribute('aria-hidden', 'true');
-            iframe.style.display = 'none';
-            document.body.appendChild(iframe);
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = GAS_URL;
-            form.target = iframeName;
-            form.enctype = 'application/x-www-form-urlencoded';
-            form.acceptCharset = 'UTF-8';
-            form.style.display = 'none';
-
-            const payload = Object.assign({}, fields || {}, {
-                transport: 'bridge',
-                requestId: requestId
+        try {
+            // By using text/plain, we bypass CORS pre-flight OPTIONS blocks.
+            // Google Apps Script will execute JSON.parse natively (1ms), 
+            // skipping the URL Decoded String splitter loop that causes 5 minute timeouts!
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify(payload),
+                signal: controller.signal
             });
 
-            Object.keys(payload).forEach(key => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = encodeGasFieldValue(payload[key]);
-                form.appendChild(input);
-            });
+            clearTimeout(timeoutId);
 
-            const cleanup = () => {
-                if (form.parentNode) {
-                    form.parentNode.removeChild(form);
-                }
-                if (iframe.parentNode) {
-                    iframe.parentNode.removeChild(iframe);
-                }
-                pendingGasBridgeRequests.delete(requestId);
-            };
+            if (!response.ok) {
+                throw new Error('네트워크 응답이 실패했습니다.');
+            }
 
-            const timeoutId = setTimeout(() => {
-                pendingGasBridgeRequests.delete(requestId);
-                cleanup();
-                reject(new Error('GAS request timed out. (파일이 크면 구글 드라이브 처리 시간이 오래 걸릴 수 있습니다)'));
-            }, timeoutMs);
-
-            pendingGasBridgeRequests.set(requestId, {
-                resolve,
-                reject,
-                cleanup,
-                timeoutId
-            });
-
-            document.body.appendChild(form);
-            form.submit();
-        });
+            const jsonResponse = await response.json();
+            return jsonResponse;
+            
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('구글 드라이브 업로드 시간 초과. (파일이 크면 실패할 수 있습니다)');
+            }
+            throw error;
+        }
     }
 
     function fileToBase64(file) {
