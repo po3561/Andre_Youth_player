@@ -25,27 +25,63 @@ const HEADERS = [
 
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action ? String(e.parameter.action) : 'list').toLowerCase();
-
-  if (action === 'song' && e && e.parameter && e.parameter.id) {
-    return json_(getSongById_(String(e.parameter.id)));
+  
+  let result;
+  if (action === 'ping') {
+    result = { status: 'ok' };
+  } else if (action === 'song' && e && e.parameter && e.parameter.id) {
+    result = getSongById_(String(e.parameter.id));
+  } else {
+    result = listSongs_();
   }
 
-  return json_(listSongs_());
+  // Handle JSONP requests
+  const callback = e && e.parameter && e.parameter.callback;
+  if (callback) {
+    return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  return json_(result);
 }
 
 function doPost(e) {
-  const data = parseBody_(e);
+  let data = parseBody_(e);
+  
+  // URL-encoded form fallback for iframe bridge (admin-script.js)
+  if (e && e.parameter && e.parameter.transport === 'bridge') {
+    data = e.parameter;
+  }
+  
   const action = String(data.action || 'create').toLowerCase();
 
+  let result;
   if (action === 'delete') {
-    return json_(deleteSong_(data));
+    result = deleteSong_(data);
+  } else if (action === 'update') {
+    result = updateSong_(data);
+  } else if (action === 'ai-sync') {
+    result = { status: 'success', offsetSec: 0 };
+  } else {
+    result = upsertSong_(data);
   }
 
-  if (action === 'update') {
-    return json_(updateSong_(data));
+  // Return HTML document that triggers parent window callback
+  if (data.transport === 'bridge') {
+    const html = `
+      <!DOCTYPE html>
+      <html><head><script>
+        window.parent.postMessage({
+          source: 'andre-youth-gas-bridge',
+          requestId: '${data.requestId}',
+          payload: ${JSON.stringify(result)}
+        }, '*');
+      </script></head><body></body></html>
+    `;
+    return HtmlService.createHtmlOutput(html);
   }
 
-  return json_(upsertSong_(data));
+  return json_(result);
 }
 
 function upsertSong_(data) {
@@ -341,7 +377,8 @@ function findRowByTitle_(sheet, title) {
 }
 
 function saveBase64File_(options) {
-  const binary = Utilities.base64Decode(options.base64);
+  const safeBase64 = String(options.base64).replace(/ /g, '+');
+  const binary = Utilities.base64Decode(safeBase64);
   const blob = Utilities.newBlob(binary, options.mimeType, options.fileName);
   const folder = options.folderId ? DriveApp.getFolderById(options.folderId) : DriveApp.getRootFolder();
   return folder.createFile(blob);

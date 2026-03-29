@@ -79,8 +79,24 @@ $(document).ready(function() {
     }
 
     async function ensureBackendOnline() {
-        updateBackendStatus(true, 'GAS backend online (Optimistic).');
-        return true;
+        if (backendOnline) return true;
+
+        try {
+            const ping = await gasJsonpGet({ action: 'ping' }, {
+                timeoutMs: 6000
+            });
+            if (ping && ping.status === 'ok') {
+                backendOnline = true;
+                updateBackendStatus(true, 'GAS backend online.');
+                return true;
+            }
+        } catch (error) {
+            console.warn('Backend ping failed:', error);
+        }
+
+        backendOnline = false;
+        updateBackendStatus(false, 'Admin backend offline. Please deploy GAS first.');
+        return false;
     }
 
     function randomGasRequestId() {
@@ -190,13 +206,65 @@ $(document).ready(function() {
     }
 
     function gasBridgePost(fields, options) {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve({ status: 'success' }), 500);
-            try {
-                const formData = new URLSearchParams();
-                Object.keys(fields).forEach(key => formData.append(key, encodeGasFieldValue(fields[key])));
-                fetch(GAS_URL, { method: 'POST', body: formData, mode: 'no-cors' }).catch(() => {});
-            } catch(e) {}
+        const timeoutMs = options && Number.isFinite(options.timeoutMs) ? options.timeoutMs : GAS_BRIDGE_TIMEOUT_MS;
+        installGasBridgeListener();
+
+        return new Promise((resolve, reject) => {
+            const requestId = randomGasRequestId();
+            const iframeName = `gas_bridge_${requestId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+            const iframe = document.createElement('iframe');
+            iframe.name = iframeName;
+            iframe.title = 'gas-bridge';
+            iframe.setAttribute('aria-hidden', 'true');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = GAS_URL;
+            form.target = iframeName;
+            form.enctype = 'application/x-www-form-urlencoded';
+            form.acceptCharset = 'UTF-8';
+            form.style.display = 'none';
+
+            const payload = Object.assign({}, fields || {}, {
+                transport: 'bridge',
+                requestId: requestId
+            });
+
+            Object.keys(payload).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = encodeGasFieldValue(payload[key]);
+                form.appendChild(input);
+            });
+
+            const cleanup = () => {
+                if (form.parentNode) {
+                    form.parentNode.removeChild(form);
+                }
+                if (iframe.parentNode) {
+                    iframe.parentNode.removeChild(iframe);
+                }
+                pendingGasBridgeRequests.delete(requestId);
+            };
+
+            const timeoutId = setTimeout(() => {
+                pendingGasBridgeRequests.delete(requestId);
+                cleanup();
+                reject(new Error('GAS request timed out. (파일이 크면 구글 드라이브 처리 시간이 오래 걸릴 수 있습니다)'));
+            }, timeoutMs);
+
+            pendingGasBridgeRequests.set(requestId, {
+                resolve,
+                reject,
+                cleanup,
+                timeoutId
+            });
+
+            document.body.appendChild(form);
+            form.submit();
         });
     }
 
@@ -860,9 +928,9 @@ $(document).ready(function() {
             });
 
             if (result.status === "success") {
-                updateProgress(100, '업로드 성공! 백그라운드 처리 중입니다.');
+                updateProgress(100, '업로드 성공! 잠시 후 메인으로 이동합니다.');
                 $bar.css('background', '#00ff88');
-                $btn.prop('disabled', false).text('추가 업로드 준비됨');
+                setTimeout(() => location.href = 'index.html', 1500);
             } else {
                 throw new Error(result.message || "Unknown error");
             }
@@ -889,56 +957,54 @@ $(document).ready(function() {
                 return;
             }
 
-            let data = [];
-            try {
-                data = await gasJsonpGet({ action: 'list' }, { timeoutMs: 3000 });
-                updateBackendStatus(true, 'GAS backend online.');
-            } catch (e) {
-                console.warn('GAS list fetch failed. Returning local fallback.');
-                data = typeof window.PUBLIC_PLAYLIST !== 'undefined' ? window.PUBLIC_PLAYLIST : [];
-            }
-            $list.empty();
+        const data = await gasJsonpGet({ action: 'list' }, {
+            timeoutMs: GAS_JSONP_TIMEOUT_MS
+        });
+        updateBackendStatus(true, 'GAS backend online.');
+        $list.empty();
 
-            if (!Array.isArray(data) || data.length === 0) {
-                $list.append('<div class="loading-spinner">등록된 곡이 없습니다.</div>');
-                return;
-            }
+        if (!Array.isArray(data) || data.length === 0) {
+            $list.append('<div class="loading-spinner">등록된 곡이 없습니다.</div>');
+            return;
+        }
+        
+        // Draw actual items from 'data' representing real status
+        data.forEach(song => {
+            const songKey = song.id ?? song.key ?? song.title ?? '';
+            const $item = $('<div>').addClass('admin-song-item').attr('data-song-key', songKey);
+            const $info = $('<div>').addClass('admin-song-info');
+            const $img = $('<img>')
+                .addClass('song-cover-thumb')
+                .attr('src', song.cover || song.coverUrl || FALLBACK_COVER)
+                .attr('alt', `${song.title || '곡'} 커버`);
 
-            data.forEach(song => {
-                const songKey = song.id ?? song.key ?? song.title ?? '';
-                const $item = $('<div>').addClass('admin-song-item').attr('data-song-key', songKey);
-                const $info = $('<div>').addClass('admin-song-info');
-                const $img = $('<img>')
-                    .addClass('song-cover-thumb')
-                    .attr('src', song.cover || FALLBACK_COVER)
-                    .attr('alt', `${song.title || '곡'} 커버`);
-
-                $img.on('error', function() {
-                    if (this.src !== FALLBACK_COVER) {
-                        this.src = FALLBACK_COVER;
-                    }
-                });
-
-                $info.append($img, $('<strong>').text(song.title || '제목 없음'));
-
-                const $deleteButton = $('<button>')
-                    .addClass('btn-delete-song')
-                    .attr('type', 'button')
-                    .attr('aria-label', '삭제')
-                    .data('song', {
-                        id: song.id ?? song.key ?? '',
-                        title: song.title ?? ''
-                    })
-                    .html('<i class="fa-solid fa-trash-can"></i>');
-
-                $item.append($info, $deleteButton);
-                $list.append($item);
+            $img.on('error', function() {
+                if (this.src !== FALLBACK_COVER) {
+                    this.src = FALLBACK_COVER;
+                }
             });
-        } catch (error) {
+
+            $info.append($img, $('<strong>').text(song.title || '제목 없음'));
+
+            const $deleteButton = $('<button>')
+                .addClass('btn-delete-song')
+                .attr('type', 'button')
+                .attr('aria-label', '삭제')
+                .data('song', {
+                    id: song.id ?? song.key ?? '',
+                    title: song.title ?? ''
+                })
+                .html('<i class="fa-solid fa-trash-can"></i>');
+
+            $item.append($info, $deleteButton);
+            $list.append($item);
+        });
+
+        } catch(error) {
+            console.error("fetchSongs error:", error);
             $list.html('<div class="loading-spinner" style="color:#ff3b30;">목록 로드 실패</div>');
-            console.error('fetchSongs error:', error);
             backendOnline = false;
-            updateBackendStatus(false, 'Admin backend offline. Showing the public snapshot until GAS is deployed.');
+            updateBackendStatus(false, 'Admin backend offline. Showing the public snapshot.');
             renderPublicSnapshotFallback();
         }
     }
