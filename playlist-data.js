@@ -4,8 +4,8 @@
     const imageFileId = '1nv0xIHkzJ0G0CVNXiiFM_feJjWoRNOst';
     const lyricsFileId = '1aSvzRXjcdtZGgi4Q46atmOrUq9W0fdQC';
 
-    const audioUrl = `https://drive.usercontent.google.com/download?id=${audioFileId}&export=download`;
-    const coverUrl = `https://drive.usercontent.google.com/download?id=${imageFileId}&export=download`;
+    const audioUrl = `https://drive.google.com/uc?export=download&id=${audioFileId}`;
+    const coverUrl = `https://drive.google.com/thumbnail?id=${imageFileId}&sz=w1000`;
 
     const lyricsData = `[00:00.30] 오늘 내 눈에 보이지 않고
 [00:07.68] 오늘 내 손에 잡히지 않아도

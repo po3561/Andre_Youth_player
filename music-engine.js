@@ -32,13 +32,19 @@ const MusicEngine = {
 
     fixUrl(url, type) {
         if (!url) return type === 'image' ? this.placeholderImage : '';
+        if (url.includes('drive.google.com/thumbnail')) return url;
         if (!url.includes('drive.google.com') && !url.includes('docs.google.com')) return url;
 
         const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (!idMatch || !idMatch[1]) return url;
 
         const id = idMatch[1];
-        return `https://drive.usercontent.google.com/download?id=${id}&export=download`;
+        if (type === 'audio') {
+            const gdUrl = encodeURIComponent(`https://drive.google.com/uc?export=download&id=${id}`);
+            return `https://api.codetabs.com/v1/proxy?quest=${gdUrl}`;
+        }
+
+        return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
     },
 
     parseLyrics(lrcText) {
