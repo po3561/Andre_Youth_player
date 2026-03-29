@@ -1,6 +1,7 @@
 /* admin-script.js */
 $(document).ready(function() {
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwhwZuBKtBNr-NaIML3-VM-WVC08yrX0lyUgdXce9L5AdJlNNzfufaWlsA3ifUE5Xmc1A/exec";
+    // Re-linked to the user's latest, authorized deployment!
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbz0O_vWpZc4Nt2vJKTh0VAfdpCH0Ntt38XmlYAaaY-4PXrR976aSt73QKpwnD0oZK-5Cg/exec";
     const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
     const state = {
         audioFile: null,
@@ -210,14 +211,11 @@ $(document).ready(function() {
         
         const payload = Object.assign({}, fields || {});
         
-        // Use AbortController for true timeout
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
-            // By using text/plain, we bypass CORS pre-flight OPTIONS blocks.
-            // Google Apps Script will execute JSON.parse natively (1ms), 
-            // skipping the URL Decoded String splitter loop that causes 5 minute timeouts!
+            // Memory Crash Bypass: Send raw JSON via text/plain to avoid Google Apps Script parsing loop crashes.
             const response = await fetch(GAS_URL, {
                 method: 'POST',
                 headers: {
