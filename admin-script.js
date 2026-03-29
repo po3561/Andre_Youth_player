@@ -1,7 +1,7 @@
 /* admin-script.js */
 $(document).ready(function() {
     // Re-linked to the user's latest, authorized deployment!
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbz0O_vWpZc4Nt2vJKTh0VAfdpCH0Ntt38XmlYAaaY-4PXrR976aSt73QKpwnD0oZK-5Cg/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
     const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
     const state = {
         audioFile: null,
