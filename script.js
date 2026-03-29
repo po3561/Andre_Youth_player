@@ -9,11 +9,10 @@ $(document).ready(function() {
         appId: "1:406016035492:web:e3d03145aefa945c707431"
     };
 
-    if (typeof firebase !== 'undefined' && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = typeof firebase !== 'undefined' ? firebase.database() : null;
-
     const audio = document.getElementById('audio-engine');
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwqK78wbvPYHSxbwl6Fyu43ystWSU824EFiwM3ZJGvusGhQW99eWJBEUY1vrOub3sQTbg/exec";
+    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v2';
+    const PLAYLIST_CACHE_TTL = 1000 * 60 * 30;
 
     let curIdx = -1;
     let isShuffle = false;
@@ -25,6 +24,9 @@ $(document).ready(function() {
     let currentLyrics = [];
     const failedTitles = new Set();
     const fallbackImage = MusicEngine.placeholderImage || "";
+    let firebaseLoadPromise = null;
+    let chatDb = null;
+    let chatListenersReady = false;
 
     localStorage.setItem('chatUserId', userId);
 
@@ -48,6 +50,40 @@ $(document).ready(function() {
                 this.src = fallbackImage;
             }
         });
+    }
+
+    function readPlaylistCache() {
+        try {
+            const raw = localStorage.getItem(PLAYLIST_CACHE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.data)) return null;
+            if (!parsed.ts || Date.now() - parsed.ts > PLAYLIST_CACHE_TTL) return null;
+            return parsed.data;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writePlaylistCache(data) {
+        try {
+            localStorage.setItem(PLAYLIST_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+        } catch (error) {
+            // Ignore storage pressure.
+        }
+    }
+
+    function hydratePlaylistCache() {
+        const cached = readPlaylistCache();
+        if (!cached || !cached.length) return false;
+        playlistData = cached;
+        render();
+        renderCopyright();
+        const firstPlayable = getNextPlayableIndex(0);
+        if (firstPlayable !== -1) {
+            requestAnimationFrame(() => load(firstPlayable, false));
+        }
+        return true;
     }
 
     function getPlayableIndices() {
@@ -271,46 +307,94 @@ $(document).ready(function() {
         openSb.timer = setTimeout(() => $('#main-header').removeClass('mode-volume'), 3500);
     }
 
-    if (typeof firebase !== 'undefined' && db) {
-        const chatDb = db.ref('messages');
-        $('#btn-send-chat').click(() => {
-            const t = $('#chat-input').val().trim();
-            if (t) {
+    function loadScriptOnce(src) {
+        return new Promise((resolve, reject) => {
+            if ([...document.scripts].some(script => script.src === src)) {
+                resolve();
+                return;
+            }
+
+            const existing = document.querySelector(`script[data-dynamic-src="${src}"]`);
+            if (existing) {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.dataset.dynamicSrc = src;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error(`Failed to load ${src}`));
+            document.head.appendChild(script);
+        });
+    }
+
+    async function ensureChatDb() {
+        if (chatDb) return chatDb;
+        if (!firebaseLoadPromise) {
+            firebaseLoadPromise = (async () => {
+                if (typeof window.firebase === 'undefined' || typeof window.firebase.database !== 'function') {
+                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
+                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js');
+                }
+
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                chatDb = firebase.database().ref('messages');
+                return chatDb;
+            })().catch(error => {
+                firebaseLoadPromise = null;
+                throw error;
+            });
+        }
+
+        const db = await firebaseLoadPromise;
+        if (!chatListenersReady) {
+            chatListenersReady = true;
+
+            $('#btn-send-chat').off('click.chat').on('click.chat', async () => {
+                const t = $('#chat-input').val().trim();
+                if (!t) return;
+                await ensureChatDb();
                 chatDb.push({ text: t, sender: userId, timestamp: Date.now(), likeCount: 0 });
                 $('#chat-input').val('');
-            }
-        });
-
-        chatDb.limitToLast(30).on('child_added', (snap) => {
-            const key = snap.key;
-            const m = snap.val();
-            const isMe = m.sender === userId;
-            const iLike = myLikedMsgs.includes(key);
-            $('#chat-messages').append(`
-                <div class="msg-row" style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; width:100%;">
-                    <div style="display:flex; align-items:flex-end; max-width:85%; flex-direction:${isMe ? 'row-reverse' : 'row'};">
-                        <div class="message ${isMe ? 'me' : 'other'}" style="background:${isMe ? 'var(--primary)' : '#fff'}; color:${isMe ? '#fff' : '#333'}; padding:10px 15px; border-radius:15px;">${escapeHtml(m.text || '')}</div>
-                        <button class="msg-like-btn ${iLike ? 'liked' : ''}" data-key="${key}">
-                            <i class="${iLike ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                            <span class="like-count">${m.likeCount || ''}</span>
-                        </button>
-                    </div>
-                </div>`);
-            $('.chat-viewport').scrollTop($('.chat-viewport')[0].scrollHeight);
-        });
-
-        $(document).on('click', '.msg-like-btn', function() {
-            const key = $(this).data('key');
-            const isLiked = $(this).hasClass('liked');
-            chatDb.child(key).transaction(p => {
-                if (p) p.likeCount = (p.likeCount || 0) + (isLiked ? -1 : 1);
-                return p;
             });
-            if (isLiked) myLikedMsgs = myLikedMsgs.filter(k => k !== key);
-            else myLikedMsgs.push(key);
-            localStorage.setItem('myLikedMsgs', JSON.stringify(myLikedMsgs));
-            $(this).toggleClass('liked', !isLiked).find('i').attr('class', !isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
-        });
+
+            chatDb.limitToLast(30).on('child_added', (snap) => {
+                const key = snap.key;
+                const m = snap.val();
+                const isMe = m.sender === userId;
+                const iLike = myLikedMsgs.includes(key);
+                $('#chat-messages').append(`
+                    <div class="msg-row" style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; width:100%;">
+                        <div style="display:flex; align-items:flex-end; max-width:85%; flex-direction:${isMe ? 'row-reverse' : 'row'};">
+                            <div class="message ${isMe ? 'me' : 'other'}" style="background:${isMe ? 'var(--primary)' : '#fff'}; color:${isMe ? '#fff' : '#333'}; padding:10px 15px; border-radius:15px;">${escapeHtml(m.text || '')}</div>
+                            <button class="msg-like-btn ${iLike ? 'liked' : ''}" data-key="${key}">
+                                <i class="${iLike ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                                <span class="like-count">${m.likeCount || ''}</span>
+                            </button>
+                        </div>
+                    </div>`);
+                const viewport = $('.chat-viewport')[0];
+                if (viewport) viewport.scrollTop = viewport.scrollHeight;
+            });
+
+            $(document).off('click.chatLike').on('click.chatLike', '.msg-like-btn', function() {
+                const key = $(this).data('key');
+                const isLiked = $(this).hasClass('liked');
+                chatDb.child(key).transaction(p => {
+                    if (p) p.likeCount = (p.likeCount || 0) + (isLiked ? -1 : 1);
+                    return p;
+                });
+                if (isLiked) myLikedMsgs = myLikedMsgs.filter(k => k !== key);
+                else myLikedMsgs.push(key);
+                localStorage.setItem('myLikedMsgs', JSON.stringify(myLikedMsgs));
+                $(this).toggleClass('liked', !isLiked).find('i').attr('class', !isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
+            });
+        }
+
+        return db;
     }
 
     function render() {
@@ -336,6 +420,46 @@ $(document).ready(function() {
         });
 
         syncHearts();
+    }
+
+    async function fetchPlaylist() {
+        try {
+            if (!playlistData.length) {
+                $('#disp-title').text('불러오는 중...');
+            }
+
+            const response = await fetch(`${GAS_URL}?v=${Date.now()}`, { cache: 'no-store' });
+            const data = await response.json();
+
+            if (Array.isArray(data) && data.length > 0) {
+                const currentTitle = playlistData[curIdx]?.title;
+                playlistData = data;
+                writePlaylistCache(data);
+                failedTitles.clear();
+                render();
+                renderCopyright();
+
+                if (currentTitle) {
+                    const preservedIndex = playlistData.findIndex(song => song?.title === currentTitle);
+                    if (preservedIndex !== -1) {
+                        curIdx = preservedIndex;
+                        render();
+                        syncHearts();
+                        return;
+                    }
+                }
+
+                const firstPlayable = getNextPlayableIndex(0);
+                load(firstPlayable === -1 ? 0 : firstPlayable, false);
+            } else if (!playlistData.length) {
+                $('#disp-title').text('곡을 추가해주세요.');
+            }
+        } catch (error) {
+            console.error('Playlist Fetch Error:', error);
+            if (!playlistData.length) {
+                $('#disp-title').text('데이터 로드 실패');
+            }
+        }
     }
 
     audio.onended = () => repeatMode === 2 ? (audio.currentTime = 0, audio.play()) : next();
@@ -381,7 +505,18 @@ $(document).ready(function() {
         if (curIdx >= 0 && playlistData[curIdx]) toggleFav(playlistData[curIdx].title);
     });
 
-    $('#btn-open-chat').click(() => $('#chat-overlay').addClass('active'));
+    $('#btn-open-chat').off('click').on('click', async () => {
+        $('#chat-overlay').addClass('active');
+        if (!chatDb) {
+            $('#chat-messages').html('<div class="chat-loading">채팅을 불러오는 중...</div>');
+            try {
+                await ensureChatDb();
+            } catch (error) {
+                console.error('Chat Init Error:', error);
+                $('#chat-messages').html('<div class="chat-loading">채팅을 불러오지 못했습니다.</div>');
+            }
+        }
+    });
     $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
     $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
 
@@ -411,5 +546,8 @@ $(document).ready(function() {
         if (playlistData[idx]) toggleFav(playlistData[idx].title);
     });
 
-    fetchPlaylist();
+    hydratePlaylistCache();
+    requestAnimationFrame(() => {
+        fetchPlaylist();
+    });
 });

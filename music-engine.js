@@ -26,7 +26,7 @@ const MusicEngine = {
 
     init() {
         this.audio.id = 'audio-engine';
-        this.audio.preload = 'auto';
+        this.audio.preload = 'metadata';
         if (!document.getElementById('audio-engine')) document.body.appendChild(this.audio);
     },
 
