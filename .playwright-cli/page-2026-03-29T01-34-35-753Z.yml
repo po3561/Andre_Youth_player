@@ -1,0 +1,104 @@
+- generic [active] [ref=e1]:
+  - iframe [ref=e2]:
+    
+  - region
+  - generic [ref=e4]:
+    - navigation [ref=e5]:
+      - button "메인 콘텐츠로 건너뛰기" [ref=e7] [cursor=pointer]:
+        - generic [ref=e9]: 메인 콘텐츠로 건너뛰기
+      - button "단축키" [ref=e11] [cursor=pointer]:
+        - generic [ref=e13]: 단축키
+      - button "접근성 관련 의견" [ref=e15] [cursor=pointer]:
+        - generic [ref=e17]: 접근성 관련 의견
+    - banner [ref=e19]:
+      - generic [ref=e20]:
+        - link "드라이브" [ref=e24] [cursor=pointer]:
+          - /url: https://drive.google.com/?tab=oo
+          - img [ref=e25]
+          - generic [ref=e26]: 드라이브
+        - generic [ref=e28]:
+          - button "Google 앱" [ref=e32] [cursor=pointer]:
+            - img [ref=e33]
+          - link "로그인" [ref=e36] [cursor=pointer]:
+            - /url: https://accounts.google.com/ServiceLogin?hl=ko&passive=true&continue=https://drive.google.com/drive/folders/1V1v0NkmtIfVfwRNoGgN6TffdiFTGXh2d%3Fusp%3Dsharing&service=writely&ec=GAZAMQ
+    - generic [ref=e37]:
+      - generic [ref=e46]:
+        - generic [ref=e48]:
+          - generic:
+            - navigation:
+              - heading "폴더 경로" [ref=e49]
+              - list "폴더 경로"
+        - toolbar [ref=e50]:
+          - radiogroup "목록 또는 그리드 레이아웃(Alt+V 다음 L)" [ref=e55]:
+            - generic [ref=e56]:
+              - radio "목록" [checked] [ref=e57] [cursor=pointer]:
+                - generic [ref=e58]:
+                  - img [ref=e59]
+                  - img [ref=e63]
+              - radio "그리드" [ref=e66] [cursor=pointer]:
+                - generic [ref=e67]:
+                  - img [ref=e68]
+                  - img [ref=e72]
+      - main [ref=e76]:
+        - region [ref=e82]:
+          - grid "항목 목록" [ref=e86]:
+            - rowgroup [ref=e87]:
+              - generic [ref=e88] [cursor=pointer]: 이름
+              - img [ref=e90] [cursor=pointer]
+              - generic [ref=e92] [cursor=pointer]: Date modified
+              - text: File size
+              - generic [ref=e98]:
+                - button "정렬" [ref=e100] [cursor=pointer]:
+                  - img [ref=e104]
+                  - generic [ref=e106]: 정렬
+                - tooltip [ref=e107]: 정렬 옵션 보기
+            - rowgroup [ref=e108]:
+              - 'row "그러므로.jpg Image Shared Modified 3월 27일 Size: 46KB Storage used: 46KB" [ref=e109]':
+                - gridcell "그러므로.jpg Image Shared" [ref=e110]:
+                  - generic [ref=e112]:
+                    - img [ref=e118]
+                    - generic "그러므로.jpg Image Shared" [ref=e121]:
+                      - strong [ref=e124]: 그러므로.jpg
+                      - img "공유됨" [ref=e126]:
+                        - img [ref=e127]
+                        - generic [ref=e130]: 공유됨
+                - gridcell "Modified 3월 27일" [ref=e131]:
+                  - generic "Modified 3월 27일" [ref=e135]:
+                    - generic [ref=e136]: 3월 27일
+                - 'gridcell "Size: 46KB Storage used: 46KB" [ref=e137]':
+                  - 'generic "Size: 46KB Storage used: 46KB" [ref=e141]':
+                    - generic [ref=e142]: 46KB
+                - gridcell [ref=e143]
+              - 'row "그러므로.lrc Text Shared Modified 3월 27일 Size: 1KB Storage used: 1KB" [ref=e147]':
+                - gridcell "그러므로.lrc Text Shared" [ref=e148]:
+                  - generic [ref=e150]:
+                    - img [ref=e156]
+                    - generic "그러므로.lrc Text Shared" [ref=e159]:
+                      - strong [ref=e162]: 그러므로.lrc
+                      - img "공유됨" [ref=e164]:
+                        - img [ref=e165]
+                        - generic [ref=e168]: 공유됨
+                - gridcell "Modified 3월 27일" [ref=e169]:
+                  - generic "Modified 3월 27일" [ref=e173]:
+                    - generic [ref=e174]: 3월 27일
+                - 'gridcell "Size: 1KB Storage used: 1KB" [ref=e175]':
+                  - 'generic "Size: 1KB Storage used: 1KB" [ref=e179]':
+                    - generic [ref=e180]: 1KB
+                - gridcell [ref=e181]
+              - 'row "그러므로.mp3 Audio Shared Modified 3월 27일 Size: 8.8MB Storage used: 8.8MB" [ref=e185]':
+                - gridcell "그러므로.mp3 Audio Shared" [ref=e186]:
+                  - generic [ref=e188]:
+                    - img [ref=e194]
+                    - generic "그러므로.mp3 Audio Shared" [ref=e197]:
+                      - strong [ref=e200]: 그러므로.mp3
+                      - img "공유됨" [ref=e202]:
+                        - img [ref=e203]
+                        - generic [ref=e206]: 공유됨
+                - gridcell "Modified 3월 27일" [ref=e207]:
+                  - generic "Modified 3월 27일" [ref=e211]:
+                    - generic [ref=e212]: 3월 27일
+                - 'gridcell "Size: 8.8MB Storage used: 8.8MB" [ref=e213]':
+                  - 'generic "Size: 8.8MB Storage used: 8.8MB" [ref=e217]':
+                    - generic [ref=e218]: 8.8MB
+                - gridcell [ref=e219]
+  - region

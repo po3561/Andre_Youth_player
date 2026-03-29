@@ -1,0 +1,127 @@
+- generic [ref=e1]:
+  - iframe [ref=e2]:
+    
+  - generic [ref=e4]:
+    - navigation [ref=e5]:
+      - button [ref=e224] [cursor=pointer]:
+        - generic [ref=e9]: 메인 콘텐츠로 건너뛰기
+      - button [ref=e225] [cursor=pointer]:
+        - generic [ref=e13]: 단축키
+      - button [ref=e226] [cursor=pointer]:
+        - generic [ref=e17]: 접근성 관련 의견
+    - banner [ref=e19]:
+      - generic [ref=e20]:
+        - link [ref=e227] [cursor=pointer]:
+          - /url: https://drive.google.com/?tab=oo
+          - img [ref=e25]
+          - generic [ref=e26]: 드라이브
+        - generic [ref=e28]:
+          - button [ref=e228] [cursor=pointer]:
+            - img [ref=e33]
+          - link [ref=e229] [cursor=pointer]:
+            - /url: https://accounts.google.com/ServiceLogin?hl=ko&passive=true&continue=https://drive.google.com/drive/folders/1V1v0NkmtIfVfwRNoGgN6TffdiFTGXh2d%3Fusp%3Dsharing&service=writely&ec=GAZAMQ
+            - text: 로그인
+    - generic [ref=e37]:
+      - generic [ref=e46]:
+        - navigation [ref=e231]:
+          - heading [ref=e232]: 폴더 경로
+          - list [ref=e233]:
+            - listitem [ref=e234]:
+              - link [ref=e235]: Andre_Youth_Music
+        - toolbar [ref=e50]:
+          - generic [ref=e51]:
+            - button [ref=e236] [cursor=pointer]: 전체 다운로드
+            - radiogroup [ref=e238]:
+              - generic [ref=e56]:
+                - radio [checked] [ref=e239] [cursor=pointer]:
+                  - generic [ref=e58]:
+                    - img [ref=e59]
+                    - img [ref=e63]
+                - radio [ref=e240] [cursor=pointer]:
+                  - generic [ref=e67]:
+                    - img [ref=e68]
+                    - img [ref=e72]
+      - main [ref=e76]:
+        - region [active] [ref=e82]:
+          - grid [ref=e241]:
+            - rowgroup [ref=e87]:
+              - generic [ref=e88] [cursor=pointer]: 이름
+              - img [ref=e90] [cursor=pointer]
+              - text: 소유자
+              - generic [ref=e92] [cursor=pointer]: 수정 날짜
+              - text: 파일 크기
+              - generic [ref=e98]:
+                - button [ref=e242] [cursor=pointer]:
+                  - img [ref=e104]
+                  - generic [ref=e106]: 정렬
+                - tooltip [ref=e107]: 정렬 옵션 보기
+            - rowgroup [ref=e108]:
+              - row [ref=e243]:
+                - gridcell [ref=e244]:
+                  - generic [ref=e245]:
+                    - img [ref=e251]
+                    - generic [ref=e254]:
+                      - strong [ref=e257]: 그러므로.jpg
+                      - img [ref=e259]:
+                        - img [ref=e260]
+                        - generic [ref=e263]: 공유됨
+                - gridcell [ref=e264]:
+                  - generic [ref=e268]:
+                    - img [ref=e271]
+                    - generic [ref=e274]: 소유자 숨겨짐
+                - gridcell [ref=e275]:
+                  - generic [ref=e279]: 3월 27일
+                - gridcell [ref=e280]:
+                  - generic [ref=e284]: 46KB
+                - gridcell [ref=e143]
+              - row [ref=e287]:
+                - gridcell [ref=e288]:
+                  - generic [ref=e289]:
+                    - img [ref=e295]
+                    - generic [ref=e298]:
+                      - strong [ref=e301]: 그러므로.lrc
+                      - img [ref=e303]:
+                        - img [ref=e304]
+                        - generic [ref=e307]: 공유됨
+                - gridcell [ref=e308]:
+                  - generic [ref=e312]:
+                    - img [ref=e315]
+                    - generic [ref=e318]: 소유자 숨겨짐
+                - gridcell [ref=e319]:
+                  - generic [ref=e323]: 3월 27일
+                - gridcell [ref=e324]:
+                  - generic [ref=e328]: 1KB
+                - gridcell [ref=e181]
+              - row [ref=e331]:
+                - gridcell [ref=e332]:
+                  - generic [ref=e333]:
+                    - img [ref=e339]
+                    - generic [ref=e342]:
+                      - strong [ref=e345]: 그러므로.mp3
+                      - img [ref=e347]:
+                        - img [ref=e348]
+                        - generic [ref=e351]: 공유됨
+                - gridcell [ref=e352]:
+                  - generic [ref=e356]:
+                    - img [ref=e359]
+                    - generic [ref=e362]: 소유자 숨겨짐
+                - gridcell [ref=e363]:
+                  - generic [ref=e367]: 3월 27일
+                - gridcell [ref=e368]:
+                  - generic [ref=e372]: 8.8MB
+                - gridcell [ref=e219]
+  - img [ref=e375]
+  - dialog "Drive를 무료로 사용해 보세요 Google Drive에 모든 파일을 안전하게 보관하세요. 지금 바로 시작하세요." [ref=e376]:
+    - generic:
+      - heading "Google Drive 정보" [ref=e377]
+      - button "닫기" [ref=e378]:
+        - img [ref=e381]
+    - document [ref=e384]:
+      - img [ref=e388]
+      - generic [ref=e395]:
+        - heading "Drive를 무료로 사용해 보세요" [level=1] [ref=e396]
+        - paragraph [ref=e397]:
+          - text: Google Drive에 모든 파일을 안전하게 보관하세요.
+          - text: 지금 바로
+          - link "시작하세요" [ref=e398] [cursor=pointer]
+          - text: .

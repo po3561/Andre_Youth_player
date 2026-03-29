@@ -1,0 +1,99 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "채팅 열기" [ref=e8] [cursor=pointer]:
+          - generic [ref=e9]: 
+        - button "볼륨 조절" [ref=e10] [cursor=pointer]:
+          - generic [ref=e11]: 
+      - generic [ref=e12]:
+        - generic [ref=e13]: Andre Youth Playlist
+        - text: 음악으로 길을 잇다
+      - generic [ref=e14]:
+        - button "공유하기" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: 
+        - button "저작권 정보" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: 
+    - generic [ref=e19]:
+      - generic [ref=e20]: 
+      - slider [ref=e21] [cursor=pointer]: "80"
+      - generic [ref=e22]: 
+      - button "" [ref=e23] [cursor=pointer]:
+        - generic [ref=e24]: 
+  - main [ref=e25]:
+    - generic [ref=e26] [cursor=pointer]:
+      - img "Album Art" [ref=e27]
+      - generic:
+        - generic:
+          - generic:
+            - generic: 오늘 내 눈에 보이지 않고
+            - generic: 오늘 내 손에 잡히지 않아도
+            - generic: 그의 눈이 날 지켜보셨고
+            - generic: 그의 손이 지켜주셨기에
+            - generic: 오늘 내 눈에 보이지 않고
+            - generic: 오늘 내 손에 잡히지 않아도
+            - generic: 그의 눈이 날 지켜보셨고
+            - generic: 그의 손이 지켜주셨기에
+            - generic: 예수 그리스도로
+            - generic: 말미암아 우리에게
+            - generic: 이김을 주시는
+            - generic: 하나님께 감사하노니
+            - generic: 그러므로 사랑하는
+            - generic: 형제들이 흔들리지 않기를
+            - generic: 오늘 하루가 주 안에서
+            - generic: 헛되지 않음을 기억하기를
+            - generic: 오늘 내 눈에 보이지 않고
+            - generic: 오늘 내 손에 잡히지 않아도
+            - generic: 그의 눈이 날 지켜보셨고
+            - generic: 그의 손이 지켜주셨기에
+            - generic: 그러므로 사랑하는
+            - generic: 형제들이 흔들리지 않기를
+            - generic: 오늘 하루가 주 안에서
+            - generic: 헛되지 않음을 기억하기를
+            - generic: 그러므로 사랑하는
+            - generic: 형제들이 흔들리지 않기를
+            - generic: 오늘 하루가 주 안에서
+            - generic: 헛되지 않음을 기억하기를
+            - generic: 헛되지 않음을 기억하기를
+            - generic: 헛되지 않음을 기억하기를
+      - generic: TAP FOR LYRICS
+    - generic [ref=e28]:
+      - img "Profile photo" [ref=e29]
+      - generic [ref=e30]:
+        - heading "재생 가능한 곡이 없습니다." [level=2] [ref=e31]
+        - paragraph [ref=e32]: Andre Youth
+      - button "좋아요" [ref=e33] [cursor=pointer]:
+        - generic [ref=e34]: 
+    - generic [ref=e35]:
+      - slider [ref=e36] [cursor=pointer]: "0"
+      - generic [ref=e37]:
+        - generic [ref=e38]: 0:00
+        - generic [ref=e39]: 0:00
+    - generic [ref=e40]:
+      - button "셔플" [ref=e41] [cursor=pointer]:
+        - generic [ref=e42]: 
+      - button "이전 곡" [ref=e43] [cursor=pointer]:
+        - generic [ref=e44]: 
+      - button "재생/일시정지" [ref=e46] [cursor=pointer]:
+        - generic [ref=e47]: 
+      - button "다음 곡" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: 
+      - button "반복" [ref=e50] [cursor=pointer]:
+        - generic [ref=e51]: 
+  - generic [ref=e52]:
+    - generic [ref=e55] [cursor=pointer]: PLAYLIST
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - heading "곡 목록" [level=3] [ref=e58]
+        - generic [ref=e59]: 총 1곡
+      - list [ref=e61]:
+        - listitem [ref=e62]:
+          - generic [ref=e63] [cursor=pointer]:
+            - img "Profile" [ref=e64]
+            - generic:
+              - strong: 그러므로
+              - paragraph: Andre Youth
+              - generic [ref=e65]:
+                - generic [ref=e66]: 
+                - text: NOW PLAYING
+          - generic [ref=e68] [cursor=pointer]: 

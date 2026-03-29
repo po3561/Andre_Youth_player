@@ -1,0 +1,7 @@
+[    2059ms] [ERROR] Access to fetch at 'https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec' from origin 'https://po3561.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://po3561.github.io/Andre_Youth_player/admin.html?v=42c14ff:0
+[    2060ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec:0
+[    2060ms] [ERROR] fetchSongs error: TypeError: Failed to fetch
+    at fetchSongs (https://po3561.github.io/Andre_Youth_player/admin-script.js?v=1.5:606:32)
+    at HTMLDocument.<anonymous> (https://po3561.github.io/Andre_Youth_player/admin-script.js?v=1.5:14:5)
+    at e (https://code.jquery.com/jquery-3.6.0.min.js:2:30038)
+    at t (https://code.jquery.com/jquery-3.6.0.min.js:2:30340) @ https://po3561.github.io/Andre_Youth_player/admin-script.js?v=1.5:646

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stream Test</title>
+</head>
+<body>
+    <button id="playBtn">Play Audios</button>
+    <div id="results"></div>
+
+    <script>
+        const id = '12t9OSJmw27DOC2QlfqjiZKeu-x4bCUND';
+        const rawUrl = `https://drive.google.com/uc?export=download&id=${id}`;
+        const encodedUrl = encodeURIComponent(rawUrl);
+
+        const urls = [
+            `https://corsproxy.io/?${encodedUrl}`,
+            `https://po3561.workers.dev/?url=${encodedUrl}` // maybe user has this?
+        ];
+
+        document.getElementById('playBtn').addEventListener('click', async () => {
+            const results = document.getElementById('results');
+            for (let i = 0; i < urls.length; i++) {
+                const url = urls[i];
+                const audio = new Audio();
+                audio.src = url;
+                const start = performance.now();
+                
+                try {
+                    await audio.play();
+                    const duration = performance.now() - start;
+                    results.innerHTML += `<p>✅ URL ${i} WORKS in ${Math.round(duration)}ms: ${url}</p>`;
+                    audio.pause();
+                } catch (e) {
+                    const duration = performance.now() - start;
+                    results.innerHTML += `<p>❌ URL ${i} FAILED in ${Math.round(duration)}ms: ${url}</p>`;
+                }
+            }
+            results.innerHTML += `<p>DONE</p>`;
+        });
+    </script>
+</body>
+</html>

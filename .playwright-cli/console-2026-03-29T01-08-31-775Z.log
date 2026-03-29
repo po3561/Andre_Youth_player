@@ -1,0 +1,6 @@
+[     329ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://po3561.github.io/favicon.ico:0
+[    2126ms] [ERROR] Access to fetch at 'https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec?v=1774746512048' from origin 'https://po3561.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://po3561.github.io/Andre_Youth_player/:0
+[    2127ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec?v=1774746512048:0
+[    2127ms] [ERROR] Playlist Fetch Error: TypeError: Failed to fetch
+    at fetchPlaylist (https://po3561.github.io/Andre_Youth_player/script.js?v=20260328-2:481:36)
+    at https://po3561.github.io/Andre_Youth_player/script.js?v=20260328-2:610:9 @ https://po3561.github.io/Andre_Youth_player/script.js?v=20260328-2:507

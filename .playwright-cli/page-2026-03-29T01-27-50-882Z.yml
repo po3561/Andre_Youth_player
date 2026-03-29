@@ -1,0 +1,133 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "채팅 열기" [ref=e8] [cursor=pointer]:
+          - generic [ref=e9]: 
+        - button "볼륨 조절" [ref=e10] [cursor=pointer]:
+          - generic [ref=e11]: 
+      - generic [ref=e12]:
+        - generic [ref=e13]: Andre Youth Playlist
+        - text: 음악으로 길을 잇다
+      - generic [ref=e14]:
+        - button "공유하기" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: 
+        - button "저작권 정보" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: 
+    - generic [ref=e19]:
+      - generic [ref=e20]: 
+      - slider [ref=e21] [cursor=pointer]: "80"
+      - generic [ref=e22]: 
+      - button "" [ref=e23] [cursor=pointer]:
+        - generic [ref=e24]: 
+  - main [ref=e25]:
+    - generic [ref=e26] [cursor=pointer]:
+      - img "Album Art" [ref=e27]
+      - generic: TAP FOR LYRICS
+    - generic [ref=e28]:
+      - img "Profile photo" [ref=e29]
+      - generic [ref=e30]:
+        - heading "Loading..." [level=2] [ref=e31]
+        - paragraph [ref=e32]: Andre Youth
+      - button "좋아요" [ref=e33] [cursor=pointer]:
+        - generic [ref=e34]: 
+    - generic [ref=e35]:
+      - slider [ref=e36] [cursor=pointer]: "0"
+      - generic [ref=e37]:
+        - generic [ref=e38]: 0:00
+        - generic [ref=e39]: 0:00
+    - generic [ref=e40]:
+      - button "셔플" [ref=e41] [cursor=pointer]:
+        - generic [ref=e42]: 
+      - button "이전 곡" [ref=e43] [cursor=pointer]:
+        - generic [ref=e44]: 
+      - button "재생/일시정지" [ref=e46] [cursor=pointer]:
+        - generic [ref=e47]: 
+      - button "다음 곡" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: 
+      - button "반복" [ref=e50] [cursor=pointer]:
+        - generic [ref=e51]: 
+  - generic [ref=e52]:
+    - generic [ref=e55] [cursor=pointer]: PLAYLIST
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - heading "곡 목록" [level=3] [ref=e58]
+        - generic [ref=e59]: 총 11곡
+      - list [ref=e61]:
+        - listitem [ref=e62]:
+          - generic [ref=e63] [cursor=pointer]:
+            - img "Profile" [ref=e64]
+            - generic:
+              - strong: 혼자 걷지 않을 거예요
+              - paragraph: 예람워십
+          - generic [ref=e66] [cursor=pointer]: 
+        - listitem [ref=e67]:
+          - generic [ref=e68] [cursor=pointer]:
+            - img "Profile" [ref=e69]
+            - generic:
+              - strong: 우리가 주를 더욱 사랑하고
+              - paragraph: Andre Youth
+          - generic [ref=e71] [cursor=pointer]: 
+        - listitem [ref=e72]:
+          - generic [ref=e73] [cursor=pointer]:
+            - img "Profile" [ref=e74]
+            - generic:
+              - strong: 행복
+              - paragraph: 피아워십
+          - generic [ref=e76] [cursor=pointer]: 
+        - listitem [ref=e77]:
+          - generic [ref=e78] [cursor=pointer]:
+            - img "Profile" [ref=e79]
+            - generic:
+              - strong: 그러므로
+              - paragraph: Andre Youth
+          - generic [ref=e81] [cursor=pointer]: 
+        - listitem [ref=e82]:
+          - generic [ref=e83] [cursor=pointer]:
+            - img "Profile" [ref=e84]
+            - generic:
+              - strong: 광야를 지나며
+              - paragraph: Andre Youth
+          - generic [ref=e86] [cursor=pointer]: 
+        - listitem [ref=e87]:
+          - generic [ref=e88] [cursor=pointer]:
+            - img "Profile" [ref=e89]
+            - generic:
+              - strong: 슬픈 마음 있는 사람
+              - paragraph: Andre Youth
+          - generic [ref=e91] [cursor=pointer]: 
+        - listitem [ref=e92]:
+          - generic [ref=e93] [cursor=pointer]:
+            - img "Profile" [ref=e94]
+            - generic:
+              - strong: 약할 때 강함 되시네
+              - paragraph: Andre Youth
+          - generic [ref=e96] [cursor=pointer]: 
+        - listitem [ref=e97]:
+          - generic [ref=e98] [cursor=pointer]:
+            - img "Profile" [ref=e99]
+            - generic:
+              - strong: 어둔날 다 지나고
+              - paragraph: Andre Youth
+          - generic [ref=e101] [cursor=pointer]: 
+        - listitem [ref=e102]:
+          - generic [ref=e103] [cursor=pointer]:
+            - img "Profile" [ref=e104]
+            - generic:
+              - strong: 전능하신 나의 주 하나님은
+              - paragraph: Andre Youth
+          - generic [ref=e106] [cursor=pointer]: 
+        - listitem [ref=e107]:
+          - generic [ref=e108] [cursor=pointer]:
+            - img "Profile" [ref=e109]
+            - generic:
+              - strong: 첫째되는 계명
+              - paragraph: Andre Youth
+          - generic [ref=e111] [cursor=pointer]: 
+        - listitem [ref=e112]:
+          - generic [ref=e113] [cursor=pointer]:
+            - img "Profile" [ref=e114]
+            - generic:
+              - strong: 하나님의 사랑이
+              - paragraph: Andre Youth
+          - generic [ref=e116] [cursor=pointer]: 
