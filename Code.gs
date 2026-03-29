@@ -27,50 +27,60 @@ const HEADERS = [
 ];
 
 function doGet(e) {
+  const callback = text_(getParam_(e, 'callback', '')).trim();
+  let payload;
+
   try {
     const action = String(getParam_(e, 'action', 'list')).toLowerCase();
 
     if (action === 'ping') {
-      return json_({
+      payload = {
         status: 'ok',
         ts: new Date().toISOString()
-      });
-    }
-
-    if (action === 'song') {
+      };
+    } else if (action === 'song') {
       const id = getParam_(e, 'id', '');
-      if (id) {
-        return json_(getSongById_(String(id)));
-      }
+      payload = id ? getSongById_(String(id)) : null;
+    } else {
+      payload = listSongs_();
     }
-
-    return json_(listSongs_());
   } catch (error) {
-    return json_(errorPayload_(error));
+    payload = errorPayload_(error);
   }
+
+  if (callback) {
+    return jsonp_(callback, payload);
+  }
+
+  return json_(payload);
 }
 
 function doPost(e) {
+  const data = parseBody_(e);
+  const bridge = isBridgeRequest_(data);
+  let payload;
+
   try {
-    const data = parseBody_(e);
     const action = String(data.action || 'create').toLowerCase();
 
     if (action === 'delete') {
-      return json_(deleteSong_(data));
+      payload = deleteSong_(data);
+    } else if (action === 'update') {
+      payload = updateSong_(data);
+    } else if (action === 'ai-sync' || action === 'aisync' || action === 'analyze-lyrics') {
+      payload = analyzeLyricsWithGemini_(data);
+    } else {
+      payload = upsertSong_(data);
     }
-
-    if (action === 'update') {
-      return json_(updateSong_(data));
-    }
-
-    if (action === 'ai-sync' || action === 'aisync' || action === 'analyze-lyrics') {
-      return json_(analyzeLyricsWithGemini_(data));
-    }
-
-    return json_(upsertSong_(data));
   } catch (error) {
-    return json_(errorPayload_(error));
+    payload = errorPayload_(error);
   }
+
+  if (bridge) {
+    return bridge_(payload, data.requestId);
+  }
+
+  return json_(payload);
 }
 
 function upsertSong_(data) {
@@ -723,6 +733,73 @@ function getParam_(e, name, fallback) {
     return e.parameter[name];
   }
   return fallback;
+}
+
+function isBridgeRequest_(data) {
+  const transport = text_(data && data.transport).trim().toLowerCase();
+  const responseMode = text_(data && data.responseMode).trim().toLowerCase();
+  const output = text_(data && data.output).trim().toLowerCase();
+  return transport === 'bridge' || responseMode === 'bridge' || output === 'bridge';
+}
+
+function sanitizeJsonpCallback_(callback) {
+  const value = text_(callback).trim();
+  if (!value) return '';
+  return /^[A-Za-z_$][0-9A-Za-z_$\.]*$/.test(value) ? value : '';
+}
+
+function safeJsonForScript_(value) {
+  const json = JSON.stringify(value);
+  return String(json === undefined ? 'null' : json)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function jsonp_(callback, payload) {
+  const safeCallback = sanitizeJsonpCallback_(callback) || 'callback';
+  const body = `${safeCallback}(${safeJsonForScript_(payload)});`;
+  return ContentService
+    .createTextOutput(body)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function bridge_(payload, requestId) {
+  const message = {
+    source: 'andre-youth-gas-bridge',
+    requestId: text_(requestId),
+    payload: payload
+  };
+
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Andre Youth Bridge</title>
+</head>
+<body>
+  <script>
+    (function() {
+      var message = ${safeJsonForScript_(message)};
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(message, '*');
+        }
+      } catch (error) {}
+      try {
+        document.body.textContent = 'OK';
+      } catch (error) {}
+    })();
+  </script>
+</body>
+</html>`;
+
+  return HtmlService
+    .createHtmlOutput(html)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function text_(value, fallback) {

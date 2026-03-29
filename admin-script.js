@@ -11,6 +11,11 @@ $(document).ready(function() {
     const PUBLIC_PLAYLIST = Array.isArray(window.PUBLIC_PLAYLIST) ? window.PUBLIC_PLAYLIST : [];
     const $backendStatus = $('#backend-status');
     let backendOnline = false;
+    const GAS_BRIDGE_SOURCE = 'andre-youth-gas-bridge';
+    const GAS_JSONP_TIMEOUT_MS = 15000;
+    const GAS_BRIDGE_TIMEOUT_MS = 120000;
+    const pendingGasBridgeRequests = new Map();
+    let gasBridgeListenerInstalled = false;
 
     fetchSongs();
 
@@ -70,6 +75,184 @@ $(document).ready(function() {
             .toggleClass('is-online', online === true)
             .toggleClass('is-offline', online === false)
             .text(message || '');
+    }
+
+    function randomGasRequestId() {
+        return `gas-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function isTrustedGasOrigin(origin) {
+        try {
+            const hostname = new URL(origin).hostname;
+            return hostname === 'script.google.com'
+                || hostname === 'script.googleusercontent.com'
+                || hostname.endsWith('.googleusercontent.com');
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function encodeGasFieldValue(value) {
+        if (value === undefined || value === null) return '';
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        return JSON.stringify(value);
+    }
+
+    function installGasBridgeListener() {
+        if (gasBridgeListenerInstalled) return;
+        window.addEventListener('message', function(event) {
+            if (!isTrustedGasOrigin(event.origin)) return;
+
+            const data = event.data;
+            if (!data || data.source !== GAS_BRIDGE_SOURCE || !data.requestId) return;
+
+            const pending = pendingGasBridgeRequests.get(data.requestId);
+            if (!pending) return;
+
+            pendingGasBridgeRequests.delete(data.requestId);
+            clearTimeout(pending.timeoutId);
+            pending.cleanup();
+
+            const payload = data.payload || {};
+            if (payload && payload.status === 'error') {
+                pending.reject(new Error(payload.message || 'GAS request failed'));
+                return;
+            }
+
+            pending.resolve(payload);
+        });
+        gasBridgeListenerInstalled = true;
+    }
+
+    function gasJsonpGet(params, options) {
+        const timeoutMs = options && Number.isFinite(options.timeoutMs) ? options.timeoutMs : GAS_JSONP_TIMEOUT_MS;
+        return new Promise((resolve, reject) => {
+            const requestId = randomGasRequestId();
+            const callbackName = `__gas_jsonp_${requestId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+            const url = new URL(GAS_URL);
+            const query = Object.assign({}, params || {}, {
+                callback: callbackName,
+                requestId: requestId
+            });
+
+            Object.keys(query).forEach(key => {
+                const value = query[key];
+                if (value === undefined || value === null) return;
+                url.searchParams.set(key, encodeGasFieldValue(value));
+            });
+
+            const script = document.createElement('script');
+            let settled = false;
+
+            const cleanup = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                try {
+                    delete window[callbackName];
+                } catch (error) {
+                    window[callbackName] = undefined;
+                }
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+            };
+
+            const timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('GAS request timed out'));
+            }, timeoutMs);
+
+            window[callbackName] = function(payload) {
+                cleanup();
+                if (payload && payload.status === 'error') {
+                    reject(new Error(payload.message || 'GAS request failed'));
+                    return;
+                }
+                resolve(payload);
+            };
+
+            script.onerror = function() {
+                cleanup();
+                reject(new Error('GAS request failed'));
+            };
+            script.async = true;
+            script.src = url.toString();
+            document.head.appendChild(script);
+        });
+    }
+
+    function gasBridgePost(fields, options) {
+        const timeoutMs = options && Number.isFinite(options.timeoutMs) ? options.timeoutMs : GAS_BRIDGE_TIMEOUT_MS;
+        installGasBridgeListener();
+
+        return new Promise((resolve, reject) => {
+            const requestId = randomGasRequestId();
+            const iframeName = `gas_bridge_${requestId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+            const iframe = document.createElement('iframe');
+            iframe.name = iframeName;
+            iframe.title = 'gas-bridge';
+            iframe.setAttribute('aria-hidden', 'true');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = GAS_URL;
+            form.target = iframeName;
+            form.enctype = 'application/x-www-form-urlencoded';
+            form.acceptCharset = 'UTF-8';
+            form.style.display = 'none';
+
+            const payload = Object.assign({}, fields || {}, {
+                transport: 'bridge',
+                requestId: requestId
+            });
+
+            Object.keys(payload).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = encodeGasFieldValue(payload[key]);
+                form.appendChild(input);
+            });
+
+            const cleanup = () => {
+                if (form.parentNode) {
+                    form.parentNode.removeChild(form);
+                }
+                if (iframe.parentNode) {
+                    iframe.parentNode.removeChild(iframe);
+                }
+                pendingGasBridgeRequests.delete(requestId);
+            };
+
+            const timeoutId = setTimeout(() => {
+                pendingGasBridgeRequests.delete(requestId);
+                cleanup();
+                reject(new Error('GAS request timed out'));
+            }, timeoutMs);
+
+            pendingGasBridgeRequests.set(requestId, {
+                resolve,
+                reject,
+                cleanup,
+                timeoutId
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+            reader.onerror = error => reject(error);
+        });
     }
 
     function readNumber($input, fallback) {
@@ -519,34 +702,20 @@ $(document).ready(function() {
         if (!rawText || !state.audio) return null;
         if (state.audio.size && state.audio.size > 18 * 1024 * 1024) return null;
 
-        const toBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
-            reader.onerror = error => reject(error);
-        });
-
         try {
-            const audioData = await toBase64(state.audio);
+            const audioData = await fileToBase64(state.audio);
             if (!audioData) return null;
 
-            const response = await fetch(GAS_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: 'ai-sync',
-                    title: $('#song-title').val().trim(),
-                    artist: 'Andre Youth',
-                    lyricsRaw: rawText,
-                    audioName: state.audio.name,
-                    audioMime: state.audio.type || 'audio/mpeg',
-                    audioData
-                })
-            });
+            const result = await gasBridgePost({
+                action: 'ai-sync',
+                title: $('#song-title').val().trim(),
+                artist: 'Andre Youth',
+                lyricsRaw: rawText,
+                audioName: state.audio.name,
+                audioMime: state.audio.type || 'audio/mpeg',
+                audioData
+            }, { timeoutMs: GAS_BRIDGE_TIMEOUT_MS });
 
-            const result = await response.json();
             if (result && result.status === 'success' && Number.isFinite(Number(result.offsetSec))) {
                 return result;
             }
@@ -703,21 +872,14 @@ $(document).ready(function() {
         };
 
         try {
-            const toBase64 = file => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
-
             const payload = {
                 title,
                 audioName: `${title}.mp3`,
                 audioMime: state.audio.type,
-                audioData: await toBase64(state.audio),
+                audioData: await fileToBase64(state.audio),
                 imageName: `${title}.jpg`,
                 imageMime: state.image.type,
-                imageData: await toBase64(state.image),
+                imageData: await fileToBase64(state.image),
                 syncOffset: readNumber($('#sync-offset'), 0),
                 syncMinGap: readNumber($('#sync-min-gap'), 0.22)
             };
@@ -729,15 +891,9 @@ $(document).ready(function() {
 
             updateProgress(50, '구글 드라이브로 전송 중...');
 
-            const response = await fetch(GAS_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
+            const result = await gasBridgePost(Object.assign({ action: 'create' }, payload), {
+                timeoutMs: GAS_BRIDGE_TIMEOUT_MS
             });
-
-            const result = await response.json();
 
             if (result.status === "success") {
                 updateProgress(100, '업로드 성공! 잠시 후 이동합니다.');
@@ -763,8 +919,9 @@ $(document).ready(function() {
 
         try {
             backendOnline = true;
-            const resp = await fetch(GAS_URL, { cache: 'no-store' });
-            const data = await resp.json();
+            const data = await gasJsonpGet({ action: 'list' }, {
+                timeoutMs: GAS_JSONP_TIMEOUT_MS
+            });
             updateBackendStatus(true, 'GAS backend online.');
             $list.empty();
 
@@ -869,19 +1026,13 @@ $(document).ready(function() {
         const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
 
         try {
-            const resp = await fetch(GAS_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    action: "delete",
-                    id: song.id || '',
-                    title: song.title || ''
-                })
+            const res = await gasBridgePost({
+                action: 'delete',
+                id: song.id || '',
+                title: song.title || ''
+            }, {
+                timeoutMs: GAS_BRIDGE_TIMEOUT_MS
             });
-
-            const res = await resp.json();
             if (res.status === "success") {
                 alert('삭제되었습니다.');
                 fetchSongs();
