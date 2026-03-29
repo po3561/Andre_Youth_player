@@ -3,7 +3,8 @@ $(document).ready(function() {
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec";
     const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
     const state = {
-        audio: null,
+        audioFile: null,
+        audioPreview: null,
         image: null,
         generatedLrc: "",
         audioPreviewUrl: null
@@ -12,8 +13,8 @@ $(document).ready(function() {
     const $backendStatus = $('#backend-status');
     let backendOnline = false;
     const GAS_BRIDGE_SOURCE = 'andre-youth-gas-bridge';
-    const GAS_JSONP_TIMEOUT_MS = 15000;
-    const GAS_BRIDGE_TIMEOUT_MS = 120000;
+    const GAS_JSONP_TIMEOUT_MS = 30000;
+    const GAS_BRIDGE_TIMEOUT_MS = 300000;
     const pendingGasBridgeRequests = new Map();
     let gasBridgeListenerInstalled = false;
 
@@ -269,9 +270,12 @@ $(document).ready(function() {
             URL.revokeObjectURL(state.audioPreviewUrl);
             state.audioPreviewUrl = null;
         }
-        if (state.audio) {
-            state.audio.pause();
-            state.audio = null;
+        if (state.audioPreview) {
+            if (typeof state.audioPreview.pause === 'function') {
+                state.audioPreview.pause();
+            }
+            state.audioPreview.src = '';
+            state.audioPreview = null;
         }
     }
 
@@ -287,14 +291,19 @@ $(document).ready(function() {
             return;
         }
 
-        state[type] = file;
+        if (type === 'audio') {
+            state.audioFile = file;
+        } else {
+            state.image = file;
+        }
         $zone.find('.file-info').text(toTitleLabel(file)).css('opacity', '1');
         $zone.find('p').text('파일 선택됨').css('color', '#00ff88');
 
         if (type === 'audio') {
             clearAudioPreview();
             state.audioPreviewUrl = URL.createObjectURL(file);
-            state.audio = new Audio(state.audioPreviewUrl);
+            state.audioPreview = new Audio(state.audioPreviewUrl);
+            state.audioPreview.preload = 'metadata';
         }
     }
 
@@ -699,11 +708,11 @@ $(document).ready(function() {
     }
 
     async function requestGeminiOffset(rawText) {
-        if (!rawText || !state.audio) return null;
-        if (state.audio.size && state.audio.size > 18 * 1024 * 1024) return null;
+        if (!rawText || !state.audioFile) return null;
+        if (state.audioFile.size && state.audioFile.size > 18 * 1024 * 1024) return null;
 
         try {
-            const audioData = await fileToBase64(state.audio);
+            const audioData = await fileToBase64(state.audioFile);
             if (!audioData) return null;
 
             const result = await gasBridgePost({
@@ -711,8 +720,8 @@ $(document).ready(function() {
                 title: $('#song-title').val().trim(),
                 artist: 'Andre Youth',
                 lyricsRaw: rawText,
-                audioName: state.audio.name,
-                audioMime: state.audio.type || 'audio/mpeg',
+                audioName: state.audioFile.name,
+                audioMime: state.audioFile.type || 'audio/mpeg',
                 audioData
             }, { timeoutMs: GAS_BRIDGE_TIMEOUT_MS });
 
@@ -732,7 +741,7 @@ $(document).ready(function() {
             alert('가사를 먼저 입력해 주세요.');
             return;
         }
-        if (!state.audio) {
+        if (!state.audioFile) {
             alert('분석할 오디오 파일을 먼저 선택해 주세요.');
             return;
         }
@@ -757,7 +766,7 @@ $(document).ready(function() {
                 await audioCtx.resume();
             }
 
-            const arrayBuffer = await state.audio.arrayBuffer();
+            const arrayBuffer = await state.audioFile.arrayBuffer();
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
 
             $status.text('파형과 가사 기준점을 찾는 중...');
@@ -854,7 +863,7 @@ $(document).ready(function() {
             alert('곡 제목을 입력해주세요.');
             return;
         }
-        if (!state.audio || !state.image) {
+        if (!state.audioFile || !state.image) {
             alert('음원과 이미지는 필수 항목입니다.');
             return;
         }
@@ -875,8 +884,8 @@ $(document).ready(function() {
             const payload = {
                 title,
                 audioName: `${title}.mp3`,
-                audioMime: state.audio.type,
-                audioData: await fileToBase64(state.audio),
+                audioMime: state.audioFile.type,
+                audioData: await fileToBase64(state.audioFile),
                 imageName: `${title}.jpg`,
                 imageMime: state.image.type,
                 imageData: await fileToBase64(state.image),
