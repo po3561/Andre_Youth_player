@@ -1,4 +1,4 @@
-$(document).ready(function() {
+﻿$(document).ready(function() {
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -128,6 +128,33 @@ $(document).ready(function() {
         return playlistData.filter(item => item && item.title).length <= 1;
     }
 
+    const audioSourceCache = new Map();
+    let activeAudioObjectUrl = null;
+    let audioLoadToken = 0;
+
+    async function resolveAudioSource(song, fixedAudio) {
+        if (!fixedAudio) return '';
+        const cacheKey = song?.audioFileId || song?.url || fixedAudio;
+        if (audioSourceCache.has(cacheKey)) {
+            return audioSourceCache.get(cacheKey);
+        }
+
+        if (!fixedAudio.includes('api.codetabs.com')) {
+            audioSourceCache.set(cacheKey, fixedAudio);
+            return fixedAudio;
+        }
+
+        const response = await fetch(fixedAudio, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`Audio fetch failed: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        audioSourceCache.set(cacheKey, objectUrl);
+        return objectUrl;
+    }
+
     function jumpToLyric(time) {
         if (Number.isNaN(time)) return;
         audio.currentTime = Math.max(0, time);
@@ -229,7 +256,7 @@ $(document).ready(function() {
     function renderLyrics() {
         const $area = $('#lyrics-scroll-area').empty();
         if (currentLyrics.length === 0) {
-            $area.append('<div class="lyric-line no-data">가사 데이터 형식이 맞지 않습니다.</div>');
+            $area.append('<div class="lyric-line no-data">媛???곗씠???뺤떇??留욎? ?딆뒿?덈떎.</div>');
             return;
         }
 
@@ -273,7 +300,7 @@ $(document).ready(function() {
 
     async function fetchPlaylist() {
         try {
-            $('#disp-title').text('불러오는 중...');
+            $('#disp-title').text('遺덈윭?ㅻ뒗 以?..');
             const response = await fetch(`${GAS_URL}?v=${Date.now()}`);
             const data = await response.json();
 
@@ -285,11 +312,11 @@ $(document).ready(function() {
                 const firstPlayable = getNextPlayableIndex(0);
                 load(firstPlayable === -1 ? 0 : firstPlayable);
             } else {
-                $('#disp-title').text('곡을 추가해주세요.');
+                $('#disp-title').text('怨≪쓣 異붽??댁＜?몄슂.');
             }
         } catch (error) {
             console.error('Playlist Fetch Error:', error);
-            $('#disp-title').text('데이터 로드 실패');
+            $('#disp-title').text('?곗씠??濡쒕뱶 ?ㅽ뙣');
         }
     }
 
@@ -307,7 +334,9 @@ $(document).ready(function() {
         const fixedAudio = MusicEngine.fixUrl(s.url, 'audio');
         const fixedCover = songImage(s);
 
-        audio.src = fixedAudio;
+        const loadToken = ++audioLoadToken;
+        audio.pause();
+        audio.removeAttribute('src');
         audio.removeAttribute('crossorigin');
         audio.load();
 
@@ -323,21 +352,50 @@ $(document).ready(function() {
             currentLyrics = MusicEngine.parseLyrics(s.lyricsData);
             renderLyrics();
         } else {
-            $('#lyrics-scroll-area').html('<div class="lyric-line no-data">등록된 가사가 없습니다.</div>');
+            $('#lyrics-scroll-area').html('<div class="lyric-line no-data">?깅줉??媛?ш? ?놁뒿?덈떎.</div>');
             currentLyrics = [];
         }
 
         render();
         syncHearts();
 
-        if (play) {
-            audio.play().catch(e => {
-                console.error('Playback System Error:', e.name, e.message);
-                if (e.name === 'NotAllowedError') {
-                    $('#disp-title').text('화면을 클릭하면 재생됩니다.');
+        void resolveAudioSource(s, fixedAudio)
+            .then(async resolvedAudio => {
+                if (loadToken !== audioLoadToken) {
+                    if (resolvedAudio && resolvedAudio.startsWith('blob:')) {
+                        URL.revokeObjectURL(resolvedAudio);
+                    }
+                    return;
                 }
+
+                if (activeAudioObjectUrl && activeAudioObjectUrl.startsWith('blob:') && activeAudioObjectUrl !== resolvedAudio) {
+                    URL.revokeObjectURL(activeAudioObjectUrl);
+                }
+                activeAudioObjectUrl = resolvedAudio && resolvedAudio.startsWith('blob:') ? resolvedAudio : null;
+
+                audio.src = resolvedAudio;
+                audio.load();
+
+                if (play) {
+                    await audio.play().catch(e => {
+                        console.error('Playback System Error:', e.name, e.message);
+                        if (e.name === 'NotAllowedError') {
+                            $('#disp-title').text('?붾㈃???대┃?섎㈃ ?ъ깮?⑸땲??');
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Audio Source Error:', error);
+                const failed = playlistData[curIdx];
+                if (failed?.title) failedTitles.add(failed.title);
+                const nextIdx = getNextPlayableIndex(curIdx + 1);
+                if (nextIdx === -1 || nextIdx === i) {
+                    $('#disp-title').text('?ъ깮 媛?ν븳 怨≪씠 ?놁뒿?덈떎.');
+                    return;
+                }
+                load(nextIdx, play);
             });
-        }
     }
 
     function next() {
@@ -350,7 +408,7 @@ $(document).ready(function() {
         }
         const n = isShuffle ? getRandomPlayableIndex() : getNextPlayableIndex(curIdx + 1);
         if (n === -1) {
-            $('#disp-title').text('재생 가능한 곡이 없습니다.');
+            $('#disp-title').text('?ъ깮 媛?ν븳 怨≪씠 ?놁뒿?덈떎.');
             return;
         }
         load(n, true);
@@ -366,7 +424,7 @@ $(document).ready(function() {
         }
         const p = getPrevPlayableIndex(curIdx - 1);
         if (p === -1) {
-            $('#disp-title').text('재생 가능한 곡이 없습니다.');
+            $('#disp-title').text('?ъ깮 媛?ν븳 怨≪씠 ?놁뒿?덈떎.');
             return;
         }
         load(p, true);
@@ -497,7 +555,7 @@ $(document).ready(function() {
         if (!ENABLE_REMOTE_PLAYLIST_SYNC) return;
         try {
             if (!playlistData.length) {
-                $('#disp-title').text('불러오는 중...');
+                $('#disp-title').text('遺덈윭?ㅻ뒗 以?..');
             }
 
             const response = await fetch(`${GAS_URL}?v=${Date.now()}`, { cache: 'no-store' });
@@ -524,12 +582,12 @@ $(document).ready(function() {
                 const firstPlayable = getNextPlayableIndex(0);
                 load(firstPlayable === -1 ? 0 : firstPlayable, false);
             } else if (!playlistData.length) {
-                $('#disp-title').text('곡을 추가해주세요.');
+                $('#disp-title').text('怨≪쓣 異붽??댁＜?몄슂.');
             }
         } catch (error) {
             console.error('Playlist Fetch Error:', error);
             if (!playlistData.length) {
-                $('#disp-title').text('데이터 로드 실패');
+                $('#disp-title').text('?곗씠??濡쒕뱶 ?ㅽ뙣');
             }
         }
     }
@@ -554,7 +612,7 @@ $(document).ready(function() {
         if (failed?.title) failedTitles.add(failed.title);
         const nextIdx = getNextPlayableIndex(curIdx + 1);
         if (nextIdx === -1) {
-            $('#disp-title').text('재생 가능한 곡이 없습니다.');
+            $('#disp-title').text('?ъ깮 媛?ν븳 怨≪씠 ?놁뒿?덈떎.');
             return;
         }
         load(nextIdx, true);
@@ -583,8 +641,18 @@ $(document).ready(function() {
     $('#btn-play-pause').on('click touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        if (audio.paused) audio.play();
-        else audio.pause();
+        if (audio.paused) {
+            if (!audio.src || audio.readyState < 2) {
+                const nextIdx = curIdx >= 0 ? curIdx : getNextPlayableIndex(0);
+                if (nextIdx !== -1) {
+                    load(nextIdx, true);
+                }
+                return;
+            }
+            audio.play().catch(() => {});
+        } else {
+            audio.pause();
+        }
     });
 
     $('#btn-next').click(next);
@@ -598,12 +666,12 @@ $(document).ready(function() {
     $('#btn-open-chat').off('click').on('click', async () => {
         $('#chat-overlay').addClass('active');
         if (!chatDb) {
-            $('#chat-messages').html('<div class="chat-loading">채팅을 불러오는 중...</div>');
+            $('#chat-messages').html('<div class="chat-loading">梨꾪똿??遺덈윭?ㅻ뒗 以?..</div>');
             try {
                 await ensureChatDb();
             } catch (error) {
                 console.error('Chat Init Error:', error);
-                $('#chat-messages').html('<div class="chat-loading">채팅을 불러오지 못했습니다.</div>');
+                $('#chat-messages').html('<div class="chat-loading">梨꾪똿??遺덈윭?ㅼ? 紐삵뻽?듬땲??</div>');
             }
         }
     });
@@ -648,3 +716,4 @@ $(document).ready(function() {
         });
     }
 });
+
