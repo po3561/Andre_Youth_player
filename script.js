@@ -1,4 +1,4 @@
-﻿$(document).ready(function() {
+$(document).ready(function() {
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -10,9 +10,9 @@
     };
 
     const audio = document.getElementById('audio-engine');
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwhwZuBKtBNr-NaIML3-VM-WVC08yrX0lyUgdXce9L5AdJlNNzfufaWlsA3ifUE5Xmc1A/exec";
-    const ENABLE_REMOTE_PLAYLIST_SYNC = false;
-    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v4';
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
+    const ENABLE_REMOTE_PLAYLIST_SYNC = true;
+    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v5';
     const PLAYLIST_CACHE_TTL = 1000 * 60 * 30;
 
     let curIdx = -1;
