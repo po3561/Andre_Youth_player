@@ -180,6 +180,27 @@
 }
 .premium-sync-btn:active { transform: translateY(1px); }
 
+.backend-status {
+    margin: 12px 0 14px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.72);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+.backend-status.is-online {
+    border-color: rgba(0,255,136,0.28);
+    color: #9cf6ca;
+    background: rgba(0,255,136,0.08);
+}
+.backend-status.is-offline {
+    border-color: rgba(255,179,71,0.28);
+    color: #ffd28f;
+    background: rgba(255,179,71,0.08);
+}
+
 .sync-meta-row {
     display: flex;
     gap: 10px;

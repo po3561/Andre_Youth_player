@@ -9,6 +9,7 @@ $(document).ready(function() {
         audioPreviewUrl: null
     };
     const PUBLIC_PLAYLIST = Array.isArray(window.PUBLIC_PLAYLIST) ? window.PUBLIC_PLAYLIST : [];
+    const $backendStatus = $('#backend-status');
     let backendOnline = false;
 
     fetchSongs();
@@ -61,6 +62,14 @@ $(document).ready(function() {
         const safe = Number.isFinite(seconds) ? seconds : 0;
         const sign = safe > 0 ? '+' : '';
         return `${sign}${safe.toFixed(2)}s`;
+    }
+
+    function updateBackendStatus(online, message) {
+        if (!$backendStatus.length) return;
+        $backendStatus
+            .toggleClass('is-online', online === true)
+            .toggleClass('is-offline', online === false)
+            .text(message || '');
     }
 
     function readNumber($input, fallback) {
@@ -681,11 +690,6 @@ $(document).ready(function() {
             return;
         }
 
-        if ($('#admin-song-list .read-only').length > 0) {
-            alert('Admin backend is offline. Upload is disabled until GAS is deployed.');
-            return;
-        }
-
         const $btn = $(this).prop('disabled', true);
         const $progressZone = $('#upload-progress-container').show();
         const $bar = $('#progress-fill').css('width', '0%').css('background', 'linear-gradient(90deg, #00ff88, #21ccf9)');
@@ -754,11 +758,14 @@ $(document).ready(function() {
 
     async function fetchSongs() {
         const $list = $('#admin-song-list');
+        updateBackendStatus(null, 'Checking admin backend...');
         $list.html('<div class="loading-spinner">목록 불러오는 중...</div>');
 
         try {
+            backendOnline = true;
             const resp = await fetch(GAS_URL, { cache: 'no-store' });
             const data = await resp.json();
+            updateBackendStatus(true, 'GAS backend online.');
             $list.empty();
 
             if (!Array.isArray(data) || data.length === 0) {
@@ -799,6 +806,9 @@ $(document).ready(function() {
         } catch (error) {
             $list.html('<div class="loading-spinner" style="color:#ff3b30;">목록 로드 실패</div>');
             console.error('fetchSongs error:', error);
+            backendOnline = false;
+            updateBackendStatus(false, 'Admin backend offline. Showing the public snapshot until GAS is deployed.');
+            renderPublicSnapshotFallback();
         }
     }
 
