@@ -8,6 +8,8 @@ $(document).ready(function() {
         generatedLrc: "",
         audioPreviewUrl: null
     };
+    const PUBLIC_PLAYLIST = Array.isArray(window.PUBLIC_PLAYLIST) ? window.PUBLIC_PLAYLIST : [];
+    let backendOnline = false;
 
     fetchSongs();
 
@@ -525,6 +527,11 @@ $(document).ready(function() {
             return;
         }
 
+        if ($('#admin-song-list .read-only').length > 0) {
+            alert('Admin backend is offline. Upload is disabled until GAS is deployed.');
+            return;
+        }
+
         const $btn = $(this).prop('disabled', true);
         const $progressZone = $('#upload-progress-container').show();
         const $bar = $('#progress-fill').css('width', '0%').css('background', 'linear-gradient(90deg, #00ff88, #21ccf9)');
@@ -642,6 +649,53 @@ $(document).ready(function() {
     }
 
     $('#btn-refresh-list').click(fetchSongs);
+
+    function renderPublicSnapshotFallback() {
+        if (!PUBLIC_PLAYLIST.length) return;
+
+        const $list = $('#admin-song-list').empty();
+        $list.append('<div class="loading-spinner" style="margin-bottom:12px; border-color:rgba(255,255,255,0.18); color:#f6d48d;">공개 Drive 스냅샷만 표시 중입니다. 실제 편집은 GAS 백엔드가 연결되어야 합니다.</div>');
+
+        PUBLIC_PLAYLIST.forEach(song => {
+            const $item = $('<div>').addClass('admin-song-item read-only');
+            const $info = $('<div>').addClass('admin-song-info');
+            const $img = $('<img>')
+                .addClass('song-cover-thumb')
+                .attr('src', song.cover || song.profile || FALLBACK_COVER)
+                .attr('alt', `${song.title || '곡'} 커버`);
+
+            $img.on('error', function() {
+                if (this.src !== FALLBACK_COVER) {
+                    this.src = FALLBACK_COVER;
+                }
+            });
+
+            const $meta = $('<div>').addClass('admin-song-meta');
+            $meta.append($('<strong>').text(song.title || '제목 없음'));
+            $meta.append($('<span>').addClass('admin-song-chip').text('공개 스냅샷'));
+            if (song.lyricsData) {
+                $meta.append($('<span>').addClass('admin-song-chip').text('가사 포함'));
+            }
+
+            const $deleteButton = $('<button>')
+                .addClass('btn-delete-song')
+                .attr('type', 'button')
+                .attr('aria-label', '삭제')
+                .prop('disabled', true)
+                .attr('title', '공개 스냅샷에서는 삭제할 수 없습니다.')
+                .html('<i class="fa-solid fa-trash-can"></i>');
+
+            $info.append($img, $meta);
+            $item.append($info, $deleteButton);
+            $list.append($item);
+        });
+    }
+
+    setTimeout(() => {
+        if ($('#admin-song-list .admin-song-item').length === 0 && PUBLIC_PLAYLIST.length > 0) {
+            renderPublicSnapshotFallback();
+        }
+    }, 3000);
 
     $(document).on('click', '.btn-delete-song', async function() {
         const song = $(this).data('song') || {};

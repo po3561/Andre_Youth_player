@@ -38,12 +38,7 @@ const MusicEngine = {
         if (!idMatch || !idMatch[1]) return url;
 
         const id = idMatch[1];
-        if (type === 'audio') {
-            const gdUrl = encodeURIComponent(`https://drive.google.com/uc?export=download&id=${id}`);
-            return `https://api.codetabs.com/v1/proxy?quest=${gdUrl}`;
-        }
-
-        return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+        return `https://drive.usercontent.google.com/download?id=${id}&export=download`;
     },
 
     parseLyrics(lrcText) {

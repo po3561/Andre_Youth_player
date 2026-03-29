@@ -12,7 +12,7 @@ $(document).ready(function() {
     const audio = document.getElementById('audio-engine');
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = false;
-    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v3';
+    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v4';
     const PLAYLIST_CACHE_TTL = 1000 * 60 * 30;
 
     let curIdx = -1;
@@ -122,6 +122,10 @@ $(document).ready(function() {
         const playable = getPlayableIndices();
         if (playable.length === 0) return -1;
         return playable[Math.floor(Math.random() * playable.length)];
+    }
+
+    function isSingleTrackPlaylist() {
+        return playlistData.filter(item => item && item.title).length <= 1;
     }
 
     function jumpToLyric(time) {
@@ -337,6 +341,13 @@ $(document).ready(function() {
     }
 
     function next() {
+        if (isSingleTrackPlaylist()) {
+            audio.currentTime = 0;
+            if (audio.paused) {
+                audio.play().catch(() => {});
+            }
+            return;
+        }
         const n = isShuffle ? getRandomPlayableIndex() : getNextPlayableIndex(curIdx + 1);
         if (n === -1) {
             $('#disp-title').text('재생 가능한 곡이 없습니다.');
@@ -346,6 +357,13 @@ $(document).ready(function() {
     }
 
     function prev() {
+        if (isSingleTrackPlaylist()) {
+            audio.currentTime = 0;
+            if (audio.paused) {
+                audio.play().catch(() => {});
+            }
+            return;
+        }
         const p = getPrevPlayableIndex(curIdx - 1);
         if (p === -1) {
             $('#disp-title').text('재생 가능한 곡이 없습니다.');
@@ -516,7 +534,21 @@ $(document).ready(function() {
         }
     }
 
-    audio.onended = () => repeatMode === 2 ? (audio.currentTime = 0, audio.play()) : next();
+    audio.onended = () => {
+        if (repeatMode === 2) {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+            return;
+        }
+
+        if (isSingleTrackPlaylist()) {
+            audio.pause();
+            $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+            return;
+        }
+
+        next();
+    };
     audio.onerror = () => {
         const failed = playlistData[curIdx];
         if (failed?.title) failedTitles.add(failed.title);

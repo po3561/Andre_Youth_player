@@ -1,140 +1,56 @@
 (() => {
-    const RAW_BASE = 'https://raw.githubusercontent.com/po3561/Andre_Youth_player/ac08006/';
-    const raw = path => `${RAW_BASE}${encodeURI(path)}`;
-    const genericCover = raw('music/jpg/ddd6ed85331e167a7d9437697300ffbe.jpg');
-    const wideCover = raw('music/jpg/광야를 지나며.jpg');
-    const loveCover = raw('music/jpg/우리가 주를 더욱 사랑하고.jpg');
+    const folderId = '1V1v0NkmtIfVfwRNoGgN6TffdiFTGXh2d';
+    const audioFileId = '12t9OSJmw27DOC2QlfqjiZKeu-x4bCUND';
+    const imageFileId = '1nv0xIHkzJ0G0CVNXiiFM_feJjWoRNOst';
+    const lyricsFileId = '1aSvzRXjcdtZGgi4Q46atmOrUq9W0fdQC';
 
-    const lonelyLyrics = `[00:15.50] 그대 폭풍 속을 걷고 있을 때
-[00:23.20] 비바람을 마주해야 할 때
-[00:30.50] 불빛조차 보이지 않아도
-[00:38.00] 그대 혼자 걷지 않을 거예요
-[00:46.50] 두려움 앞에서 하늘을 보아요
-[00:54.00] 외로운 그대여 걱정 마요
-[01:01.50] 꿈꾸는 그 길을 또 걷고 걸어요
-[01:09.00] 그대 혼자 걷지 않을 거예요
+    const audioUrl = `https://drive.usercontent.google.com/download?id=${audioFileId}&export=download`;
+    const coverUrl = `https://drive.usercontent.google.com/download?id=${imageFileId}&export=download`;
 
-[01:33.50] 그대 폭풍 속을 걷고 있을 때
-[01:41.00] 비바람을 마주해야 할 때
-[01:48.50] 불빛조차 보이지 않아도
-[01:56.00] 그대 혼자 걷지 않을 거예요
-[02:04.50] 두려움 앞에서 하늘을 보아요
-[02:12.00] 외로운 그대여 걱정 마요
-[02:19.50] 꿈꾸는 그 길을 또 걷고 걸어요
-[02:27.00] 그대 혼자 걷지 않을 거예요
-
-[02:44.50] 그대 폭풍 속을 걷고 있을 때
-[02:52.00] 비바람을 마주해야 할 때
-[02:59.50] 불빛조차 보이지 않아도
-[03:07.00] 그대 혼자 걷지 않을 거예요
-[03:15.50] 두려움 앞에서 하늘을 보아요
-[03:23.00] 외로운 그대여 걱정 마요
-[03:30.50] 꿈꾸는 그 길을 또 걷고 걸어요
-[03:38.00] 그대 혼자 걷지 않을 거예요
-
-[03:45.50] 두려움 앞에서 하늘을 보아요
-[03:53.00] 외로운 그대여 걱정 마요
-[04:00.50] 꿈꾸는 그 길을 또 걷고 걸어요
-[04:08.00] 그대 혼자 걷지 않을 거예요
-
-[04:16.50] 두려움 앞에서 하늘을 보아요
-[04:24.00] 외로운 그대여 걱정 마요
-[04:31.50] 꿈꾸는 그 길을 또 걷고 걸어요
-[04:39.00] 그대 혼자 걷지 않을 거예요
-
-[04:47.50] 그대 혼자 걷지 않을 거예요
-[04:55.00] 그대 혼자 걷지 않을 거예요`;
-
-    const 광야Lyrics = `[00:00.00]왜 나를 깊은 어둠속에
-[00:06.00]홀로 두시는지
-[00:12.00]어두운 밤은 왜 그리 길었는지
-[00:23.00]나를 고독하게 나를 낮아지게
-[00:34.00]세상 어디도 기댈 곳이 없게 하셨네
-[00:46.00]광야 광야에 서 있네
-[00:57.00]주님만 내 도움이 되시고
-[01:03.00]주님만 내 빛이 되시는
-[01:09.00]주님만 내 친구 되시는 광야
-[01:20.00]주님 손 놓고는 단 하루도
-[01:26.00]살 수 없는 곳 광야
-[01:35.00]광야에 서 있네`;
+    const lyricsData = `[00:00.30] 오늘 내 눈에 보이지 않고
+[00:07.68] 오늘 내 손에 잡히지 않아도
+[00:15.07] 그의 눈이 날 지켜보셨고
+[00:22.46] 그의 손이 지켜주셨기에
+[00:29.84] 오늘 내 눈에 보이지 않고
+[00:37.23] 오늘 내 손에 잡히지 않아도
+[00:44.62] 그의 눈이 날 지켜보셨고
+[00:52.00] 그의 손이 지켜주셨기에
+[00:59.39] 예수 그리스도로
+[01:06.77] 말미암아 우리에게
+[01:14.16] 이김을 주시는
+[01:21.55] 하나님께 감사하노니
+[01:28.94] 그러므로 사랑하는
+[01:36.32] 형제들이 흔들리지 않기를
+[01:43.71] 오늘 하루가 주 안에서
+[01:51.10] 헛되지 않음을 기억하기를
+[01:58.48] 오늘 내 눈에 보이지 않고
+[02:05.87] 오늘 내 손에 잡히지 않아도
+[02:13.26] 그의 눈이 날 지켜보셨고
+[02:20.64] 그의 손이 지켜주셨기에
+[02:28.03] 그러므로 사랑하는
+[02:35.42] 형제들이 흔들리지 않기를
+[02:42.80] 오늘 하루가 주 안에서
+[02:50.19] 헛되지 않음을 기억하기를
+[02:57.58] 그러므로 사랑하는
+[03:04.96] 형제들이 흔들리지 않기를
+[03:12.35] 오늘 하루가 주 안에서
+[03:19.74] 헛되지 않음을 기억하기를
+[03:27.12] 헛되지 않음을 기억하기를
+[03:34.51] 헛되지 않음을 기억하기를`;
 
     window.PUBLIC_PLAYLIST = [
         {
-            title: '혼자 걷지 않을 거예요',
-            artist: '예람워십',
-            url: raw('music/pyi/혼자 걷지 않을 거예요 - 예람워십.mp3'),
-            cover: genericCover,
-            lyricsData: lonelyLyrics
-        },
-        {
-            title: '우리가 주를 더욱 사랑하고',
-            artist: 'Andre Youth',
-            url: raw('music/pyi/우리가 주를 더욱 사랑하고.mp3'),
-            cover: loveCover,
-            lyricsData: ''
-        },
-        {
-            title: '행복',
-            artist: '피아워십',
-            url: raw('music/pyi/행복 - 피아워십.mp3'),
-            cover: genericCover,
-            lyricsData: ''
-        },
-        {
+            id: '그러므로',
             title: '그러므로',
             artist: 'Andre Youth',
-            url: raw('music/pyi/그러므로.mp3'),
-            cover: genericCover,
-            lyricsData: ''
-        },
-        {
-            title: '광야를 지나며',
-            artist: 'Andre Youth',
-            url: raw('music/pyi/광야를 지나며.mp3'),
-            cover: wideCover,
-            lyricsData: 광야Lyrics
-        },
-        {
-            title: '슬픈 마음 있는 사람',
-            artist: 'Andre Youth',
-            url: raw('music/pyi/슬픈 마음 있는 사람.mp3'),
-            cover: genericCover,
-            lyricsData: ''
-        },
-        {
-            title: '약할 때 강함 되시네',
-            artist: 'Andre Youth',
-            url: raw('music/pyi/약할 때 강함 되시네.mp3'),
-            cover: genericCover,
-            lyricsData: ''
-        },
-        {
-            title: '어둔날 다 지나고',
-            artist: 'Andre Youth',
-            url: raw('music/pyi/어둔날 다 지나고.mp3'),
-            cover: genericCover,
-            lyricsData: ''
-        },
-        {
-            title: '전능하신 나의 주 하나님은',
-            artist: 'Andre Youth',
-            url: raw('music/pyi/전능하신 나의 주 하나님은.mp3'),
-            cover: genericCover,
-            lyricsData: ''
-        },
-        {
-            title: '첫째되는 계명',
-            artist: 'Andre Youth',
-            url: raw('music/pyi/첫째되는 계명 (1).mp3'),
-            cover: genericCover,
-            lyricsData: ''
-        },
-        {
-            title: '하나님의 사랑이',
-            artist: 'Andre Youth',
-            url: raw('music/pyi/하나님의 사랑이.mp3'),
-            cover: genericCover,
-            lyricsData: ''
+            sourceFolderId: folderId,
+            audioFileId,
+            imageFileId,
+            lyricsFileId,
+            url: audioUrl,
+            cover: coverUrl,
+            profile: coverUrl,
+            lyricsData
         }
     ];
 })();
