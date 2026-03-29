@@ -1,24 +1,21 @@
 /* admin-script.js */
 $(document).ready(function() {
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwqK78wbvPYHSxbwl6Fyu43ystWSU824EFiwM3ZJGvusGhQW99eWJBEUY1vrOub3sQTbg/exec";
-    const files = { audio: null, image: null, generatedLrc: "" };
-    
-    // 싱크 조절용 변수
-    let syncLines = [];
-    let currentSyncIdx = 0;
-    let tempAudio = null;
-    let recordedLrc = [];
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzpgVGfUET30p03Y2RD17ULZHUjrPROqaxPCcSQmqnbnMFQVqMSdXM9T0_M5eC68oad9g/exec";
+    const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
+    const state = {
+        audio: null,
+        image: null,
+        generatedLrc: "",
+        audioPreviewUrl: null
+    };
 
-    // [New] 초기 곡 목록 로드
     fetchSongs();
 
-    // 드래그 앤 드롭 방지
     $(document).on('dragover dragenter drop', function(e) {
         e.preventDefault();
         e.stopPropagation();
     });
 
-    // 드롭 존 설정
     $('.drop-zone').on('dragover dragenter', function() {
         $(this).addClass('active');
     }).on('dragleave dragend drop', function() {
@@ -32,7 +29,7 @@ $(document).ready(function() {
     });
 
     $('.drop-zone').on('click', function() {
-        $(this).find('input[type="file"]').click();
+        $(this).find('input[type="file"]').trigger('click');
     });
 
     $('input[type="file"]').on('change', function() {
@@ -41,135 +38,496 @@ $(document).ready(function() {
         handleFileSelect(type, file, $(this).parent());
     });
 
-    function handleFileSelect(type, file, $zone) {
-        if (!file) return;
-        
-        // 파일 검증
-        if (type === 'audio' && !file.type.startsWith('audio/')) { alert('음원 파일만 선택 가능합니다.'); return; }
-        if (type === 'image' && !file.type.startsWith('image/')) { alert('이미지 파일만 선택 가능합니다.'); return; }
+    function nextFrame() {
+        return new Promise(resolve => requestAnimationFrame(() => resolve()));
+    }
 
-        files[type] = file;
-        $zone.find('.file-info').text(`${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`).css('opacity', '1');
-        $zone.find('p').text('파일 선택됨').css('color', '#00ff88');
+    function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
 
-        // 음원이 선택되면 임시 오디오 객체 준비
-        if (type === 'audio') {
-            if (tempAudio) { tempAudio.pause(); tempAudio = null; }
-            tempAudio = new Audio(URL.createObjectURL(file));
+    function formatTime(seconds) {
+        const safeSeconds = Math.max(0, seconds);
+        const totalMs = Math.round(safeSeconds * 1000);
+        const mm = Math.floor(totalMs / 60000).toString().padStart(2, '0');
+        const ss = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
+        const cs = Math.floor((totalMs % 1000) / 10).toString().padStart(2, '0');
+        return `[${mm}:${ss}.${cs}]`;
+    }
+
+    function readNumber($input, fallback) {
+        const value = Number.parseFloat($input.val());
+        return Number.isFinite(value) ? value : fallback;
+    }
+
+    function toTitleLabel(file) {
+        return `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+    }
+
+    function clearAudioPreview() {
+        if (state.audioPreviewUrl) {
+            URL.revokeObjectURL(state.audioPreviewUrl);
+            state.audioPreviewUrl = null;
+        }
+        if (state.audio) {
+            state.audio.pause();
+            state.audio = null;
         }
     }
 
-    // --- 고속 AI 자동 가사 싱크 엔진 로직 ---
-    $(document).on('click', '#btn-ai-auto-sync', async function() {
+    function handleFileSelect(type, file, $zone) {
+        if (!file) return;
+
+        if (type === 'audio' && !file.type.startsWith('audio/')) {
+            alert('음원 파일만 선택 가능합니다.');
+            return;
+        }
+        if (type === 'image' && !file.type.startsWith('image/')) {
+            alert('이미지 파일만 선택 가능합니다.');
+            return;
+        }
+
+        state[type] = file;
+        $zone.find('.file-info').text(toTitleLabel(file)).css('opacity', '1');
+        $zone.find('p').text('파일 선택됨').css('color', '#00ff88');
+
+        if (type === 'audio') {
+            clearAudioPreview();
+            state.audioPreviewUrl = URL.createObjectURL(file);
+            state.audio = new Audio(state.audioPreviewUrl);
+        }
+    }
+
+    function mixDownToMono(audioBuffer) {
+        const { numberOfChannels, length } = audioBuffer;
+        const mono = new Float32Array(length);
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+            const source = audioBuffer.getChannelData(channel);
+            for (let i = 0; i < length; i++) {
+                mono[i] += source[i];
+            }
+        }
+        const scale = numberOfChannels > 0 ? 1 / numberOfChannels : 1;
+        for (let i = 0; i < length; i++) {
+            mono[i] *= scale;
+        }
+        return mono;
+    }
+
+    function smoothSeries(values, radius) {
+        const result = new Float32Array(values.length);
+        for (let i = 0; i < values.length; i++) {
+            let sum = 0;
+            let count = 0;
+            for (let offset = -radius; offset <= radius; offset++) {
+                const idx = i + offset;
+                if (idx < 0 || idx >= values.length) continue;
+                sum += values[idx];
+                count++;
+            }
+            result[i] = count > 0 ? sum / count : values[i];
+        }
+        return result;
+    }
+
+    function percentile(sortedValues, fraction) {
+        if (!sortedValues.length) return 0;
+        const index = Math.min(sortedValues.length - 1, Math.max(0, Math.floor(sortedValues.length * fraction)));
+        return sortedValues[index];
+    }
+
+    async function buildEnvelope(audioBuffer, onProgress) {
+        const sampleRate = audioBuffer.sampleRate;
+        const mono = mixDownToMono(audioBuffer);
+        const hopSize = Math.max(512, Math.round(sampleRate * 0.02));
+        const windowSize = Math.max(hopSize * 3, Math.round(sampleRate * 0.06));
+        const frameCount = Math.max(1, Math.ceil(Math.max(0, mono.length - windowSize) / hopSize) + 1);
+        const envelope = new Float32Array(frameCount);
+        let frame = 0;
+
+        for (let start = 0; start < mono.length; start += hopSize) {
+            const end = Math.min(start + windowSize, mono.length);
+            let sum = 0;
+            for (let i = start; i < end; i++) {
+                const sample = mono[i];
+                sum += sample * sample;
+            }
+            envelope[frame] = Math.sqrt(sum / Math.max(1, end - start));
+            frame++;
+
+            if (frame % 40 === 0) {
+                onProgress(frame / frameCount);
+                await nextFrame();
+            }
+        }
+
+        onProgress(1);
+        return {
+            envelope: smoothSeries(envelope, 2),
+            hopSize
+        };
+    }
+
+    function detectActiveRegion(envelope, hopSize, sampleRate, duration) {
+        const sorted = Array.from(envelope).sort((a, b) => a - b);
+        const noiseFloor = percentile(sorted, 0.2);
+        const highLevel = percentile(sorted, 0.92);
+        const threshold = noiseFloor + (highLevel - noiseFloor) * 0.18;
+
+        let startFrame = 0;
+        while (startFrame < envelope.length && envelope[startFrame] <= threshold) {
+            startFrame++;
+        }
+
+        let endFrame = envelope.length - 1;
+        while (endFrame >= 0 && envelope[endFrame] <= threshold) {
+            endFrame--;
+        }
+
+        if (startFrame >= endFrame) {
+            return { startSec: 0, endSec: duration, threshold };
+        }
+
+        const startSec = clamp((startFrame * hopSize) / sampleRate - 0.35, 0, duration);
+        const endSec = clamp((endFrame * hopSize) / sampleRate + 0.65, 0, duration);
+        return {
+            startSec: Math.min(startSec, Math.max(0, duration - 0.5)),
+            endSec: Math.max(endSec, Math.min(duration, 0.5)),
+            threshold
+        };
+    }
+
+    function detectPeaks(envelope, hopSize, sampleRate, activeStartSec, activeEndSec) {
+        const diffs = new Float32Array(envelope.length);
+        for (let i = 1; i < envelope.length; i++) {
+            diffs[i] = Math.max(0, envelope[i] - envelope[i - 1]);
+        }
+
+        const envSorted = Array.from(envelope).sort((a, b) => a - b);
+        const diffSorted = Array.from(diffs).sort((a, b) => a - b);
+        const envThreshold = percentile(envSorted, 0.78);
+        const diffThreshold = percentile(diffSorted, 0.82);
+        const candidates = [];
+
+        for (let i = 1; i < envelope.length - 1; i++) {
+            const time = (i * hopSize) / sampleRate;
+            if (time < activeStartSec || time > activeEndSec) continue;
+
+            const localMax = envelope[i] >= envelope[i - 1] && envelope[i] > envelope[i + 1];
+            if (!localMax) continue;
+            if (envelope[i] < envThreshold && diffs[i] < diffThreshold) continue;
+
+            const energy = envelope[i];
+            const attack = diffs[i];
+            candidates.push({
+                time,
+                energy,
+                attack,
+                score: energy * 1.6 + attack * 2.4
+            });
+        }
+
+        candidates.sort((a, b) => b.score - a.score);
+        const selected = [];
+        const minGap = 0.18;
+
+        for (const candidate of candidates) {
+            const hasNearbyPeak = selected.some(peak => Math.abs(peak.time - candidate.time) < minGap);
+            if (!hasNearbyPeak) selected.push(candidate);
+        }
+
+        selected.sort((a, b) => a.time - b.time);
+        return selected;
+    }
+
+    function parseLyricDraft(rawText) {
+        const lines = String(rawText || '')
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(Boolean);
+
+        const timeReg = /^\[(\d{2}):(\d{2}(?:\.\d{1,3})?)\]\s*/;
+        const entries = lines.map(line => {
+            const times = [];
+            let rest = line;
+
+            while (true) {
+                const match = timeReg.exec(rest);
+                if (!match) break;
+                times.push(parseInt(match[1], 10) * 60 + parseFloat(match[2]));
+                rest = rest.slice(match[0].length);
+            }
+
+            return {
+                text: rest.trim(),
+                time: times.length ? times[times.length - 1] : null,
+                hasTimestamp: times.length > 0
+            };
+        }).filter(entry => entry.text);
+
+        return {
+            entries,
+            hasSeedTimes: entries.some(entry => Number.isFinite(entry.time))
+        };
+    }
+
+    function snapTimeToPeak(candidateTime, peaks, searchWindow) {
+        let snappedTime = candidateTime;
+        let bestScore = Number.POSITIVE_INFINITY;
+
+        for (const peak of peaks) {
+            const distance = Math.abs(peak.time - candidateTime);
+            if (distance > searchWindow) continue;
+            const score = distance - peak.energy * 0.08 - peak.attack * 0.05;
+            if (score < bestScore) {
+                bestScore = score;
+                snappedTime = peak.time;
+            }
+        }
+
+        return snappedTime;
+    }
+
+    function buildSeededTimeline(entries, peaks, startSec, endSec, offsetSec, minGapSec) {
+        const duration = Math.max(0.1, endSec - startSec);
+        const total = entries.length;
+        const averageGap = duration / Math.max(1, total);
+        const fallbackGap = clamp(Math.max(minGapSec, averageGap || 0.5), minGapSec, 4);
+        const seedIndexes = [];
+        const candidateTimes = new Array(total).fill(null);
+
+        entries.forEach((entry, index) => {
+            if (Number.isFinite(entry.time)) {
+                candidateTimes[index] = clamp(entry.time + offsetSec, startSec, endSec);
+                seedIndexes.push(index);
+            }
+        });
+
+        if (!seedIndexes.length) return null;
+
+        for (let i = 0; i < seedIndexes.length - 1; i++) {
+            const left = seedIndexes[i];
+            const right = seedIndexes[i + 1];
+            const gap = Math.max(fallbackGap, (candidateTimes[right] - candidateTimes[left]) / Math.max(1, right - left));
+            for (let j = left + 1; j < right; j++) {
+                candidateTimes[j] = candidateTimes[left] + gap * (j - left);
+            }
+        }
+
+        const firstSeed = seedIndexes[0];
+        for (let i = firstSeed - 1; i >= 0; i--) {
+            candidateTimes[i] = candidateTimes[i + 1] - fallbackGap;
+        }
+
+        const lastSeed = seedIndexes[seedIndexes.length - 1];
+        for (let i = lastSeed + 1; i < total; i++) {
+            candidateTimes[i] = candidateTimes[i - 1] + fallbackGap;
+        }
+
+        const searchWindow = clamp(Math.max(0.22, averageGap * 0.55), 0.22, 0.9);
+        const result = [];
+        let previousTime = startSec - minGapSec;
+
+        for (let index = 0; index < total; index++) {
+            const entry = entries[index];
+            const targetTime = candidateTimes[index] ?? (startSec + averageGap * index);
+            const snappedTime = snapTimeToPeak(targetTime, peaks, searchWindow);
+            let finalTime = targetTime * 0.78 + snappedTime * 0.22;
+            finalTime = clamp(finalTime, startSec, endSec);
+
+            if (finalTime < previousTime + minGapSec) {
+                finalTime = previousTime + minGapSec;
+            }
+
+            const remainingLines = total - index - 1;
+            const maxAllowed = endSec - Math.max(remainingLines * minGapSec, 0.05);
+            if (finalTime > maxAllowed) {
+                finalTime = maxAllowed;
+            }
+
+            finalTime = clamp(finalTime, startSec, endSec);
+            previousTime = finalTime;
+            result.push(`${formatTime(finalTime)} ${entry.text}`);
+        }
+
+        return result.join('\n');
+    }
+
+    function assignLyricTimestamps(lines, peaks, startSec, endSec, offsetSec, minGapSec) {
+        const entries = Array.isArray(lines)
+            ? lines.map(line => {
+                if (typeof line === 'string') {
+                    return { text: line.trim(), time: null, hasTimestamp: false };
+                }
+                return {
+                    text: String(line.text || '').trim(),
+                    time: Number.isFinite(line.time) ? line.time : null,
+                    hasTimestamp: !!line.hasTimestamp
+                };
+            }).filter(entry => entry.text)
+            : [];
+
+        if (!entries.length) return "";
+
+        if (entries.some(entry => Number.isFinite(entry.time))) {
+            const seeded = buildSeededTimeline(entries, peaks, startSec, endSec, offsetSec, minGapSec);
+            if (seeded) return seeded;
+        }
+
+        const cleanedLines = entries.map(entry => entry.text);
+        if (!cleanedLines.length) return "";
+
+        const duration = Math.max(0.1, endSec - startSec);
+        const totalWeight = cleanedLines.reduce((sum, line) => {
+            const weight = line.replace(/\s+/g, '').length;
+            return sum + Math.max(1, weight);
+        }, 0);
+        const averageGap = duration / cleanedLines.length;
+        const searchWindow = clamp(Math.max(0.28, averageGap * 0.85), 0.28, 1.2);
+        const result = [];
+        let cumulativeWeight = 0;
+        let previousTime = startSec - minGapSec;
+
+        for (let index = 0; index < cleanedLines.length; index++) {
+            const line = cleanedLines[index];
+            const weight = Math.max(1, line.replace(/\s+/g, '').length);
+            const midpoint = (cumulativeWeight + weight * 0.5) / totalWeight;
+            cumulativeWeight += weight;
+
+            const targetTime = startSec + duration * midpoint;
+            const snappedTime = snapTimeToPeak(targetTime, peaks, searchWindow);
+
+            let finalTime = snappedTime * 0.65 + targetTime * 0.35 + offsetSec;
+            finalTime = clamp(finalTime, startSec, endSec);
+
+            if (finalTime < previousTime + minGapSec) {
+                finalTime = previousTime + minGapSec;
+            }
+
+            const remainingLines = cleanedLines.length - index - 1;
+            const maxAllowed = endSec - Math.max(remainingLines * minGapSec, 0.05);
+            if (finalTime > maxAllowed) {
+                finalTime = maxAllowed;
+            }
+
+            finalTime = clamp(finalTime, startSec, endSec);
+            previousTime = finalTime;
+            result.push(`${formatTime(finalTime)} ${line}`);
+        }
+
+        return result.join('\n');
+    }
+
+    async function analyzeLyrics() {
         const rawText = $('#lyrics-raw').val().trim();
-        if (!rawText) { alert('먼저 가사 텍스트를 입력해주세요.'); return; }
-        if (!files.audio) { alert('분석할 음원 파일을 먼저 선택해주세요.'); return; }
+        if (!rawText) {
+            alert('먼저 가사 텍스트를 입력해주세요.');
+            return;
+        }
+        if (!state.audio) {
+            alert('분석할 음원 파일을 먼저 선택해주세요.');
+            return;
+        }
 
-        // 재생 중인 오디오가 있다면 즉시 정지 (Background 분석 보장)
-        if (tempAudio) { tempAudio.pause(); }
-
-        const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 고속 분석 중...');
+        const offsetSec = readNumber($('#sync-offset'), 0);
+        const minGapSec = clamp(readNumber($('#sync-min-gap'), 0.22), 0.12, 1.0);
+        const $btn = $('#btn-ai-auto-sync').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 고속 분석 중...');
         const $progressZone = $('#analysis-progress-container').fadeIn();
         const $fill = $('#analysis-fill').css('width', '0%');
         const $percent = $('#analysis-percent').text('0%');
-        const $status = $('#analysis-status-text').text('데이터 로딩 중...');
+        const $status = $('#analysis-status-text').text('오디오 디코딩 중...');
+        let audioCtx = null;
+        const draft = parseLyricDraft(rawText);
 
         try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const arrayBuffer = await files.audio.arrayBuffer();
-            
-            $status.text('오디오 파형 디코딩 중...');
-            $percent.text('20%'); $fill.css('width', '20%');
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            
-            const rawData = audioBuffer.getChannelData(0); 
-            const duration = audioBuffer.duration;
-            const sampleRate = audioBuffer.sampleRate;
-            const winSize = Math.floor(sampleRate * 0.1); // 100ms 단위 분석
-            const peaks = [];
-            
-            $status.text('패턴 고속 분석 중 (재생 없음)...');
-            
-            // 비동기 청크 분석 (메인 스레드 부하 방지 및 고속화)
-            let currentIndex = 0;
-            const chunkProcessing = () => {
-                return new Promise((resolve) => {
-                    const processNext = () => {
-                        const start = Date.now();
-                        // 한 번에 약 100만 샘플씩 처리 (약 20초 분량)
-                        const limit = currentIndex + (sampleRate * 20); 
-                        
-                        while (currentIndex < rawData.length && currentIndex < limit) {
-                            let sum = 0;
-                            const end = Math.min(currentIndex + winSize, rawData.length);
-                            for (let j = currentIndex; j < end; j++) {
-                                sum += rawData[j] * rawData[j];
-                            }
-                            const rms = Math.sqrt(sum / (end - currentIndex));
-                            peaks.push({ time: currentIndex / sampleRate, energy: rms });
-                            currentIndex += winSize;
-                        }
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
 
-                        // 진행률 업데이트
-                        const progress = 20 + Math.floor((currentIndex / rawData.length) * 75);
-                        $percent.text(progress + '%');
-                        $fill.css('width', progress + '%');
+            const arrayBuffer = await state.audio.arrayBuffer();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
 
-                        if (currentIndex < rawData.length) {
-                            requestAnimationFrame(processNext);
-                        } else {
-                            resolve();
-                        }
-                    };
-                    processNext();
-                });
-            };
+            $status.text('파형 에너지 분석 중...');
+            $percent.text('15%');
+            $fill.css('width', '15%');
 
-            await chunkProcessing();
-
-            // 3단계: 가사 매칭 및 타임라인 생성
-            $status.text('타임라인 생성 완료!');
-            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const threshold = peaks.reduce((a, b) => a + b.energy, 0) / peaks.length * 0.4;
-            const activePeaks = peaks.filter(p => p.energy > threshold);
-            
-            const startT = activePeaks.length > 0 ? activePeaks[0].time : 2.0; 
-            const endT = activePeaks.length > 0 ? activePeaks[activePeaks.length - 1].time : duration - 2.0;
-            const vocalRange = endT - startT;
-            
-            let generatedLrc = "";
-            lines.forEach((line, idx) => {
-                const targetT = startT + (vocalRange * (idx / lines.length));
-                const totalMs = Math.floor(targetT * 1000);
-                const mm = Math.floor(totalMs / 60000).toString().padStart(2, '0');
-                const ss = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
-                const ms = Math.floor((totalMs % 1000) / 10).toString().padStart(2, '0');
-                generatedLrc += `[${mm}:${ss}.${ms}] ${line}\n`;
+            const envelopeResult = await buildEnvelope(audioBuffer, progress => {
+                const percent = Math.round(15 + progress * 50);
+                $percent.text(percent + '%');
+                $fill.css('width', percent + '%');
             });
 
-            files.generatedLrc = generatedLrc;
-            $('#generated-lrc-preview').text(generatedLrc).fadeIn();
-            
-            $percent.text('100%'); $fill.css('width', '100%');
-            $btn.html('<i class="fa-solid fa-check"></i> 분석 완료').removeClass('premium-sync-btn').addClass('secondary-btn').prop('disabled', false);
+            const duration = audioBuffer.duration;
+            const activeRegion = detectActiveRegion(
+                envelopeResult.envelope,
+                envelopeResult.hopSize,
+                audioBuffer.sampleRate,
+                duration
+            );
 
+            $status.text('발성 피크 탐지 중...');
+            $percent.text('70%');
+            $fill.css('width', '70%');
+
+            const peaks = detectPeaks(
+                envelopeResult.envelope,
+                envelopeResult.hopSize,
+                audioBuffer.sampleRate,
+                activeRegion.startSec,
+                activeRegion.endSec
+            );
+
+            $status.text(draft.hasSeedTimes ? '원본 타임코드 보정 중...' : '가사 타임라인 생성 중...');
+            const generatedLrc = assignLyricTimestamps(
+                draft.entries,
+                peaks,
+                activeRegion.startSec,
+                activeRegion.endSec,
+                offsetSec,
+                minGapSec
+            );
+
+            state.generatedLrc = generatedLrc;
+            $('#generated-lrc-preview').text(generatedLrc || '가사 라인이 너무 짧아 타임라인을 만들 수 없습니다.').fadeIn();
+
+            $percent.text('100%');
+            $fill.css('width', '100%');
+            if (draft.hasSeedTimes) {
+                $status.text(peaks.length > 0 ? '타임코드 보정 완료' : '타임코드 보정 완료. 피크가 적어 일부 구간은 균등 보정되었습니다.');
+            } else {
+                $status.text(peaks.length > 0 ? '싱크 생성 완료' : '싱크 생성 완료. 피크가 적어 균등 보정이 일부 사용되었습니다.');
+            }
+            $btn.html('<i class="fa-solid fa-check"></i> 분석 완료').removeClass('premium-sync-btn').addClass('secondary-btn').prop('disabled', false);
         } catch (error) {
             console.error("AI Sync Error:", error);
             alert("분석 실패: " + error.message);
             $status.text('오류 발생');
             $btn.prop('disabled', false).html('<i class="fa-solid fa-bolt"></i> 분석 재시도');
+        } finally {
+            if (audioCtx) {
+                await audioCtx.close().catch(() => {});
+            }
+            $progressZone.show();
         }
-    });
+    }
 
-    // 업로드 실행
+    $(document).on('click', '#btn-ai-auto-sync', analyzeLyrics);
+
     $('#btn-upload-all').click(async function() {
         const title = $('#song-title').val().trim();
-        if (!title) { alert('곡 제목을 입력해주세요.'); return; }
-        if (!files.audio || !files.image) { alert('음원과 이미지는 필수 항목입니다.'); return; }
+        if (!title) {
+            alert('곡 제목을 입력해주세요.');
+            return;
+        }
+        if (!state.audio || !state.image) {
+            alert('음원과 이미지는 필수 항목입니다.');
+            return;
+        }
 
         const $btn = $(this).prop('disabled', true);
         const $progressZone = $('#upload-progress-container').show();
-        const $bar = $('#progress-fill').css('width', '0%');
+        const $bar = $('#progress-fill').css('width', '0%').css('background', 'linear-gradient(90deg, #00ff88, #21ccf9)');
         const $percent = $('#progress-percent').text('0%');
         const $status = $('#upload-status-text').text('파일 읽기 중...');
 
@@ -188,25 +546,29 @@ $(document).ready(function() {
             });
 
             const payload = {
-                title: title,
+                title,
                 audioName: `${title}.mp3`,
-                audioMime: files.audio.type,
-                audioData: await toBase64(files.audio),
+                audioMime: state.audio.type,
+                audioData: await toBase64(state.audio),
                 imageName: `${title}.jpg`,
-                imageMime: files.image.type,
-                imageData: await toBase64(files.image)
+                imageMime: state.image.type,
+                imageData: await toBase64(state.image),
+                syncOffset: readNumber($('#sync-offset'), 0),
+                syncMinGap: readNumber($('#sync-min-gap'), 0.22)
             };
 
-            if (files.generatedLrc) {
-                // 스마트 싱크로 생성된 가사가 있다면 사용
+            if (state.generatedLrc) {
                 payload.lrcName = `${title}.lrc`;
-                payload.lrcData = btoa(unescape(encodeURIComponent(files.generatedLrc))); // UTF-8 Base64
+                payload.lrcData = btoa(unescape(encodeURIComponent(state.generatedLrc)));
             }
 
             updateProgress(50, '구글 드라이브로 전송 중...');
 
             const response = await fetch(GAS_URL, {
                 method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify(payload)
             });
 
@@ -219,57 +581,98 @@ $(document).ready(function() {
             } else {
                 throw new Error(result.message || "Unknown error");
             }
-
         } catch (error) {
             console.error("Upload Error:", error);
             $bar.css('width', '100%').css('background', '#ff3b30');
             $status.text('업로드 실패: ' + error.message);
             $btn.prop('disabled', false);
+        } finally {
+            $progressZone.show();
         }
     });
 
-    // --- [New] 곡 관리 기능 (목록&삭제) ---
     async function fetchSongs() {
-        const $list = $('#admin-song-list').html('<div class="loading-spinner">목록 불러오는 중...</div>');
+        const $list = $('#admin-song-list');
+        $list.html('<div class="loading-spinner">목록 불러오는 중...</div>');
+
         try {
-            const resp = await fetch(GAS_URL);
+            const resp = await fetch(GAS_URL, { cache: 'no-store' });
             const data = await resp.json();
             $list.empty();
-            if (data.length === 0) { $list.append('<div class="loading-spinner">등록된 곡이 없습니다.</div>'); return; }
-            
-            data.forEach(s => {
-                $list.append(`
-                    <div class="admin-song-item">
-                        <div class="admin-song-info">
-                            <img src="${s.cover}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">
-                            <strong>${s.title}</strong>
-                        </div>
-                        <button class="btn-delete-song" data-title="${s.title}" aria-label="삭제">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                `);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                $list.append('<div class="loading-spinner">등록된 곡이 없습니다.</div>');
+                return;
+            }
+
+            data.forEach(song => {
+                const songKey = song.id ?? song.key ?? song.title ?? '';
+                const $item = $('<div>').addClass('admin-song-item').attr('data-song-key', songKey);
+                const $info = $('<div>').addClass('admin-song-info');
+                const $img = $('<img>')
+                    .addClass('song-cover-thumb')
+                    .attr('src', song.cover || FALLBACK_COVER)
+                    .attr('alt', `${song.title || '곡'} 커버`);
+
+                $img.on('error', function() {
+                    if (this.src !== FALLBACK_COVER) {
+                        this.src = FALLBACK_COVER;
+                    }
+                });
+
+                $info.append($img, $('<strong>').text(song.title || '제목 없음'));
+
+                const $deleteButton = $('<button>')
+                    .addClass('btn-delete-song')
+                    .attr('type', 'button')
+                    .attr('aria-label', '삭제')
+                    .data('song', {
+                        id: song.id ?? song.key ?? '',
+                        title: song.title ?? ''
+                    })
+                    .html('<i class="fa-solid fa-trash-can"></i>');
+
+                $item.append($info, $deleteButton);
+                $list.append($item);
             });
-        } catch (e) { $list.html('<div class="loading-spinner" style="color:#ff3b30;">목록 로드 실패</div>'); }
+        } catch (error) {
+            $list.html('<div class="loading-spinner" style="color:#ff3b30;">목록 로드 실패</div>');
+            console.error('fetchSongs error:', error);
+        }
     }
 
     $('#btn-refresh-list').click(fetchSongs);
 
     $(document).on('click', '.btn-delete-song', async function() {
-        const title = $(this).data('title');
-        if (!confirm(`'${title}' 곡을 정말 삭제할까요? 드라이브에서도 삭제됩니다.`)) return;
+        const song = $(this).data('song') || {};
+        const label = song.title || song.id || '이 곡';
+        if (!confirm(`'${label}' 곡을 정말 삭제할까요? 드라이브에서도 삭제됩니다.`)) return;
 
         const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+
         try {
             const resp = await fetch(GAS_URL, {
                 method: "POST",
-                body: JSON.stringify({ action: "delete", title: title })
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    action: "delete",
+                    id: song.id || '',
+                    title: song.title || ''
+                })
             });
+
             const res = await resp.json();
             if (res.status === "success") {
                 alert('삭제되었습니다.');
                 fetchSongs();
-            } else throw new Error(res.message);
-        } catch (e) { alert('삭제 실패: ' + e.message); $btn.prop('disabled', false).html('<i class="fa-solid fa-trash-can"></i>'); }
+            } else {
+                throw new Error(res.message || '삭제 실패');
+            }
+        } catch (error) {
+            alert('삭제 실패: ' + error.message);
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-trash-can"></i>');
+        }
     });
 });
