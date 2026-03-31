@@ -142,24 +142,45 @@ $(document).ready(function() {
     async function resolveAudioSource(song, fixedAudio) {
         if (!fixedAudio) return '';
         const cacheKey = song?.audioFileId || song?.url || fixedAudio;
+        
+        // Return from memory cache if available
         if (audioSourceCache.has(cacheKey)) {
             return audioSourceCache.get(cacheKey);
         }
 
+        // Direct stream for non-proxy links to reduce latency
         if (!fixedAudio.includes('api.codetabs.com')) {
             audioSourceCache.set(cacheKey, fixedAudio);
             return fixedAudio;
         }
 
-        const response = await fetch(fixedAudio, { cache: 'no-store' });
-        if (!response.ok) {
-            throw new Error(`Audio fetch failed: ${response.status}`);
+        try {
+            // Speed up by using 'force-cache' if the browser supports it
+            const response = await fetch(fixedAudio, { cache: 'default' });
+            if (!response.ok) throw new Error(`Audio fetch failed: ${response.status}`);
+            
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            audioSourceCache.set(cacheKey, objectUrl);
+            return objectUrl;
+        } catch (e) {
+            console.warn('Audio resolve fallback:', e);
+            return fixedAudio; // Final fallback to original URL
         }
+    }
 
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        audioSourceCache.set(cacheKey, objectUrl);
-        return objectUrl;
+    function preloadNextTrack() {
+        const nextIdx = isShuffle ? getRandomPlayableIndex() : getNextPlayableIndex(curIdx + 1);
+        if (nextIdx === -1 || nextIdx === curIdx) return;
+        
+        const nextSong = playlistData[nextIdx];
+        if (nextSong && nextSong.url) {
+            const fixed = MusicEngine.fixUrl(nextSong.url, 'audio');
+            // Background resolve (won't block UI)
+            void resolveAudioSource(nextSong, fixed).then(url => {
+                console.log('Next track preloaded:', nextSong.title);
+            }).catch(() => {});
+        }
     }
 
     function jumpToLyric(time) {
@@ -396,7 +417,10 @@ $(document).ready(function() {
                 audio.load();
 
                 if (play) {
-                    await audio.play().catch(e => {
+                    audio.play().then(() => {
+                        // Successfully playing, trigger preload for next track
+                        preloadNextTrack();
+                    }).catch(e => {
                         console.error('Playback System Error:', e.name, e.message);
                         if (e.name === 'NotAllowedError') {
                             $('#disp-title').text('화면을 클릭하면 재생됩니다.');
@@ -734,8 +758,8 @@ $(document).ready(function() {
     $('#sheet-trigger').on('touchstart', (e) => { sheetStartY = e.touches[0].clientY; });
     $('#sheet-trigger').on('touchmove', (e) => {
         const diff = sheetStartY - e.touches[0].clientY;
-        if (diff > 40) $('#sheet').addClass('expanded');
-        else if (diff < -40) $('#sheet').removeClass('expanded');
+        if (diff > 60) $('#sheet').addClass('expanded'); // 임계값 상향 (40 -> 60)
+        else if (diff < -60) $('#sheet').removeClass('expanded');
     });
     $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
 
