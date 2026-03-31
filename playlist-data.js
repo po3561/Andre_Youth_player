@@ -51,41 +51,6 @@
             cover: coverUrl,
             profile: coverUrl,
             lyricsData
-        },
-        {
-            id: '우리가-주를-더욱-사랑하고',
-            title: '우리가 주를 더욱 사랑하고',
-            artist: 'Andre Youth',
-            cover: coverUrl,
-            profile: coverUrl
-        },
-        {
-            id: '행복',
-            title: '행복',
-            artist: 'Andre Youth',
-            cover: coverUrl,
-            profile: coverUrl
-        },
-        {
-            id: '첫째되는-계명',
-            title: '첫째되는 계명',
-            artist: 'Andre Youth',
-            cover: coverUrl,
-            profile: coverUrl
-        },
-        {
-            id: '혼자-걷지-않을-거예요',
-            title: '혼자 걷지 않을 거예요',
-            artist: 'Andre Youth',
-            cover: coverUrl,
-            profile: coverUrl
-        },
-        {
-            id: '하나님의-사랑',
-            title: '하나님의 사랑',
-            artist: 'Andre Youth',
-            cover: coverUrl,
-            profile: coverUrl
         }
     ];
 })();

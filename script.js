@@ -97,7 +97,7 @@ $(document).ready(function() {
     function getPlayableIndices() {
         return playlistData
             .map((song, index) => ({ song, index }))
-            .filter(item => item.song && !failedTitles.has(item.song.title))
+            .filter(item => item.song && item.song.url && !failedTitles.has(item.song.title))
             .map(item => item.index);
     }
 
@@ -105,7 +105,8 @@ $(document).ready(function() {
         if (!playlistData.length) return -1;
         for (let step = 0; step < playlistData.length; step++) {
             const idx = (startIndex + step + playlistData.length) % playlistData.length;
-            if (!failedTitles.has(playlistData[idx]?.title)) return idx;
+            const s = playlistData[idx];
+            if (s && s.url && !failedTitles.has(s.title)) return idx;
         }
         return -1;
     }
@@ -327,15 +328,27 @@ $(document).ready(function() {
     }
 
     function load(i, play = false) {
-        if (i < 0 || i >= playlistData.length) return;
-
-        const s = playlistData[i];
-        if (s?.title && failedTitles.has(s.title)) {
-            const fallbackIndex = isShuffle ? getRandomPlayableIndex() : getNextPlayableIndex(i + 1);
-            if (fallbackIndex !== -1 && fallbackIndex !== i) return load(fallbackIndex, play);
+        if (!playlistData.length) return;
+        
+        // Find best playable index starting from i
+        let targetIdx = i;
+        const s = playlistData[targetIdx];
+        
+        // If the current candidate is invalid (no URL or marked failed), find the next one
+        if (!s || !s.url || failedTitles.has(s.title)) {
+            targetIdx = getNextPlayableIndex(targetIdx + 1);
+            if (targetIdx === -1 || targetIdx === i) {
+                // If I came back to the same failed index or no playable left
+                if ($('#disp-title').text() !== 'Loading...') {
+                    $('#disp-title').text('재생 가능한 곡이 없습니다.');
+                }
+                return;
+            }
+            return load(targetIdx, play);
         }
 
-        curIdx = i;
+        curIdx = targetIdx;
+        const finalSong = playlistData[curIdx];
 
         const fixedAudio = MusicEngine.fixUrl(s.url, 'audio');
         const fixedCover = songImage(s);
@@ -414,16 +427,8 @@ $(document).ready(function() {
         }
         const n = isShuffle ? getRandomPlayableIndex() : getNextPlayableIndex(curIdx + 1);
         
-        // Repeat None (0) check: Stop if next index is less than current (reached end)
-        if (repeatMode === 0 && !isShuffle && n <= curIdx) {
-            audio.pause();
-            audio.currentTime = 0;
-            $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
-            return;
-        }
-
         if (n === -1) {
-            $('#disp-title').text('재생 가능한 곡이 없습니다.');
+            // Only show message if we actually gave up
             return;
         }
         load(n, true);
