@@ -122,7 +122,12 @@ $(document).ready(function() {
     function getRandomPlayableIndex() {
         const playable = getPlayableIndices();
         if (playable.length === 0) return -1;
-        return playable[Math.floor(Math.random() * playable.length)];
+        if (playable.length === 1) return playable[0];
+        
+        // Exclude current index to avoid repeat in shuffle
+        const others = playable.filter(idx => idx !== curIdx);
+        const target = others.length > 0 ? others : playable;
+        return target[Math.floor(Math.random() * target.length)];
     }
 
     function isSingleTrackPlaylist() {
@@ -564,22 +569,25 @@ $(document).ready(function() {
     async function fetchPlaylist() {
         if (!ENABLE_REMOTE_PLAYLIST_SYNC) return;
         try {
-            if (!playlistData.length) {
-                $('#disp-title').text('遺덈윭?ㅻ뒗 以?..');
+            if (!playlistData.length || playlistData.length <= 1) {
+                $('#disp-title').text('불러오는 중...');
             }
 
             const response = await fetch(`${GAS_URL}?v=${Date.now()}`, { cache: 'no-store' });
             const data = await response.json();
 
             if (Array.isArray(data) && data.length > 0) {
+                // If it was empty or 1-song fallback, replace immediately
+                const wasMinimal = playlistData.length <= 1;
                 const currentTitle = playlistData[curIdx]?.title;
+                
                 playlistData = data;
                 writePlaylistCache(data);
                 failedTitles.clear();
                 render();
                 renderCopyright();
 
-                if (currentTitle) {
+                if (currentTitle && !wasMinimal) {
                     const preservedIndex = playlistData.findIndex(song => song?.title === currentTitle);
                     if (preservedIndex !== -1) {
                         curIdx = preservedIndex;
@@ -590,7 +598,7 @@ $(document).ready(function() {
                 }
 
                 const firstPlayable = getNextPlayableIndex(0);
-                load(firstPlayable === -1 ? 0 : firstPlayable, false);
+                load(firstPlayable === -1 ? 0 : firstPlayable, !wasMinimal ? false : true);
             } else if (!playlistData.length) {
                 $('#disp-title').text('곡을 추가해주세요.');
             }
