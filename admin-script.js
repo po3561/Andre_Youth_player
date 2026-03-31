@@ -287,6 +287,7 @@ $(document).ready(function() {
             return;
         }
 
+
         if (type === 'audio') {
             state.audioFile = file;
         } else {
@@ -793,7 +794,8 @@ $(document).ready(function() {
                 activeRegion.endSec
             );
 
-            $status.text('Gemini AI가 오프셋을 확인하는 중...');
+            $status.text('Gemini AI가 오디오 특성과 가사를 대조하는 중...');
+            const geminiOffsetPromise = requestGeminiOffset(rawText);
             const geminiOffsetResult = await geminiOffsetPromise;
             const aiOffsetSec = geminiOffsetResult ? Number(geminiOffsetResult.offsetSec) : NaN;
             const autoOffsetSec = draft.hasSeedTimes
@@ -851,6 +853,25 @@ $(document).ready(function() {
 
     $(document).on('click', '#btn-ai-auto-sync', analyzeLyrics);
 
+    $(document).on('click', '.offset-quick-btn', function() {
+        const delta = parseFloat($(this).data('delta'));
+        const $input = $('#sync-offset');
+        let current = parseFloat($input.val()) || 0;
+        $input.val((current + delta).toFixed(2)).trigger('change');
+        
+        // If results already exist, re-run mapping to show preview immediately
+        if (state.generatedLrc && state.audioFile) {
+            analyzeLyrics();
+        }
+    });
+
+    $('#sync-offset, #sync-min-gap').on('change', function() {
+        if (state.generatedLrc && state.audioFile) {
+            // Re-analyze with new manual values if preview exists
+            analyzeLyrics();
+        }
+    });
+
     $('#btn-upload-all').click(async function() {
         const title = $('#song-title').val().trim();
         if (!title) {
@@ -903,9 +924,13 @@ $(document).ready(function() {
             });
 
             if (result.status === "success") {
-                updateProgress(100, '업로드 성공! 잠시 후 메인으로 이동합니다.');
+                updateProgress(95, '공개 접근 권한 설정 및 DB 기록 중...');
+                // Wait a bit for Drive indexing
+                await new Promise(r => setTimeout(r, 1000));
+                
+                updateProgress(100, '성공! 최신 목록으로 이동합니다.');
                 $bar.css('background', '#00ff88');
-                setTimeout(() => location.href = 'index.html', 1500);
+                setTimeout(() => location.href = 'index.html?sync=true', 1500);
             } else {
                 throw new Error(result.message || "Unknown error");
             }

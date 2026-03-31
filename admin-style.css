@@ -286,3 +286,39 @@ body.admin-page .admin-container {
     height: 18px;
     accent-color: #a064ff;
 }
+
+.offset-input-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 5px;
+}
+
+.offset-quick-btn {
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s;
+    min-width: 45px;
+}
+
+.offset-quick-btn:hover {
+    background: rgba(160,100,255,0.4);
+    border-color: #a064ff;
+    transform: translateY(-1px);
+}
+
+.offset-quick-btn:active {
+    transform: translateY(1px);
+}
+
+#sync-offset {
+    width: 80px;
+    text-align: center;
+    padding: 10px !important;
+}

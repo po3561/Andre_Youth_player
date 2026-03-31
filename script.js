@@ -13,7 +13,7 @@ $(document).ready(function() {
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = true;
     const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v5';
-    const PLAYLIST_CACHE_TTL = 1000 * 60 * 30;
+    const PLAYLIST_CACHE_TTL = 1000 * 60; // 1 minute for faster sync in production
 
     let curIdx = -1;
     let isShuffle = false;
@@ -710,10 +710,31 @@ $(document).ready(function() {
     });
 
     hydratePlaylistCache();
+
+    // Check for explicit sync request from admin or URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceSync = urlParams.get('sync') === 'true' || urlParams.get('refreshed') === 'true';
+
     if (ENABLE_REMOTE_PLAYLIST_SYNC) {
         requestAnimationFrame(() => {
+            if (forceSync) {
+                // Clear local cache for explicit sync
+                localStorage.removeItem(PLAYLIST_CACHE_KEY);
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
             fetchPlaylist();
         });
     }
+
+    // Add manual refresh button functionality if it exists in UI
+    $('#btn-refresh-playlist').on('click', () => {
+        const $btn = $('#btn-refresh-playlist');
+        $btn.addClass('fa-spin disabled');
+        localStorage.removeItem(PLAYLIST_CACHE_KEY);
+        fetchPlaylist().finally(() => {
+            $btn.removeClass('fa-spin disabled');
+        });
+    });
 });
 
