@@ -912,11 +912,17 @@ $(document).ready(function() {
                 syncMinGap: readNumber($('#sync-min-gap'), 0.22)
             };
 
-            if (state.generatedLrc) {
+            const skipAi = $('#sync-skip-ai').is(':checked');
+            const rawLyrics = $('#lyrics-raw').val().trim();
+
+            if (!skipAi && state.generatedLrc) {
                 payload.lrcName = `${title}.lrc`;
                 payload.lrcData = btoa(unescape(encodeURIComponent(state.generatedLrc)));
+            } else if (rawLyrics) {
+                payload.lrcName = `${title}.lrc`;
+                payload.lrcData = btoa(unescape(encodeURIComponent(rawLyrics)));
             }
-
+            
             updateProgress(50, '구글 드라이브로 전송 중...');
 
             const result = await gasBridgePost(Object.assign({ action: 'create' }, payload), {

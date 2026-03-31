@@ -54,6 +54,9 @@
 
                     <div class="sync-controls">
                         <button id="btn-ai-auto-sync" class="premium-sync-btn"><i class="fa-solid fa-bolt"></i> AI 자동 싱크 생성</button>
+                        <label class="sync-skip-label">
+                            <input type="checkbox" id="sync-skip-ai"> AI 보정 없이 원본 가사로 등록
+                        </label>
                     </div>
                     <p class="sync-help sync-note">AI가 오디오 파형과 가사 타임스탬프를 보고 시작 오프셋을 자동 추정합니다. 수동 설정은 필요할 때만 사용하세요.</p>
                     <p id="backend-status" class="backend-status" role="status" aria-live="polite">Checking admin backend...</p>

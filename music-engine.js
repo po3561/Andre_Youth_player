@@ -61,6 +61,12 @@ const MusicEngine = {
                 const time = minutes * 60 + seconds;
                 const text = line.replace(timeReg, '').trim();
                 if (text) result.push({ time, text });
+            } else {
+                const text = line.trim();
+                // If it's a non-empty line without timestamp, treat as 0s to show at start
+                if (text && !line.startsWith('[')) {
+                    result.push({ time: 0, text });
+                }
             }
         });
 

@@ -287,6 +287,23 @@ body.admin-page .admin-container {
     accent-color: #a064ff;
 }
 
+.sync-skip-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sync-skip-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: #21ccf9;
+}
+
 .offset-input-group {
     display: flex;
     gap: 6px;
