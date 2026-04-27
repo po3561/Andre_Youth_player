@@ -368,11 +368,12 @@ $(document).ready(function() {
         if (song.lyricsData) return song;
         try {
             let payload = null;
+            const ts = Date.now();
             try {
-                const response = await fetchWithTimeout(`${GAS_URL}?action=lyrics&id=${encodeURIComponent(song.id)}`, { cache: 'no-store' }, 1500);
+                const response = await fetchWithTimeout(`${GAS_URL}?action=lyrics&id=${encodeURIComponent(song.id)}&_t=${ts}`, { cache: 'no-store' }, 2500);
                 payload = await response.json();
             } catch (fetchError) {
-                payload = await jsonpGet({ action: 'lyrics', id: song.id }, 7000);
+                payload = await jsonpGet({ action: 'lyrics', id: song.id, _t: ts }, 8000);
             }
             if (payload && payload.status === 'ok') {
                 song.lyricsData = payload.lyricsData || '';
@@ -386,7 +387,7 @@ $(document).ready(function() {
         return song;
     }
 
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 1200) {
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 2500) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {
@@ -772,7 +773,11 @@ $(document).ready(function() {
         } catch (error) {
             console.error('Playlist Fetch Error:', error);
             if (!playlistData.length) {
-                $('#disp-title').text('데이터 로드 실패');
+                if (error.message.includes('bootstrap')) {
+                    $('#disp-title').text('백엔드 설정 오류');
+                } else {
+                    $('#disp-title').text('데이터 로드 실패');
+                }
             }
         }
     }
