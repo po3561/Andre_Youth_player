@@ -15,6 +15,7 @@ const SETTINGS_PROPERTY_KEY = 'APP_SETTINGS_V1';
 const CACHE_BOOTSTRAP_KEY = 'bootstrap_v3';
 const CACHE_SONG_PREFIX = 'song_v1_';
 const CACHE_TTL_SEC = 30;
+const CACHE_FILE_EXISTS_PREFIX = 'file_exists_v1_';
 
 const HEADERS = [
   'id',
@@ -264,6 +265,7 @@ function getBootstrapPayload_(options) {
   const payload = {
     status: 'ok',
     ts: new Date().toISOString(),
+    revision: getPlaylistRevision_(),
     settings: getAppSettings_(),
     songs: listSongsLite_({
       includeLyrics: includeLyrics,
@@ -288,7 +290,7 @@ function listSongsLite_(options) {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const song = rowToSong_(row, i + 1, headerMap);
-    if (song && song.title) {
+    if (song && song.title && isSongPlayable_(song)) {
       const item = {
         id: song.id,
         title: song.title,
@@ -498,7 +500,7 @@ function listSongs_() {
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const song = rowToSong_(row, i + 1, headerMap);
-    if (song && song.title) {
+    if (song && song.title && isSongPlayable_(song)) {
       songs.push(serializeSong_(song));
     }
   }
@@ -523,6 +525,47 @@ function invalidateSongCaches_(ids) {
     if (!clean) return;
     cache.remove(CACHE_SONG_PREFIX + clean);
   });
+}
+
+function getPlaylistRevision_() {
+  const sheet = getSheet_();
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return 'empty';
+  const map = buildHeaderMap_(rows[0]);
+  const updatedIdx = map.updatedAt;
+  let latest = '';
+  for (let i = 1; i < rows.length; i++) {
+    const value = updatedIdx === undefined ? '' : text_(rows[i][updatedIdx]).trim();
+    if (value && value > latest) latest = value;
+  }
+  return `${rows.length - 1}:${latest || 'na'}`;
+}
+
+function isSongPlayable_(song) {
+  const hasAudio = !!text_(song && song.audioFileId).trim();
+  const hasCover = !!text_(song && song.imageFileId).trim();
+  if (!hasAudio || !hasCover) return false;
+  return fileExistsCached_(song.audioFileId) && fileExistsCached_(song.imageFileId);
+}
+
+function fileExistsCached_(fileId) {
+  const id = text_(fileId).trim();
+  if (!id) return false;
+
+  const cache = CacheService.getScriptCache();
+  const key = CACHE_FILE_EXISTS_PREFIX + id;
+  const cached = cache.get(key);
+  if (cached === '1') return true;
+  if (cached === '0') return false;
+
+  let exists = false;
+  try {
+    exists = !!DriveApp.getFileById(id);
+  } catch (error) {
+    exists = false;
+  }
+  cache.put(key, exists ? '1' : '0', CACHE_TTL_SEC);
+  return exists;
 }
 
 function rowToSong_(row, rowIndex, headerMap) {

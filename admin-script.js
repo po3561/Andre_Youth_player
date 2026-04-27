@@ -1184,12 +1184,6 @@ $(document).ready(function() {
         });
     }
 
-    setTimeout(() => {
-        if ($('#admin-song-list .admin-song-item').length === 0 && PUBLIC_PLAYLIST.length > 0) {
-            renderPublicSnapshotFallback();
-        }
-    }, 3000);
-
     $(document).on('click', '.btn-delete-song', async function() {
         const song = $(this).data('song') || {};
         const label = song.title || song.id || '이 곡';
@@ -1231,7 +1225,12 @@ $(document).ready(function() {
         $('#edit-lyrics').val(song && song.lyricsData ? String(song.lyricsData) : '');
         $('#edit-sync-offset').val(Number.isFinite(Number(song && song.syncOffset)) ? Number(song.syncOffset) : 0);
         $('#edit-sync-min-gap').val(Number.isFinite(Number(song && song.syncMinGap)) ? Number(song.syncMinGap) : 0.22);
-        $('#edit-cover-preview').attr('src', song && (song.coverUrl || song.cover) ? (song.coverUrl || song.cover) : FALLBACK_COVER);
+        $('#edit-cover-preview')
+            .off('error')
+            .attr('src', song && (song.coverUrl || song.cover) ? (song.coverUrl || song.cover) : FALLBACK_COVER)
+            .on('error', function() {
+                if (this.src !== FALLBACK_COVER) this.src = FALLBACK_COVER;
+            });
         $('#edit-overlay').addClass('active').attr('aria-hidden', 'false');
 
         // Reset edit drop zone labels

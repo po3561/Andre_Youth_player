@@ -214,7 +214,7 @@ body.admin-page .admin-container {
 .admin-edit-meta {
     display: flex;
     gap: 12px;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 14px;
 }
 
@@ -235,6 +235,12 @@ body.admin-page .admin-container {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 0.82rem;
     color: rgba(0,0,0,0.62);
+    word-break: break-all;
+}
+
+.admin-edit-meta-text {
+    min-width: 0;
+    flex: 1;
 }
 
 .admin-settings-grid {

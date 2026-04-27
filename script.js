@@ -14,8 +14,8 @@ $(document).ready(function() {
         ? window.APP_CONFIG.GAS_URL
         : "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = true;
-    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v5';
-    const PLAYLIST_CACHE_TTL = 1000 * 60 * 5;
+    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v6';
+    const PLAYLIST_CACHE_TTL = 1000 * 30;
 
     let curIdx = -1;
     let isShuffle = false;
@@ -26,6 +26,7 @@ $(document).ready(function() {
     let myLikedMsgs = JSON.parse(localStorage.getItem('myLikedMsgs')) || [];
     let playlistData = [];
     let appSettings = null;
+    let playlistRevision = '';
     let currentLyrics = [];
     const failedTitles = new Set();
     const fallbackImage = MusicEngine.placeholderImage || "";
@@ -106,11 +107,13 @@ $(document).ready(function() {
 
     function hydratePlaylistCache() {
         const cached = readPlaylistCache();
-        const fallback = Array.isArray(window.PUBLIC_PLAYLIST) ? window.PUBLIC_PLAYLIST : [];
-        const source = cached && Array.isArray(cached.songs) && cached.songs.length ? cached.songs : fallback;
+        const source = cached && Array.isArray(cached.songs) && cached.songs.length ? cached.songs : [];
         if (!source.length) return false;
         if (cached && cached.settings) {
             applyAppSettings(cached.settings);
+        }
+        if (cached && cached.revision) {
+            playlistRevision = String(cached.revision);
         }
         playlistData = source;
         render();
@@ -364,8 +367,13 @@ $(document).ready(function() {
         if (!song || !song.id) return song;
         if (song.lyricsData) return song;
         try {
-            const response = await fetch(`${GAS_URL}?action=lyrics&id=${encodeURIComponent(song.id)}`, { cache: 'default' });
-            const payload = await response.json();
+            let payload = null;
+            try {
+                const response = await fetchWithTimeout(`${GAS_URL}?action=lyrics&id=${encodeURIComponent(song.id)}`, { cache: 'no-store' }, 1500);
+                payload = await response.json();
+            } catch (fetchError) {
+                payload = await jsonpGet({ action: 'lyrics', id: song.id }, 7000);
+            }
             if (payload && payload.status === 'ok') {
                 song.lyricsData = payload.lyricsData || '';
                 if (Number.isFinite(Number(payload.syncOffset))) {
@@ -385,6 +393,66 @@ $(document).ready(function() {
             return await fetch(url, Object.assign({}, options, { signal: controller.signal }));
         } finally {
             clearTimeout(timeoutId);
+        }
+    }
+
+    function jsonpGet(params = {}, timeoutMs = 8000) {
+        return new Promise((resolve, reject) => {
+            const requestId = `jsonp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const callbackName = `__jsonp_${requestId}`;
+            const url = new URL(GAS_URL);
+            Object.keys(params).forEach(key => {
+                if (params[key] === undefined || params[key] === null) return;
+                url.searchParams.set(key, String(params[key]));
+            });
+            url.searchParams.set('callback', callbackName);
+
+            const script = document.createElement('script');
+            const timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('JSONP timeout'));
+            }, timeoutMs);
+
+            function cleanup() {
+                clearTimeout(timeoutId);
+                try {
+                    delete window[callbackName];
+                } catch (error) {
+                    window[callbackName] = undefined;
+                }
+                if (script.parentNode) script.parentNode.removeChild(script);
+            }
+
+            window[callbackName] = payload => {
+                cleanup();
+                resolve(payload);
+            };
+            script.onerror = () => {
+                cleanup();
+                reject(new Error('JSONP failed'));
+            };
+            script.async = true;
+            script.src = url.toString();
+            document.head.appendChild(script);
+        });
+    }
+
+    async function fetchBootstrapPayload(options = {}) {
+        const includeLyrics = options.includeLyrics ? '1' : '0';
+        const lyricsLimit = Number(options.lyricsLimit || 0);
+        const url = `${GAS_URL}?action=bootstrap&includeLyrics=${includeLyrics}&lyricsLimit=${lyricsLimit}`;
+        try {
+            const response = await fetchWithTimeout(url, { cache: 'no-store' }, 1500);
+            const payload = await response.json();
+            if (payload && payload.status === 'ok') return payload;
+            throw new Error('invalid bootstrap payload');
+        } catch (error) {
+            const payload = await jsonpGet({
+                action: 'bootstrap',
+                includeLyrics: includeLyrics,
+                lyricsLimit: lyricsLimit
+            }, 7000);
+            return payload;
         }
     }
 
@@ -599,8 +667,8 @@ $(document).ready(function() {
                 const isMe = m.sender === userId;
                 const iLike = myLikedMsgs.includes(key);
                 $('#chat-messages').append(`
-                    <div class="msg-row" style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; width:100%;">
-                        <div style="display:flex; align-items:flex-end; max-width:85%; flex-direction:${isMe ? 'row-reverse' : 'row'};">
+                    <div class="msg-row">
+                        <div class="msg-bubble-wrap ${isMe ? 'me' : 'other'}">
                             <div class="message ${isMe ? 'me' : 'other'}" style="background:${isMe ? 'var(--primary)' : '#fff'}; color:${isMe ? '#fff' : '#333'}; padding:10px 15px; border-radius:15px;">${escapeHtml(m.text || '')}</div>
                             <button class="msg-like-btn ${iLike ? 'liked' : ''}" data-key="${key}">
                                 <i class="${iLike ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
@@ -661,8 +729,7 @@ $(document).ready(function() {
                 $('#disp-title').text('불러오는 중...');
             }
 
-            const response = await fetch(`${GAS_URL}?action=bootstrap`, { cache: 'default' });
-            const payload = await response.json();
+            const payload = await fetchBootstrapPayload({ includeLyrics: false, lyricsLimit: 0 });
             const data = payload && Array.isArray(payload.songs) ? payload.songs : [];
 
             if (payload && payload.settings) {
@@ -675,7 +742,12 @@ $(document).ready(function() {
                 const currentTitle = playlistData[curIdx]?.title;
                 
                 playlistData = data;
-                writePlaylistCache({ songs: data, settings: payload && payload.settings ? payload.settings : appSettings });
+                playlistRevision = String(payload && payload.revision ? payload.revision : '');
+                writePlaylistCache({
+                    songs: data,
+                    settings: payload && payload.settings ? payload.settings : appSettings,
+                    revision: playlistRevision
+                });
                 failedTitles.clear();
                 render();
                 renderCopyright();
@@ -852,15 +924,17 @@ $(document).ready(function() {
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
             // Fast-start bootstrap call; if delayed, keep cached UI and continue with async refresh.
-            fetchWithTimeout(`${GAS_URL}?action=bootstrap&includeLyrics=1&lyricsLimit=2`, {
-                cache: 'default'
-            }, 1200)
-                .then(res => res.json())
+            fetchBootstrapPayload({ includeLyrics: true, lyricsLimit: 2 })
                 .then(payload => {
                     if (payload && payload.settings) applyAppSettings(payload.settings);
                     if (payload && Array.isArray(payload.songs) && payload.songs.length) {
+                        playlistRevision = String(payload && payload.revision ? payload.revision : '');
                         playlistData = payload.songs;
-                        writePlaylistCache({ songs: payload.songs, settings: payload.settings || appSettings });
+                        writePlaylistCache({
+                            songs: payload.songs,
+                            settings: payload.settings || appSettings,
+                            revision: playlistRevision
+                        });
                         render();
                         renderCopyright();
                         if (curIdx < 0) {
@@ -885,6 +959,13 @@ $(document).ready(function() {
         fetchPlaylist().finally(() => {
             $btn.removeClass('fa-spin disabled');
         });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        if (!ENABLE_REMOTE_PLAYLIST_SYNC) return;
+        // Returning from background should quickly reconcile updates from other devices.
+        fetchPlaylist().catch(() => {});
     });
 });
 
