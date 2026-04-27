@@ -1,18 +1,18 @@
 /**
  * Andre Youth Player - 통합 백엔드 (Code.gs)
  * 
- * [필수 설정]
- * 1. 아래 SPREADSHEET_ID에 실제 구글 시트 ID를 입력하세요.
- * 2. 상단 메뉴 [배포] -> [새 배포] -> [웹 앱]으로 배포 후 URL을 GitHub config.js에 넣으세요.
+ * [조치 사항]
+ * 1. 이 내용을 전체 복사해서 GAS 에디터에 붙여넣으세요.
+ * 2. 상단 메뉴 [배포] -> [배포 관리] -> [편집] -> [새 버전] -> [배포]를 누르세요.
  */
 
 const CONFIG = {
-  // 사용 중인 스프레드시트 ID (URL의 /d/ 와 /edit 사이 문자열)
-  SPREADSHEET_ID: '여기에_스프레드시트_ID를_넣으세요', 
+  // 사용자의 스프레드시트 ID가 반영되었습니다.
+  SPREADSHEET_ID: '1M1N_qOpCRoVWfFnu3qP0B3ZoG2ipeertFsP-uZMPDPI', 
   SHEET_NAME: 'Songs',
   SETTINGS_SHEET: 'Settings',
   
-  // 파일 저장을 위한 폴더 ID (없으면 루트 폴더에 저장됨)
+  // 파일 저장을 위한 폴더 ID (필요 시 입력)
   AUDIO_FOLDER_ID: '', 
   IMAGE_FOLDER_ID: '', 
   LRC_FOLDER_ID: ''
@@ -58,7 +58,7 @@ function doGet(e) {
 }
 
 /**
- * POST 요청 처리 (업로드, 수정, 삭제)
+ * POST 요청 처리
  */
 function doPost(e) {
   let data = {};
@@ -90,9 +90,6 @@ function doPost(e) {
   return json_(result);
 }
 
-/**
- * 초기 로딩 시 필요한 모든 데이터를 한 번에 가져옴
- */
 function getBootstrapData_() {
   return {
     status: 'ok',
@@ -102,9 +99,6 @@ function getBootstrapData_() {
   };
 }
 
-/**
- * 앱 설정 가져오기 (타이틀, 테마 등)
- */
 function getAppSettings_() {
   try {
     const sheet = getSettingsSheet_();
@@ -142,17 +136,15 @@ function listSongs_() {
     const song = rowToSong_(rows[i], i + 1, map);
     if (song && song.title) songs.push(song);
   }
-  return songs.reverse(); // 최신곡이 위로 오게
+  return songs.reverse();
 }
 
 function upsertSong_(data) {
   if (!data.title) throw new Error('제목이 필요합니다.');
-  
   const sheet = getSheet_();
   const now = new Date().toISOString();
   const songId = data.id || Utilities.getUuid();
   
-  // 파일 저장 로직 (Base64)
   let audioId = data.audioFileId || '';
   if (data.audioData) {
     audioId = saveFile_(data.audioData, data.audioName || (data.title + '.mp3'), data.audioMime, CONFIG.AUDIO_FOLDER_ID);
@@ -169,37 +161,22 @@ function upsertSong_(data) {
   }
 
   const song = {
-    id: songId,
-    title: data.title,
-    artist: data.artist || 'Andre Youth',
-    audioFileId: audioId,
-    imageFileId: imageId,
-    lyricsFileId: lyricsId,
-    syncOffset: data.syncOffset || 0,
-    syncMinGap: data.syncMinGap || 0.22,
-    audioUrl: makeUrl_(audioId),
-    coverUrl: makeUrl_(imageId),
+    id: songId, title: data.title, artist: data.artist || 'Andre Youth',
+    audioFileId: audioId, imageFileId: imageId, lyricsFileId: lyricsId,
+    syncOffset: data.syncOffset || 0, syncMinGap: data.syncMinGap || 0.22,
+    audioUrl: makeUrl_(audioId), coverUrl: makeUrl_(imageId),
     lyricsData: lyricsId ? readFile_(lyricsId) : (data.lyricsRaw || ''),
-    createdAt: now,
-    updatedAt: now
+    createdAt: now, updatedAt: now
   };
 
   const existing = findRowById_(sheet, songId);
-  if (existing) {
-    updateRow_(sheet, existing.rowIndex, song);
-  } else {
-    appendRow_(sheet, song);
-  }
+  if (existing) updateRow_(sheet, existing.rowIndex, song);
+  else appendRow_(sheet, song);
 
   return { status: 'success', song: song };
 }
 
-// --- Helper Functions ---
-
 function getSheet_() {
-  if (!CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.includes('HERE')) {
-    throw new Error('스프레드시트 ID가 설정되지 않았습니다. Code.gs 상단을 확인하세요.');
-  }
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   let sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
   if (!sheet) {
