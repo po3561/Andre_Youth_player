@@ -121,6 +121,43 @@
 
             <div class="manage-card glass-card">
                 <div class="manage-header">
+                    <h3>플레이어 앱 설정</h3>
+                    <button id="btn-load-settings" class="icon-btn" aria-label="설정 불러오기"><i class="fa-solid fa-gear"></i></button>
+                </div>
+                <div class="admin-settings-grid">
+                    <label class="sync-meta-item">
+                        상단 타이틀
+                        <input type="text" id="setting-playlist-title" placeholder="Andre Youth Playlist">
+                    </label>
+                    <label class="sync-meta-item">
+                        상단 서브타이틀
+                        <input type="text" id="setting-playlist-subtitle" placeholder="음악으로 길을 잇다">
+                    </label>
+                    <label class="sync-meta-item">
+                        기본 아티스트명
+                        <input type="text" id="setting-default-artist" placeholder="Andre Youth">
+                    </label>
+                    <label class="sync-meta-item">
+                        메인 컬러
+                        <input type="color" id="setting-theme-primary" value="#21ccf9">
+                    </label>
+                    <label class="sync-meta-item">
+                        가사 힌트 문구
+                        <input type="text" id="setting-lyric-hint" placeholder="TAP FOR LYRICS">
+                    </label>
+                    <label class="sync-meta-item settings-wide">
+                        저작권 안내 문구
+                        <textarea id="setting-copyright-notice" rows="4" placeholder="본 플레이어는 비영리 목적의 내부 재생용입니다."></textarea>
+                    </label>
+                </div>
+                <div class="sync-controls">
+                    <button id="btn-save-settings" class="secondary-btn"><i class="fa-solid fa-floppy-disk"></i> 앱 설정 저장</button>
+                    <p id="settings-status" class="sync-help" role="status" aria-live="polite"></p>
+                </div>
+            </div>
+
+            <div class="manage-card glass-card">
+                <div class="manage-header">
                     <h3>현재 등록된 곡 목록</h3>
                     <button id="btn-refresh-list" class="icon-btn" aria-label="목록 갱신"><i class="fa-solid fa-rotate"></i></button>
                 </div>

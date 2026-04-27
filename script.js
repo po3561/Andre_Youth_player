@@ -15,7 +15,7 @@ $(document).ready(function() {
         : "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = true;
     const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v5';
-    const PLAYLIST_CACHE_TTL = 1000 * 60; // 1 minute for faster sync in production
+    const PLAYLIST_CACHE_TTL = 1000 * 60 * 5;
 
     let curIdx = -1;
     let isShuffle = false;
@@ -25,6 +25,7 @@ $(document).ready(function() {
     let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
     let myLikedMsgs = JSON.parse(localStorage.getItem('myLikedMsgs')) || [];
     let playlistData = [];
+    let appSettings = null;
     let currentLyrics = [];
     const failedTitles = new Set();
     const fallbackImage = MusicEngine.placeholderImage || "";
@@ -67,27 +68,50 @@ $(document).ready(function() {
             const raw = localStorage.getItem(PLAYLIST_CACHE_KEY);
             if (!raw) return null;
             const parsed = JSON.parse(raw);
-            if (!parsed || !Array.isArray(parsed.data)) return null;
+            if (!parsed) return null;
             if (!parsed.ts || Date.now() - parsed.ts > PLAYLIST_CACHE_TTL) return null;
-            return parsed.data;
+            if (Array.isArray(parsed.data)) {
+                return { songs: parsed.data, settings: null };
+            }
+            if (Array.isArray(parsed.songs)) {
+                return { songs: parsed.songs, settings: parsed.settings || null };
+            }
+            return null;
         } catch (error) {
             return null;
         }
     }
 
-    function writePlaylistCache(data) {
+    function writePlaylistCache(payload) {
         try {
-            localStorage.setItem(PLAYLIST_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+            localStorage.setItem(PLAYLIST_CACHE_KEY, JSON.stringify(Object.assign({ ts: Date.now() }, payload)));
         } catch (error) {
             // Ignore storage pressure.
+        }
+    }
+
+    function applyAppSettings(settings) {
+        if (!settings || typeof settings !== 'object') return;
+        appSettings = Object.assign({}, appSettings || {}, settings);
+        const safePrimary = appSettings.themePrimary || '#21ccf9';
+
+        document.documentElement.style.setProperty('--primary', safePrimary);
+        $('.sub-title').text(appSettings.playlistTitle || 'Andre Youth Playlist');
+        $('.main-title').text(appSettings.playlistSubtitle || '음악으로 길을 잇다');
+        $('.lyrics-hint').text(appSettings.lyricHintText || 'TAP FOR LYRICS');
+        if (appSettings.copyrightNotice) {
+            $('.copyright-notice').text(appSettings.copyrightNotice);
         }
     }
 
     function hydratePlaylistCache() {
         const cached = readPlaylistCache();
         const fallback = Array.isArray(window.PUBLIC_PLAYLIST) ? window.PUBLIC_PLAYLIST : [];
-        const source = cached && cached.length ? cached : fallback;
+        const source = cached && Array.isArray(cached.songs) && cached.songs.length ? cached.songs : fallback;
         if (!source.length) return false;
+        if (cached && cached.settings) {
+            applyAppSettings(cached.settings);
+        }
         playlistData = source;
         render();
         renderCopyright();
@@ -269,7 +293,7 @@ $(document).ready(function() {
             $list.append(`
                 <div class="copy-item">
                     <span class="copy-title">${i + 1}. ${escapeHtml(s.title || '')}</span>
-                    <span style="font-size:0.75rem; opacity:0.6;">Andre Youth</span>
+                    <span style="font-size:0.75rem; opacity:0.6;">${escapeHtml(s.artist || (appSettings && appSettings.defaultArtist) || 'Andre Youth')}</span>
                 </div>
             `);
         });
@@ -336,6 +360,45 @@ $(document).ready(function() {
 
     // fetchPlaylist() is defined later with caching + sync; keep a single implementation.
 
+    async function ensureLyricsForSong(song) {
+        if (!song || !song.id) return song;
+        if (song.lyricsData) return song;
+        try {
+            const response = await fetch(`${GAS_URL}?action=lyrics&id=${encodeURIComponent(song.id)}`, { cache: 'default' });
+            const payload = await response.json();
+            if (payload && payload.status === 'ok') {
+                song.lyricsData = payload.lyricsData || '';
+                if (Number.isFinite(Number(payload.syncOffset))) {
+                    song.syncOffset = Number(payload.syncOffset);
+                }
+            }
+        } catch (error) {
+            console.warn('Lyrics fetch failed:', error);
+        }
+        return song;
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 1200) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            return await fetch(url, Object.assign({}, options, { signal: controller.signal }));
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    function warmupLyricsAround(index) {
+        if (!Array.isArray(playlistData) || !playlistData.length) return;
+        const candidates = [index, index + 1, index - 1];
+        candidates.forEach(i => {
+            const idx = (i + playlistData.length) % playlistData.length;
+            const song = playlistData[idx];
+            if (!song || song.lyricsData) return;
+            void ensureLyricsForSong(song);
+        });
+    }
+
     function load(i, play = false) {
         if (!playlistData.length) return;
         
@@ -383,10 +446,17 @@ $(document).ready(function() {
         } else {
             $('#lyrics-scroll-area').html('<div class="lyric-line no-data">등록된 가사가 없습니다.</div>');
             currentLyrics = [];
+            void ensureLyricsForSong(s).then(updatedSong => {
+                if (curIdx !== targetIdx || !updatedSong || !updatedSong.lyricsData) return;
+                currentLyrics = MusicEngine.parseLyrics(updatedSong.lyricsData, Number(updatedSong.syncOffset) || 0);
+                renderLyrics();
+                updateLyricsUI(audio.currentTime);
+            });
         }
 
         render();
         syncHearts();
+        warmupLyricsAround(curIdx);
 
         void resolveAudioSource(s, fixedAudio)
             .then(async resolvedAudio => {
@@ -591,8 +661,13 @@ $(document).ready(function() {
                 $('#disp-title').text('불러오는 중...');
             }
 
-            const response = await fetch(`${GAS_URL}?v=${Date.now()}`, { cache: 'no-store' });
-            const data = await response.json();
+            const response = await fetch(`${GAS_URL}?action=bootstrap`, { cache: 'default' });
+            const payload = await response.json();
+            const data = payload && Array.isArray(payload.songs) ? payload.songs : [];
+
+            if (payload && payload.settings) {
+                applyAppSettings(payload.settings);
+            }
 
             if (Array.isArray(data) && data.length > 0) {
                 // If it was empty or 1-song fallback, replace immediately
@@ -600,7 +675,7 @@ $(document).ready(function() {
                 const currentTitle = playlistData[curIdx]?.title;
                 
                 playlistData = data;
-                writePlaylistCache(data);
+                writePlaylistCache({ songs: data, settings: payload && payload.settings ? payload.settings : appSettings });
                 failedTitles.clear();
                 render();
                 renderCopyright();
@@ -776,7 +851,29 @@ $(document).ready(function() {
                 // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
-            fetchPlaylist();
+            // Fast-start bootstrap call; if delayed, keep cached UI and continue with async refresh.
+            fetchWithTimeout(`${GAS_URL}?action=bootstrap&includeLyrics=1&lyricsLimit=2`, {
+                cache: 'default'
+            }, 1200)
+                .then(res => res.json())
+                .then(payload => {
+                    if (payload && payload.settings) applyAppSettings(payload.settings);
+                    if (payload && Array.isArray(payload.songs) && payload.songs.length) {
+                        playlistData = payload.songs;
+                        writePlaylistCache({ songs: payload.songs, settings: payload.settings || appSettings });
+                        render();
+                        renderCopyright();
+                        if (curIdx < 0) {
+                            const firstPlayable = getNextPlayableIndex(0);
+                            load(firstPlayable === -1 ? 0 : firstPlayable, true);
+                        }
+                    } else {
+                        fetchPlaylist();
+                    }
+                })
+                .catch(() => {
+                    fetchPlaylist();
+                });
         });
     }
 

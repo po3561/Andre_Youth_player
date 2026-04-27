@@ -25,6 +25,7 @@ $(document).ready(function() {
     let gasBridgeListenerInstalled = false;
 
     fetchSongs();
+    loadAppSettings().catch(() => {});
 
     $(document).on('dragover dragenter drop', function(e) {
         e.preventDefault();
@@ -990,9 +991,19 @@ $(document).ready(function() {
                 return;
             }
 
-        const data = await gasJsonpGet({ action: 'list' }, {
-            timeoutMs: GAS_JSONP_TIMEOUT_MS
-        });
+        let data = [];
+        try {
+            const bootstrap = await gasJsonpGet({ action: 'bootstrap' }, {
+                timeoutMs: 6000
+            });
+            data = Array.isArray(bootstrap && bootstrap.songs) ? bootstrap.songs : [];
+        } catch (bootstrapError) {
+            // Fallback for environments where bootstrap is not yet deployed
+            const listData = await gasJsonpGet({ action: 'list' }, {
+                timeoutMs: GAS_JSONP_TIMEOUT_MS
+            });
+            data = Array.isArray(listData) ? listData : [];
+        }
         updateBackendStatus(true, 'GAS backend online.');
         $list.empty();
 
@@ -1055,6 +1066,82 @@ $(document).ready(function() {
     }
 
     $('#btn-refresh-list').click(fetchSongs);
+
+    function readSettingsForm() {
+        return {
+            playlistTitle: $('#setting-playlist-title').val().trim(),
+            playlistSubtitle: $('#setting-playlist-subtitle').val().trim(),
+            defaultArtist: $('#setting-default-artist').val().trim(),
+            themePrimary: $('#setting-theme-primary').val().trim(),
+            lyricHintText: $('#setting-lyric-hint').val().trim(),
+            copyrightNotice: $('#setting-copyright-notice').val().trim()
+        };
+    }
+
+    function writeSettingsForm(settings) {
+        const data = settings || {};
+        $('#setting-playlist-title').val(data.playlistTitle || '');
+        $('#setting-playlist-subtitle').val(data.playlistSubtitle || '');
+        $('#setting-default-artist').val(data.defaultArtist || 'Andre Youth');
+        $('#setting-theme-primary').val(data.themePrimary || '#21ccf9');
+        $('#setting-lyric-hint').val(data.lyricHintText || 'TAP FOR LYRICS');
+        $('#setting-copyright-notice').val(data.copyrightNotice || '');
+    }
+
+    async function loadAppSettings() {
+        const $status = $('#settings-status').text('설정 불러오는 중...');
+        try {
+            if (!(await ensureBackendOnline())) {
+                throw new Error('Admin backend offline');
+            }
+
+            let data = null;
+            try {
+                data = await gasJsonpGet({ action: 'settings' }, { timeoutMs: 6000 });
+            } catch (settingsError) {
+                const bootstrap = await gasJsonpGet({ action: 'bootstrap' }, { timeoutMs: 6000 });
+                if (bootstrap && bootstrap.settings) {
+                    data = { status: 'ok', settings: bootstrap.settings };
+                }
+            }
+            if (data && data.status === 'ok' && data.settings) {
+                writeSettingsForm(data.settings);
+                $status.text('설정을 불러왔습니다.');
+            } else {
+                throw new Error((data && data.message) || '설정 로드 실패');
+            }
+        } catch (error) {
+            $status.text('설정 불러오기 실패: ' + error.message);
+        }
+    }
+
+    async function saveAppSettings() {
+        const $status = $('#settings-status').text('설정 저장 중...');
+        const $btn = $('#btn-save-settings').prop('disabled', true);
+        try {
+            if (!(await ensureBackendOnline())) {
+                throw new Error('Admin backend offline');
+            }
+            const settings = readSettingsForm();
+            const res = await gasBridgePost({
+                action: 'update-settings',
+                settings: JSON.stringify(settings)
+            }, { timeoutMs: GAS_BRIDGE_TIMEOUT_MS });
+
+            if (res && res.status === 'success') {
+                $status.text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
+            } else {
+                throw new Error((res && res.message) || '설정 저장 실패');
+            }
+        } catch (error) {
+            $status.text('설정 저장 실패: ' + error.message);
+        } finally {
+            $btn.prop('disabled', false);
+        }
+    }
+
+    $('#btn-load-settings').on('click', loadAppSettings);
+    $('#btn-save-settings').on('click', saveAppSettings);
 
     function renderPublicSnapshotFallback() {
         if (!PUBLIC_PLAYLIST.length) return;

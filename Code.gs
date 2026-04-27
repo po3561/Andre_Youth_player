@@ -11,6 +11,10 @@ const CONFIG = {
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_MAX_INLINE_BYTES = 18 * 1024 * 1024;
+const SETTINGS_PROPERTY_KEY = 'APP_SETTINGS_V1';
+const CACHE_BOOTSTRAP_KEY = 'bootstrap_v3';
+const CACHE_SONG_PREFIX = 'song_v1_';
+const CACHE_TTL_SEC = 30;
 
 const HEADERS = [
   'id',
@@ -40,9 +44,23 @@ function doGet(e) {
         status: 'ok',
         ts: new Date().toISOString()
       };
+    } else if (action === 'bootstrap') {
+      payload = getBootstrapPayload_({
+        includeLyrics: text_(getParam_(e, 'includeLyrics', '')).trim() === '1',
+        lyricsLimit: Number(getParam_(e, 'lyricsLimit', 2)) || 2
+      });
+    } else if (action === 'settings') {
+      payload = {
+        status: 'ok',
+        settings: getAppSettings_(),
+        ts: new Date().toISOString()
+      };
     } else if (action === 'song') {
       const id = getParam_(e, 'id', '');
       payload = id ? getSongById_(String(id)) : null;
+    } else if (action === 'lyrics') {
+      const id = getParam_(e, 'id', '');
+      payload = id ? getSongLyricsById_(String(id)) : { status: 'error', message: 'id is required' };
     } else {
       payload = listSongs_();
     }
@@ -67,6 +85,8 @@ function doPost(e) {
 
     if (action === 'delete') {
       payload = deleteSong_(data);
+    } else if (action === 'update-settings' || action === 'settings-update') {
+      payload = updateAppSettings_(data);
     } else if (action === 'update') {
       payload = updateSong_(data);
     } else if (action === 'ai-sync' || action === 'aisync' || action === 'analyze-lyrics') {
@@ -200,10 +220,12 @@ function saveSong_(data, requireExisting) {
       deleteFileIfExists_(previous.lyricsFileId);
     }
 
+    invalidateSongCaches_([song.id, previous && previous.id]);
     return { status: 'success', action: 'update', song: serializeSong_(song) };
   }
 
   appendRow_(sheet, song);
+  invalidateSongCaches_([song.id]);
   return { status: 'success', action: 'create', song: serializeSong_(song) };
 }
 
@@ -221,8 +243,145 @@ function deleteSong_(data) {
   deleteFileIfExists_(existing.imageFileId);
   deleteFileIfExists_(existing.lyricsFileId);
   sheet.deleteRow(existing.rowIndex);
+  invalidateSongCaches_([existing.id]);
 
   return { status: 'success', action: 'delete', id: existing.id };
+}
+
+function getBootstrapPayload_(options) {
+  const includeLyrics = !!(options && options.includeLyrics);
+  const lyricsLimit = Math.min(10, Math.max(0, Number(options && options.lyricsLimit) || 0));
+  const cacheKey = includeLyrics
+    ? `${CACHE_BOOTSTRAP_KEY}_lyrics_${lyricsLimit}`
+    : CACHE_BOOTSTRAP_KEY;
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    const parsed = safeJsonParse_(cached, null);
+    if (parsed) return parsed;
+  }
+
+  const payload = {
+    status: 'ok',
+    ts: new Date().toISOString(),
+    settings: getAppSettings_(),
+    songs: listSongsLite_({
+      includeLyrics: includeLyrics,
+      lyricsLimit: lyricsLimit
+    })
+  };
+  cache.put(cacheKey, JSON.stringify(payload), CACHE_TTL_SEC);
+  return payload;
+}
+
+function listSongsLite_(options) {
+  const includeLyrics = !!(options && options.includeLyrics);
+  const lyricsLimit = Math.min(10, Math.max(0, Number(options && options.lyricsLimit) || 0));
+  let lyricsIncluded = 0;
+  const sheet = getSheet_();
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+
+  const headerMap = buildHeaderMap_(rows[0]);
+  const songs = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const song = rowToSong_(row, i + 1, headerMap);
+    if (song && song.title) {
+      const item = {
+        id: song.id,
+        title: song.title,
+        artist: song.artist || 'Andre Youth',
+        audioFileId: song.audioFileId,
+        imageFileId: song.imageFileId,
+        lyricsFileId: song.lyricsFileId,
+        syncOffset: song.syncOffset,
+        syncMinGap: song.syncMinGap,
+        url: song.url,
+        cover: song.cover,
+        profile: song.profile,
+        updatedAt: song.updatedAt
+      };
+
+      if (includeLyrics && lyricsIncluded < lyricsLimit) {
+        item.lyricsData = song.lyricsData || '';
+        lyricsIncluded++;
+      }
+      songs.push(item);
+    }
+  }
+
+  return songs;
+}
+
+function getSongLyricsById_(id) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = CACHE_SONG_PREFIX + text_(id).trim();
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    const parsed = safeJsonParse_(cached, null);
+    if (parsed) return parsed;
+  }
+
+  const sheet = getSheet_();
+  const existing = findRowById_(sheet, id);
+  if (!existing) {
+    return { status: 'error', message: 'song not found' };
+  }
+
+  const payload = {
+    status: 'ok',
+    id: existing.id,
+    lyricsData: existing.lyricsData || '',
+    syncOffset: existing.syncOffset,
+    syncMinGap: existing.syncMinGap,
+    updatedAt: existing.updatedAt
+  };
+  cache.put(cacheKey, JSON.stringify(payload), CACHE_TTL_SEC);
+  return payload;
+}
+
+function getAppSettings_() {
+  const raw = text_(PropertiesService.getScriptProperties().getProperty(SETTINGS_PROPERTY_KEY)).trim();
+  const parsed = safeJsonParse_(raw, {});
+  const defaults = {
+    playlistTitle: 'Andre Youth Playlist',
+    playlistSubtitle: '음악으로 길을 잇다',
+    defaultArtist: 'Andre Youth',
+    copyrightNotice: '본 플레이어는 비영리 목적의 내부 재생용입니다.',
+    themePrimary: '#21ccf9',
+    lyricHintText: 'TAP FOR LYRICS'
+  };
+  return Object.assign({}, defaults, parsed || {});
+}
+
+function updateAppSettings_(data) {
+  const incoming = safeJsonParse_(text_(data && data.settings), null) || data || {};
+  const current = getAppSettings_();
+  const next = Object.assign({}, current, {
+    playlistTitle: text_(incoming.playlistTitle || current.playlistTitle).slice(0, 80),
+    playlistSubtitle: text_(incoming.playlistSubtitle || current.playlistSubtitle).slice(0, 120),
+    defaultArtist: text_(incoming.defaultArtist || current.defaultArtist).slice(0, 80),
+    copyrightNotice: text_(incoming.copyrightNotice || current.copyrightNotice).slice(0, 600),
+    themePrimary: normalizeCssColor_(incoming.themePrimary || current.themePrimary),
+    lyricHintText: text_(incoming.lyricHintText || current.lyricHintText).slice(0, 80)
+  });
+
+  PropertiesService.getScriptProperties().setProperty(SETTINGS_PROPERTY_KEY, JSON.stringify(next));
+  invalidateSongCaches_([]);
+
+  return {
+    status: 'success',
+    action: 'update-settings',
+    settings: next
+  };
+}
+
+function normalizeCssColor_(value) {
+  const raw = text_(value).trim();
+  if (/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(raw)) return raw;
+  return '#21ccf9';
 }
 
 function analyzeLyricsWithGemini_(data) {
@@ -340,7 +499,6 @@ function listSongs_() {
     const row = rows[i];
     const song = rowToSong_(row, i + 1, headerMap);
     if (song && song.title) {
-      ensureFilesPublic_([song.audioFileId, song.imageFileId, song.lyricsFileId]);
       songs.push(serializeSong_(song));
     }
   }
@@ -352,6 +510,19 @@ function getSongById_(id) {
   const sheet = getSheet_();
   const existing = findRowById_(sheet, id);
   return existing ? serializeSong_(existing) : null;
+}
+
+function invalidateSongCaches_(ids) {
+  const cache = CacheService.getScriptCache();
+  cache.remove(CACHE_BOOTSTRAP_KEY);
+  for (let i = 0; i <= 10; i++) {
+    cache.remove(`${CACHE_BOOTSTRAP_KEY}_lyrics_${i}`);
+  }
+  (ids || []).forEach(id => {
+    const clean = text_(id).trim();
+    if (!clean) return;
+    cache.remove(CACHE_SONG_PREFIX + clean);
+  });
 }
 
 function rowToSong_(row, rowIndex, headerMap) {
