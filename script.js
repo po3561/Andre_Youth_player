@@ -440,9 +440,10 @@ $(document).ready(function() {
     async function fetchBootstrapPayload(options = {}) {
         const includeLyrics = options.includeLyrics ? '1' : '0';
         const lyricsLimit = Number(options.lyricsLimit || 0);
-        const url = `${GAS_URL}?action=bootstrap&includeLyrics=${includeLyrics}&lyricsLimit=${lyricsLimit}`;
+        const ts = Date.now();
+        const url = `${GAS_URL}?action=bootstrap&includeLyrics=${includeLyrics}&lyricsLimit=${lyricsLimit}&_t=${ts}`;
         try {
-            const response = await fetchWithTimeout(url, { cache: 'no-store' }, 1500);
+            const response = await fetchWithTimeout(url, { cache: 'no-store' }, 2500);
             const payload = await response.json();
             if (payload && payload.status === 'ok') return payload;
             throw new Error('invalid bootstrap payload');
@@ -450,8 +451,9 @@ $(document).ready(function() {
             const payload = await jsonpGet({
                 action: 'bootstrap',
                 includeLyrics: includeLyrics,
-                lyricsLimit: lyricsLimit
-            }, 7000);
+                lyricsLimit: lyricsLimit,
+                _t: ts
+            }, 8000);
             return payload;
         }
     }
