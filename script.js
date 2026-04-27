@@ -12,7 +12,7 @@ $(document).ready(function() {
     const audio = document.getElementById('audio-engine');
     const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
         ? window.APP_CONFIG.GAS_URL
-        : "https://script.google.com/macros/s/AKfycbwH4pDRA9wmsNRUJE4TEejCqyaeT3F46U1zs5TN4Z6XzDDFiKj0sCtrkJg--KYItpS21g/exec";
+        : "https://script.google.com/macros/s/AKfycbxv_s0YGXz-2cUzTsosgZp2BZFlKtXgVIZCCVG9441vKcsAE54gLPJEeo_a6McFQo8TZA/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = true;
     const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v7';
     const PLAYLIST_CACHE_TTL = 1000 * 30;
