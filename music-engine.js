@@ -47,7 +47,7 @@ const MusicEngine = {
         return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
     },
 
-    parseLyrics(lrcText) {
+    parseLyrics(lrcText, offsetSec = 0) {
         if (!lrcText) return [];
         const lines = lrcText.split('\n');
         const result = [];
@@ -58,7 +58,7 @@ const MusicEngine = {
             if (match) {
                 const minutes = parseInt(match[1], 10);
                 const seconds = parseFloat(match[2]);
-                const time = minutes * 60 + seconds;
+                const time = Math.max(0, minutes * 60 + seconds + (Number.isFinite(offsetSec) ? offsetSec : 0));
                 const text = line.replace(timeReg, '').trim();
                 if (text) result.push({ time, text });
             } else {

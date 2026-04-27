@@ -167,6 +167,76 @@ body.admin-page .admin-container {
 }
 .btn-delete-song:hover { background: #ff3b30; color: #fff; transform: scale(1.1); }
 
+.admin-song-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-edit-song {
+    background: rgba(33, 204, 249, 0.18);
+    color: rgba(255,255,255,0.92);
+    border: 1px solid rgba(33, 204, 249, 0.28);
+    width: 35px;
+    height: 35px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-edit-song:hover {
+    background: rgba(33, 204, 249, 0.45);
+    transform: scale(1.08);
+}
+
+.admin-edit-card {
+    height: 78vh;
+    max-width: 520px;
+}
+
+.admin-edit-body {
+    padding: 18px 20px;
+    background: rgba(255,255,255,0.96);
+}
+
+.admin-edit-body textarea {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(0,0,0,0.08);
+    background: rgba(0,0,0,0.04);
+    color: #111;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    resize: vertical;
+}
+
+.admin-edit-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.edit-cover-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+}
+
+.admin-edit-id-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.admin-edit-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.82rem;
+    color: rgba(0,0,0,0.62);
+}
+
 .premium-label { font-size: 1rem !important; color: #00ff88 !important; margin-bottom: 12px; display: block; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
 
 .loading-spinner { text-align: center; color: rgba(255,255,255,0.5); padding: 20px; font-size: 0.9rem; }

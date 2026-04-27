@@ -1,14 +1,19 @@
 /* admin-script.js */
 $(document).ready(function() {
     // Re-linked to the user's latest, authorized deployment!
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
+    const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
+        ? window.APP_CONFIG.GAS_URL
+        : "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
     const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
     const state = {
         audioFile: null,
         audioPreview: null,
         image: null,
         generatedLrc: "",
-        audioPreviewUrl: null
+        audioPreviewUrl: null,
+        editSongId: null,
+        editAudioFile: null,
+        editImageFile: null
     };
     const PUBLIC_PLAYLIST = Array.isArray(window.PUBLIC_PLAYLIST) ? window.PUBLIC_PLAYLIST : [];
     const $backendStatus = $('#backend-status');
@@ -277,6 +282,28 @@ $(document).ready(function() {
 
     function handleFileSelect(type, file, $zone) {
         if (!file) return;
+
+        if (type === 'edit-audio') {
+            if (!file.type.startsWith('audio/')) {
+                alert('음원 파일만 선택 가능합니다.');
+                return;
+            }
+            state.editAudioFile = file;
+            $zone.find('.file-info').text(toTitleLabel(file)).css('opacity', '1');
+            $zone.find('p').text('파일 선택됨').css('color', '#00ff88');
+            return;
+        }
+
+        if (type === 'edit-image') {
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 선택 가능합니다.');
+                return;
+            }
+            state.editImageFile = file;
+            $zone.find('.file-info').text(toTitleLabel(file)).css('opacity', '1');
+            $zone.find('p').text('파일 선택됨').css('color', '#00ff88');
+            return;
+        }
 
         if (type === 'audio' && !file.type.startsWith('audio/')) {
             alert('음원 파일만 선택 가능합니다.');
@@ -807,10 +834,10 @@ $(document).ready(function() {
             const minGapSec = useManualSync ? manualMinGapSec : 0.22;
 
             $status.text(useManualSync
-                ? '?? ?? ?? ?... ' + formatSignedSeconds(offsetSec)
+                ? ('수동 오프셋 적용 중... ' + formatSignedSeconds(offsetSec))
                 : (geminiOffsetResult
-                    ? 'Gemini AI? ?? ???? ?????? ' + formatSignedSeconds(offsetSec)
-                    : '?? ???? ?? ???? ?????? ' + formatSignedSeconds(offsetSec))
+                    ? ('Gemini AI 보정값 적용 중... ' + formatSignedSeconds(offsetSec))
+                    : ('자동 오프셋 추정값 적용 중... ' + formatSignedSeconds(offsetSec)))
             );
 
             const generatedLrc = assignLyricTimestamps(
@@ -829,13 +856,13 @@ $(document).ready(function() {
             $fill.css('width', '100%');
             if (draft.hasSeedTimes) {
                 $status.text(useManualSync
-                    ? '?? ?? ?? ? ' + formatSignedSeconds(offsetSec)
+                    ? ('수동 오프셋 적용 완료 ' + formatSignedSeconds(offsetSec))
                     : (geminiOffsetResult
-                        ? 'Gemini AI ?? ?? ?? ? ' + formatSignedSeconds(offsetSec)
-                        : '?? ?? ?? ?? ? ' + formatSignedSeconds(offsetSec))
+                        ? ('Gemini AI 보정 완료 ' + formatSignedSeconds(offsetSec))
+                        : ('자동 오프셋 추정 완료 ' + formatSignedSeconds(offsetSec)))
                 );
             } else {
-                $status.text(useManualSync ? '?? ?? ??' : 'AI ?? ?? ??');
+                $status.text(useManualSync ? '수동 보정 완료' : 'AI 분석 완료');
             }
             $btn.html('<i class="fa-solid fa-check"></i> 보정 완료').removeClass('premium-sync-btn').addClass('secondary-btn').prop('disabled', false);
         } catch (error) {
@@ -992,6 +1019,16 @@ $(document).ready(function() {
 
             $info.append($img, $('<strong>').text(song.title || '제목 없음'));
 
+            const $editButton = $('<button>')
+                .addClass('btn-edit-song')
+                .attr('type', 'button')
+                .attr('aria-label', '수정')
+                .data('song', {
+                    id: song.id ?? song.key ?? '',
+                    title: song.title ?? ''
+                })
+                .html('<i class="fa-solid fa-pen-to-square"></i>');
+
             const $deleteButton = $('<button>')
                 .addClass('btn-delete-song')
                 .attr('type', 'button')
@@ -1002,7 +1039,9 @@ $(document).ready(function() {
                 })
                 .html('<i class="fa-solid fa-trash-can"></i>');
 
-            $item.append($info, $deleteButton);
+            const $actions = $('<div>').addClass('admin-song-actions');
+            $actions.append($editButton, $deleteButton);
+            $item.append($info, $actions);
             $list.append($item);
         });
 
@@ -1092,6 +1131,128 @@ $(document).ready(function() {
         } catch (error) {
             alert('삭제 실패: ' + error.message);
             $btn.prop('disabled', false).html('<i class="fa-solid fa-trash-can"></i>');
+        }
+    });
+
+    function openEditModal(song) {
+        state.editSongId = song && song.id ? String(song.id) : null;
+        state.editAudioFile = null;
+        state.editImageFile = null;
+        $('#edit-status').text('');
+        $('#edit-song-id').text(state.editSongId || '');
+        $('#edit-title').val(song && song.title ? String(song.title) : '');
+        $('#edit-lyrics').val(song && song.lyricsData ? String(song.lyricsData) : '');
+        $('#edit-sync-offset').val(Number.isFinite(Number(song && song.syncOffset)) ? Number(song.syncOffset) : 0);
+        $('#edit-sync-min-gap').val(Number.isFinite(Number(song && song.syncMinGap)) ? Number(song.syncMinGap) : 0.22);
+        $('#edit-cover-preview').attr('src', song && (song.coverUrl || song.cover) ? (song.coverUrl || song.cover) : FALLBACK_COVER);
+        $('#edit-overlay').addClass('active').attr('aria-hidden', 'false');
+
+        // Reset edit drop zone labels
+        $('#edit-drop-audio .file-info, #edit-drop-image .file-info').text('드래그 또는 클릭').css('opacity', '0.6');
+        $('#edit-drop-audio p').text('음원 교체 (선택)').css('color', '#fff');
+        $('#edit-drop-image p').text('커버 교체 (선택)').css('color', '#fff');
+    }
+
+    function closeEditModal() {
+        $('#edit-overlay').removeClass('active').attr('aria-hidden', 'true');
+        state.editSongId = null;
+        state.editAudioFile = null;
+        state.editImageFile = null;
+    }
+
+    $('#btn-edit-close').on('click', closeEditModal);
+    $('#edit-overlay').on('click', function(e) {
+        if (e.target === this) closeEditModal();
+    });
+
+    async function fetchSongById(id) {
+        if (!id) return null;
+        const data = await gasJsonpGet({ action: 'song', id: String(id) }, { timeoutMs: GAS_JSONP_TIMEOUT_MS });
+        return data && typeof data === 'object' ? data : null;
+    }
+
+    $(document).on('click', '.btn-edit-song', async function() {
+        const song = $(this).data('song') || {};
+        if (!(await ensureBackendOnline())) {
+            alert('Admin backend offline. Edit is disabled until GAS is deployed.');
+            return;
+        }
+
+        try {
+            $('#edit-status').text('데이터 불러오는 중...');
+            const full = await fetchSongById(song.id);
+            if (!full) throw new Error('곡 정보를 불러오지 못했습니다.');
+            openEditModal(full);
+            $('#edit-status').text('');
+        } catch (error) {
+            console.error('Edit open failed:', error);
+            alert('곡 로드 실패: ' + error.message);
+        }
+    });
+
+    function encodeUtf8Base64(text) {
+        return btoa(unescape(encodeURIComponent(String(text || ''))));
+    }
+
+    $('#btn-edit-save').on('click', async function() {
+        const id = state.editSongId;
+        if (!id) return;
+
+        const title = $('#edit-title').val().trim();
+        if (!title) {
+            alert('곡 제목을 입력해주세요.');
+            return;
+        }
+
+        const $status = $('#edit-status').text('저장 중...');
+        const $btn = $(this).prop('disabled', true);
+
+        try {
+            if (!(await ensureBackendOnline())) {
+                throw new Error('Admin backend offline. Update is disabled until GAS is deployed.');
+            }
+
+            const payload = {
+                action: 'update',
+                id,
+                title,
+                artist: 'Andre Youth',
+                syncOffset: Number.parseFloat($('#edit-sync-offset').val()) || 0,
+                syncMinGap: Number.parseFloat($('#edit-sync-min-gap').val()) || 0.22
+            };
+
+            const lyricsText = $('#edit-lyrics').val();
+            if (lyricsText && lyricsText.trim()) {
+                payload.lrcName = `${title}.lrc`;
+                payload.lrcData = encodeUtf8Base64(lyricsText.trim());
+            }
+
+            if (state.editAudioFile) {
+                payload.audioName = `${title}.mp3`;
+                payload.audioMime = state.editAudioFile.type || 'audio/mpeg';
+                payload.audioData = await fileToBase64(state.editAudioFile);
+            }
+
+            if (state.editImageFile) {
+                payload.imageName = `${title}.jpg`;
+                payload.imageMime = state.editImageFile.type || 'image/jpeg';
+                payload.imageData = await fileToBase64(state.editImageFile);
+            }
+
+            const res = await gasBridgePost(payload, { timeoutMs: GAS_BRIDGE_TIMEOUT_MS });
+            if (res && res.status === 'success') {
+                $status.text('저장 완료. 목록을 갱신합니다...');
+                await new Promise(r => setTimeout(r, 600));
+                closeEditModal();
+                fetchSongs();
+            } else {
+                throw new Error((res && res.message) || '업데이트 실패');
+            }
+        } catch (error) {
+            console.error('Update failed:', error);
+            $status.text('저장 실패: ' + error.message);
+        } finally {
+            $btn.prop('disabled', false);
         }
     });
 });

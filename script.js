@@ -10,7 +10,9 @@ $(document).ready(function() {
     };
 
     const audio = document.getElementById('audio-engine');
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
+    const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
+        ? window.APP_CONFIG.GAS_URL
+        : "https://script.google.com/macros/s/AKfycbyzQx5SNfDIv1cONQdCgP8KxfNEyjYqQyujqY6uMNFgZnVmmhFOZ6i_CZSf6vKwDRiH9w/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = true;
     const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v5';
     const PLAYLIST_CACHE_TTL = 1000 * 60; // 1 minute for faster sync in production
@@ -33,6 +35,8 @@ $(document).ready(function() {
     let lyricsAutoScrollTimer = null;
     let lyricsProgrammaticScrollLock = false;
     let lyricsProgrammaticScrollTimer = null;
+    let lastActiveLyricIdx = -1;
+    let lastLyricsScrollAt = 0;
 
     localStorage.setItem('chatUserId', userId);
 
@@ -154,19 +158,9 @@ $(document).ready(function() {
             return fixedAudio;
         }
 
-        try {
-            // Speed up by using 'force-cache' if the browser supports it
-            const response = await fetch(fixedAudio, { cache: 'default' });
-            if (!response.ok) throw new Error(`Audio fetch failed: ${response.status}`);
-            
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            audioSourceCache.set(cacheKey, objectUrl);
-            return objectUrl;
-        } catch (e) {
-            console.warn('Audio resolve fallback:', e);
-            return fixedAudio; // Final fallback to original URL
-        }
+        // For the Drive proxy URL, streaming is faster than downloading the whole blob first.
+        audioSourceCache.set(cacheKey, fixedAudio);
+        return fixedAudio;
     }
 
     function preloadNextTrack() {
@@ -305,48 +299,42 @@ $(document).ready(function() {
     function updateLyricsUI(currentTime) {
         if (!currentLyrics || currentLyrics.length === 0) return;
 
-        let activeIdx = -1;
-        for (let i = 0; i < currentLyrics.length; i++) {
-            if (currentTime >= currentLyrics[i].time) activeIdx = i;
-            else break;
+        // Advance pointer instead of scanning all lines every tick.
+        let activeIdx = lastActiveLyricIdx;
+        if (activeIdx < 0) activeIdx = 0;
+
+        if (activeIdx > 0 && currentTime < currentLyrics[activeIdx].time) {
+            while (activeIdx > 0 && currentTime < currentLyrics[activeIdx].time) activeIdx--;
+        } else {
+            while (activeIdx + 1 < currentLyrics.length && currentTime >= currentLyrics[activeIdx + 1].time) activeIdx++;
         }
 
-        if (activeIdx === -1) return;
-        $('.lyric-line').removeClass('active');
+        if (activeIdx < 0 || activeIdx >= currentLyrics.length) return;
+        if (activeIdx === lastActiveLyricIdx) return;
+
+        if (lastActiveLyricIdx >= 0) {
+            $(`#lyric-${lastActiveLyricIdx}`).removeClass('active');
+        }
         const $activeLine = $(`#lyric-${activeIdx}`).addClass('active');
+        lastActiveLyricIdx = activeIdx;
 
         const container = $('.lyrics-container')[0];
         if (lyricsAutoScrollEnabled && container && $activeLine[0]) {
+            const now = performance.now();
+            if (now - lastLyricsScrollAt < 220) return;
+            lastLyricsScrollAt = now;
+
             const lineOffset = $activeLine[0].offsetTop;
             const lineSize = $activeLine[0].offsetHeight;
             const containerSize = container.offsetHeight;
             const scrollTarget = lineOffset - (containerSize / 2) + (lineSize / 2);
             beginProgrammaticLyricsScroll();
-            container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+            // Frequent smooth scrolling can cause lyric lag; throttle + jump instantly.
+            container.scrollTo({ top: scrollTarget, behavior: 'auto' });
         }
     }
 
-    async function fetchPlaylist() {
-        try {
-            $('#disp-title').text('불러오는 중...');
-            const response = await fetch(`${GAS_URL}?v=${Date.now()}`);
-            const data = await response.json();
-
-            if (data && data.length > 0) {
-                playlistData = data;
-                failedTitles.clear();
-                render();
-                renderCopyright();
-                const firstPlayable = getNextPlayableIndex(0);
-                load(firstPlayable === -1 ? 0 : firstPlayable);
-            } else {
-                $('#disp-title').text('곡을 추가해주세요.');
-            }
-        } catch (error) {
-            console.error('Playlist Fetch Error:', error);
-            $('#disp-title').text('데이터 로드 실패');
-        }
-    }
+    // fetchPlaylist() is defined later with caching + sync; keep a single implementation.
 
     function load(i, play = false) {
         if (!playlistData.length) return;
@@ -388,8 +376,9 @@ $(document).ready(function() {
         $('#disp-title').text(s.title || 'Untitled');
         $('#disp-artist').text(s.artist || 'Andre Youth');
 
+        lastActiveLyricIdx = -1;
         if (s.lyricsData) {
-            currentLyrics = MusicEngine.parseLyrics(s.lyricsData);
+            currentLyrics = MusicEngine.parseLyrics(s.lyricsData, Number(s.syncOffset) || 0);
             renderLyrics();
         } else {
             $('#lyrics-scroll-area').html('<div class="lyric-line no-data">등록된 가사가 없습니다.</div>');
@@ -659,7 +648,7 @@ $(document).ready(function() {
         if (failed?.title) failedTitles.add(failed.title);
         const nextIdx = getNextPlayableIndex(curIdx + 1);
         if (nextIdx === -1) {
-            $('#disp-title').text('?ъ깮 媛?ν븳 怨≪씠 ?놁뒿?덈떎.');
+            $('#disp-title').text('재생 가능한 곡이 없습니다.');
             return;
         }
         load(nextIdx, true);

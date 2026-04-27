@@ -1,5 +1,7 @@
-// Google Apps Script backend for Andre Youth Player
-// Replace the placeholder IDs before deploying.
+// (LEGACY) Google Apps Script backend for Andre Youth Player
+// Prefer using `Code.gs` as the single source of truth.
+// Do NOT deploy `gas-backend.gs` and `Code.gs` together in the same GAS project
+// because they both define top-level CONFIG/HEADERS and will conflict.
 
 const CONFIG = {
   SPREADSHEET_ID: 'PUT_SPREADSHEET_ID_HERE',
@@ -16,6 +18,8 @@ const HEADERS = [
   'audioFileId',
   'imageFileId',
   'lyricsFileId',
+  'syncOffset',
+  'syncMinGap',
   'audioUrl',
   'coverUrl',
   'lyricsData',
@@ -99,6 +103,8 @@ function upsertSong_(data) {
     id: existing ? existing.id : Utilities.getUuid(),
     title: String(data.title),
     artist: String(data.artist || 'Andre Youth'),
+    syncOffset: Number.isFinite(Number(data.syncOffset)) ? Number(data.syncOffset) : (existing ? (Number(existing.syncOffset) || 0) : 0),
+    syncMinGap: Number.isFinite(Number(data.syncMinGap)) ? Number(data.syncMinGap) : (existing ? (Number(existing.syncMinGap) || 0.22) : 0.22),
     createdAt: existing ? existing.createdAt : now.toISOString(),
     updatedAt: now.toISOString()
   };
@@ -165,6 +171,8 @@ function updateSong_(data) {
     id: existing.id,
     title: data.title ? String(data.title) : existing.title,
     artist: data.artist ? String(data.artist) : existing.artist,
+    syncOffset: Number.isFinite(Number(data.syncOffset)) ? Number(data.syncOffset) : (Number(existing.syncOffset) || 0),
+    syncMinGap: Number.isFinite(Number(data.syncMinGap)) ? Number(data.syncMinGap) : (Number(existing.syncMinGap) || 0.22),
     audioFileId: existing.audioFileId,
     imageFileId: existing.imageFileId,
     lyricsFileId: existing.lyricsFileId,
@@ -273,6 +281,8 @@ function rowToSong_(row, rowIndex, headerMap) {
     audioFileId: audioFileId,
     imageFileId: imageFileId,
     lyricsFileId: lyricsFileId,
+    syncOffset: Number(read('syncOffset') || 0) || 0,
+    syncMinGap: Number(read('syncMinGap') || 0.22) || 0.22,
     url: audioFileId ? makeDriveViewUrl_(audioFileId) : String(read('audioUrl') || ''),
     cover: imageFileId ? makeDriveViewUrl_(imageFileId) : String(read('coverUrl') || ''),
     lyricsData: lyricsFileId ? readFileText_(lyricsFileId) : String(read('lyricsData') || ''),
@@ -328,6 +338,8 @@ function appendRow_(sheet, song) {
     song.audioFileId,
     song.imageFileId,
     song.lyricsFileId,
+    song.syncOffset,
+    song.syncMinGap,
     song.audioUrl,
     song.coverUrl,
     song.lyricsData,
@@ -344,6 +356,8 @@ function updateRow_(sheet, rowIndex, song) {
     song.audioFileId,
     song.imageFileId,
     song.lyricsFileId,
+    song.syncOffset,
+    song.syncMinGap,
     song.audioUrl,
     song.coverUrl,
     song.lyricsData,

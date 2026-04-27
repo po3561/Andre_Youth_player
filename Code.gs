@@ -19,6 +19,8 @@ const HEADERS = [
   'audioFileId',
   'imageFileId',
   'lyricsFileId',
+  'syncOffset',
+  'syncMinGap',
   'audioUrl',
   'coverUrl',
   'lyricsData',
@@ -111,6 +113,12 @@ function saveSong_(data, requireExisting) {
   const artist = text_(data.artist || (existing && existing.artist) || 'Andre Youth').trim() || 'Andre Youth';
   const nowIso = new Date().toISOString();
   const isUpdate = !!existing;
+  const syncOffset = Number.isFinite(Number(data.syncOffset))
+    ? Number(data.syncOffset)
+    : (existing && Number.isFinite(Number(existing.syncOffset)) ? Number(existing.syncOffset) : 0);
+  const syncMinGap = Number.isFinite(Number(data.syncMinGap))
+    ? Number(data.syncMinGap)
+    : (existing && Number.isFinite(Number(existing.syncMinGap)) ? Number(existing.syncMinGap) : 0.22);
 
   const audioSource = text_(data.audioData || '');
   const imageSource = text_(data.imageData || data.coverData || data.profileData || '');
@@ -125,6 +133,8 @@ function saveSong_(data, requireExisting) {
     id: isUpdate ? existing.id : Utilities.getUuid(),
     title: title,
     artist: artist,
+    syncOffset: syncOffset,
+    syncMinGap: syncMinGap,
     createdAt: isUpdate ? existing.createdAt : nowIso,
     updatedAt: nowIso
   });
@@ -359,6 +369,8 @@ function rowToSong_(row, rowIndex, headerMap) {
     audioFileId: read('audioFileId'),
     imageFileId: read('imageFileId'),
     lyricsFileId: read('lyricsFileId'),
+    syncOffset: read('syncOffset'),
+    syncMinGap: read('syncMinGap'),
     audioUrl: read('audioUrl'),
     coverUrl: read('coverUrl'),
     lyricsData: read('lyricsData'),
@@ -381,6 +393,8 @@ function normalizeSong_(song) {
     audioFileId: text_(song.audioFileId),
     imageFileId: text_(song.imageFileId),
     lyricsFileId: text_(song.lyricsFileId),
+    syncOffset: Number.isFinite(Number(song.syncOffset)) ? Number(song.syncOffset) : 0,
+    syncMinGap: Number.isFinite(Number(song.syncMinGap)) ? Number(song.syncMinGap) : 0.22,
     audioUrl: audioUrl,
     coverUrl: coverUrl,
     profileUrl: profileUrl || coverUrl,
@@ -466,6 +480,8 @@ function appendRow_(sheet, song) {
     song.audioFileId,
     song.imageFileId,
     song.lyricsFileId,
+    song.syncOffset,
+    song.syncMinGap,
     song.audioUrl,
     song.coverUrl,
     song.lyricsData,
@@ -482,6 +498,8 @@ function updateRow_(sheet, rowIndex, song) {
     song.audioFileId,
     song.imageFileId,
     song.lyricsFileId,
+    song.syncOffset,
+    song.syncMinGap,
     song.audioUrl,
     song.coverUrl,
     song.lyricsData,
