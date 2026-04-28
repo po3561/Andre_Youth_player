@@ -183,26 +183,20 @@ $(document).ready(function() {
             return audioSourceCache.get(cacheKey);
         }
 
-        // Google Drive uc?export=download URLs require blob fetch
-        // because the browser's audio tag can't follow Drive's redirects
-        if (fixedAudio.includes('drive.google.com/uc')) {
+        // Google Drive usercontent URLs require blob fetch because of CORP: same-site policies
+        if (fixedAudio.includes('drive.usercontent.google.com')) {
             try {
-                const response = await fetch(fixedAudio, { mode: 'no-cors' });
-                // no-cors returns opaque response; try cors first
-                const corsResponse = await fetch(fixedAudio).catch(() => null);
-                if (corsResponse && corsResponse.ok) {
-                    const blob = await corsResponse.blob();
+                // Fetch directly with CORS
+                const response = await fetch(fixedAudio);
+                if (response.ok) {
+                    const blob = await response.blob();
                     const blobUrl = URL.createObjectURL(blob);
                     audioSourceCache.set(cacheKey, blobUrl);
                     return blobUrl;
                 }
-                // If CORS blocked, use the URL directly - browser may handle redirect
-                audioSourceCache.set(cacheKey, fixedAudio);
-                return fixedAudio;
+                console.warn('Fetch failed with status:', response.status);
             } catch (e) {
-                console.warn('Blob fetch failed, using direct URL:', e.message);
-                audioSourceCache.set(cacheKey, fixedAudio);
-                return fixedAudio;
+                console.warn('Blob fetch failed, using direct URL as fallback:', e.message);
             }
         }
 

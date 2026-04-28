@@ -50,8 +50,9 @@ const MusicEngine = {
 
         const id = idMatch[1];
         if (type === 'audio') {
-            // 직접 다운로드 URL – 프록시 없이 Google Drive에서 직접 스트리밍
-            return `https://drive.google.com/uc?export=download&id=${id}`;
+            // 직접 다운로드 URL - 리다이렉트 없이 최종 목적지인 usercontent 도메인 사용
+            // 이를 통해 script.js에서 CORS fetch가 가능하게 함
+            return `https://drive.usercontent.google.com/download?id=${id}&export=download&authuser=0`;
         }
 
         // 이미지는 thumbnail API로 (빠르고 CORS 무관)
