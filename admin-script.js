@@ -928,8 +928,11 @@ $(document).ready(function() {
                 throw new Error('Admin backend offline. Upload is disabled until GAS is deployed.');
             }
 
+            const artist = $('#song-artist').val().trim() || $('#setting-default-artist').val().trim() || 'Andre Youth';
+
             const payload = {
                 title,
+                artist,
                 audioName: `${title}.mp3`,
                 audioMime: state.audioFile.type,
                 audioData: await fileToBase64(state.audioFile),

@@ -10,8 +10,8 @@
     <link rel="stylesheet" href="admin-style.css?v=20260427-9">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script defer src="playlist-data.js?v=20260428-1"></script>
-    <script defer src="config.js?v=20260428-1"></script>
+    <script defer src="playlist-data.js?v=20260428-5"></script>
+    <script defer src="config.js?v=20260428-5"></script>
 </head>
 <body class="admin-page">
     <div id="bg-image" style="background-image: url('https://images.unsplash.com/photo-1514525253361-bee8718a300c?auto=format&fit=crop&q=80&w=1000');"></div>
@@ -36,6 +36,11 @@
                 <div class="form-group">
                     <label for="song-title">곡 제목 (필수)</label>
                     <input type="text" id="song-title" placeholder="곡 제목을 입력하세요" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="song-artist">아티스트명</label>
+                    <input type="text" id="song-artist" placeholder="기본값: 설정에 지정된 아티스트" autocomplete="off">
                 </div>
 
                 <div class="form-group lyrics-editor-zone">
@@ -105,7 +110,7 @@
                 </div>
 
                 <button id="btn-upload-all" class="primary-btn upload-all-btn">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> 한 번에 업로드 시작
+                    <i class="fa-solid fa-cloud-arrow-up"></i> 새 곡 저장 및 업로드 시작
                 </button>
 
                 <div id="upload-progress-container" class="progress-container" style="display: none;">
@@ -234,6 +239,6 @@
         </div>
     </div>
 
-    <script defer src="admin-script.js?v=20260428-1"></script>
+    <script defer src="admin-script.js?v=20260428-5"></script>
 </body>
 </html>
