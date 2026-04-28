@@ -50,9 +50,11 @@ const MusicEngine = {
 
         const id = idMatch[1];
         if (type === 'audio') {
-            // 직접 다운로드 URL - 리다이렉트 없이 최종 목적지인 usercontent 도메인 사용
-            // 이를 통해 script.js에서 CORS fetch가 가능하게 함
-            return `https://drive.usercontent.google.com/download?id=${id}&export=download&authuser=0`;
+            // Google Drive 직접 다운로드 URL은 브라우저의 CORP(Cross-Origin-Resource-Policy) 및 
+            // 리다이렉트 보안 정책으로 인해 <audio> 태그에서 재생이 차단됩니다.
+            // 따라서 CORS 우회를 위해 다시 프록시 서버를 사용합니다.
+            const directUrl = `https://drive.google.com/uc?export=download&id=${id}`;
+            return `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(directUrl)}`;
         }
 
         // 이미지는 thumbnail API로 (빠르고 CORS 무관)

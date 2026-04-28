@@ -183,24 +183,7 @@ $(document).ready(function() {
             return audioSourceCache.get(cacheKey);
         }
 
-        // Google Drive usercontent URLs require blob fetch because of CORP: same-site policies
-        if (fixedAudio.includes('drive.usercontent.google.com')) {
-            try {
-                // Fetch directly with CORS
-                const response = await fetch(fixedAudio);
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    audioSourceCache.set(cacheKey, blobUrl);
-                    return blobUrl;
-                }
-                console.warn('Fetch failed with status:', response.status);
-            } catch (e) {
-                console.warn('Blob fetch failed, using direct URL as fallback:', e.message);
-            }
-        }
-
-        // Non-Drive URLs - use directly
+        // Use the URL directly (it now points to api.codetabs.com proxy which handles CORS)
         audioSourceCache.set(cacheKey, fixedAudio);
         return fixedAudio;
     }
