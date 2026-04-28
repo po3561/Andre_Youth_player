@@ -12,10 +12,10 @@ $(document).ready(function() {
     const audio = document.getElementById('audio-engine');
     const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
         ? window.APP_CONFIG.GAS_URL
-        : "https://script.google.com/macros/s/AKfycbxv_s0YGXz-2cUzTsosgZp2BZFlKtXgVIZCCVG9441vKcsAE54gLPJEeo_a6McFQo8TZA/exec";
+        : "https://script.google.com/macros/s/AKfycby3Tl6TuBntpy44B6qSuL5m2VU83OhpURZKR445n2Pzv2yYlLC7gGqq8bVedd_08EpMMw/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = true;
-    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v7';
-    const PLAYLIST_CACHE_TTL = 1000 * 30;
+    const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v8';
+    const PLAYLIST_CACHE_TTL = 1000 * 10;
 
     let curIdx = -1;
     let isShuffle = false;
@@ -52,7 +52,7 @@ $(document).ready(function() {
     }
 
     function songImage(song) {
-        const raw = song?.profile || song?.cover || "";
+        const raw = song?.profile || song?.cover || song?.coverUrl || "";
         return MusicEngine.fixUrl(raw, 'image') || fallbackImage;
     }
 
@@ -125,10 +125,14 @@ $(document).ready(function() {
         return true;
     }
 
+    function getSongUrl(song) {
+        return song?.url || song?.audioUrl || '';
+    }
+
     function getPlayableIndices() {
         return playlistData
             .map((song, index) => ({ song, index }))
-            .filter(item => item.song && item.song.url && !failedTitles.has(item.song.title))
+            .filter(item => item.song && getSongUrl(item.song) && !failedTitles.has(item.song.title))
             .map(item => item.index);
     }
 
@@ -137,7 +141,7 @@ $(document).ready(function() {
         for (let step = 0; step < playlistData.length; step++) {
             const idx = (startIndex + step + playlistData.length) % playlistData.length;
             const s = playlistData[idx];
-            if (s && s.url && !failedTitles.has(s.title)) return idx;
+            if (s && getSongUrl(s) && !failedTitles.has(s.title)) return idx;
         }
         return -1;
     }
@@ -478,7 +482,7 @@ $(document).ready(function() {
         const s = playlistData[targetIdx];
         
         // If the current candidate is invalid (no URL or marked failed), find the next one
-        if (!s || !s.url || failedTitles.has(s.title)) {
+        if (!s || !getSongUrl(s) || failedTitles.has(s.title)) {
             targetIdx = getNextPlayableIndex(targetIdx + 1);
             if (targetIdx === -1 || targetIdx === i) {
                 // If I came back to the same failed index or no playable left
@@ -493,7 +497,7 @@ $(document).ready(function() {
         curIdx = targetIdx;
         const finalSong = playlistData[curIdx];
 
-        const fixedAudio = MusicEngine.fixUrl(s.url, 'audio');
+        const fixedAudio = MusicEngine.fixUrl(getSongUrl(s), 'audio');
         const fixedCover = songImage(s);
 
         const loadToken = ++audioLoadToken;
@@ -725,6 +729,21 @@ $(document).ready(function() {
         syncHearts();
     }
 
+    // GAS 응답 데이터의 url/cover 필드 정규화 (audioUrl/coverUrl fallback)
+    function normalizeSongs(songs) {
+        if (!Array.isArray(songs)) return [];
+        return songs.map(s => {
+            if (!s) return s;
+            // url 필드가 없으면 audioUrl에서 생성
+            if (!s.url && s.audioUrl) s.url = s.audioUrl;
+            if (!s.url && s.audioFileId) s.url = 'https://drive.google.com/uc?export=download&id=' + s.audioFileId;
+            // cover 필드가 없으면 coverUrl에서 생성
+            if (!s.cover && s.coverUrl) s.cover = s.coverUrl;
+            if (!s.cover && s.imageFileId) s.cover = 'https://drive.google.com/thumbnail?id=' + s.imageFileId + '&sz=w1000';
+            return s;
+        });
+    }
+
     async function fetchPlaylist() {
         if (!ENABLE_REMOTE_PLAYLIST_SYNC) return;
         try {
@@ -733,7 +752,8 @@ $(document).ready(function() {
             }
 
             const payload = await fetchBootstrapPayload({ includeLyrics: false, lyricsLimit: 0 });
-            const data = payload && Array.isArray(payload.songs) ? payload.songs : [];
+            const rawData = payload && Array.isArray(payload.songs) ? payload.songs : [];
+            const data = normalizeSongs(rawData);
 
             if (payload && payload.settings) {
                 applyAppSettings(payload.settings);
@@ -745,6 +765,8 @@ $(document).ready(function() {
                 const currentTitle = playlistData[curIdx]?.title;
                 
                 playlistData = data;
+                // PUBLIC_PLAYLIST도 동기화하여 admin fallback 데이터 갱신
+                window.PUBLIC_PLAYLIST = data;
                 playlistRevision = String(payload && payload.revision ? payload.revision : '');
                 writePlaylistCache({
                     songs: data,
@@ -936,9 +958,10 @@ $(document).ready(function() {
                     if (payload && payload.settings) applyAppSettings(payload.settings);
                     if (payload && Array.isArray(payload.songs) && payload.songs.length) {
                         playlistRevision = String(payload && payload.revision ? payload.revision : '');
-                        playlistData = payload.songs;
+                        playlistData = normalizeSongs(payload.songs);
+                        window.PUBLIC_PLAYLIST = playlistData;
                         writePlaylistCache({
-                            songs: payload.songs,
+                            songs: playlistData,
                             settings: payload.settings || appSettings,
                             revision: playlistRevision
                         });

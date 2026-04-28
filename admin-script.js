@@ -3,7 +3,7 @@ $(document).ready(function() {
     // Re-linked to the user's latest, authorized deployment!
     const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
         ? window.APP_CONFIG.GAS_URL
-        : "https://script.google.com/macros/s/AKfycbxv_s0YGXz-2cUzTsosgZp2BZFlKtXgVIZCCVG9441vKcsAE54gLPJEeo_a6McFQo8TZA/exec";
+        : "https://script.google.com/macros/s/AKfycby3Tl6TuBntpy44B6qSuL5m2VU83OhpURZKR445n2Pzv2yYlLC7gGqq8bVedd_08EpMMw/exec";
     const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
     const state = {
         audioFile: null,
@@ -1017,9 +1017,10 @@ $(document).ready(function() {
             const songKey = song.id ?? song.key ?? song.title ?? '';
             const $item = $('<div>').addClass('admin-song-item').attr('data-song-key', songKey);
             const $info = $('<div>').addClass('admin-song-info');
+            const coverSrc = normalizeCoverUrl(song.cover || song.coverUrl || '');
             const $img = $('<img>')
                 .addClass('song-cover-thumb')
-                .attr('src', song.cover || song.coverUrl || FALLBACK_COVER)
+                .attr('src', coverSrc || FALLBACK_COVER)
                 .attr('alt', `${song.title || '곡'} 커버`);
 
             $img.on('error', function() {
@@ -1063,6 +1064,17 @@ $(document).ready(function() {
             updateBackendStatus(false, 'Admin backend offline. Showing the public snapshot.');
             renderPublicSnapshotFallback();
         }
+    }
+
+    // Google Drive cover URL -> thumbnail URL 정규화
+    function normalizeCoverUrl(url) {
+        if (!url) return '';
+        if (url.includes('drive.google.com/thumbnail')) return url;
+        const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (idMatch && idMatch[1]) {
+            return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w200`;
+        }
+        return url;
     }
 
     $('#btn-refresh-list').click(fetchSongs);
@@ -1225,9 +1237,10 @@ $(document).ready(function() {
         $('#edit-lyrics').val(song && song.lyricsData ? String(song.lyricsData) : '');
         $('#edit-sync-offset').val(Number.isFinite(Number(song && song.syncOffset)) ? Number(song.syncOffset) : 0);
         $('#edit-sync-min-gap').val(Number.isFinite(Number(song && song.syncMinGap)) ? Number(song.syncMinGap) : 0.22);
+        const editCoverSrc = normalizeCoverUrl((song && (song.coverUrl || song.cover)) ? (song.coverUrl || song.cover) : '');
         $('#edit-cover-preview')
             .off('error')
-            .attr('src', song && (song.coverUrl || song.cover) ? (song.coverUrl || song.cover) : FALLBACK_COVER)
+            .attr('src', editCoverSrc || FALLBACK_COVER)
             .on('error', function() {
                 if (this.src !== FALLBACK_COVER) this.src = FALLBACK_COVER;
             });

@@ -209,6 +209,91 @@ function readFile_(id) {
   try { return DriveApp.getFileById(id).getBlob().getDataAsString(); } catch(e) { return ''; }
 }
 
+function deleteSong_(data) {
+  const sheet = getSheet_();
+  const id = data && data.id ? String(data.id) : '';
+  const title = data && data.title ? String(data.title) : '';
+  
+  if (!id && !title) throw new Error('id 또는 title이 필요합니다.');
+  
+  let existing = null;
+  if (id) {
+    existing = findRowById_(sheet, id);
+  }
+  if (!existing && title) {
+    // title로 fallback 검색
+    const rows = sheet.getDataRange().getValues();
+    const map = buildHeaderMap_(rows[0]);
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][map.title] || '') === title) {
+        existing = rowToSong_(rows[i], i + 1, map);
+        break;
+      }
+    }
+  }
+  
+  if (!existing) throw new Error('곡을 찾을 수 없습니다.');
+  
+  // 드라이브 파일 삭제
+  ['audioFileId', 'imageFileId', 'lyricsFileId'].forEach(function(key) {
+    var fileId = existing[key];
+    if (fileId) {
+      try { DriveApp.getFileById(fileId).setTrashed(true); } catch(e) { /* ignore */ }
+    }
+  });
+  
+  sheet.deleteRow(existing.rowIndex);
+  return { status: 'success', action: 'delete', id: existing.id };
+}
+
+function getSongById_(id) {
+  const sheet = getSheet_();
+  const existing = findRowById_(sheet, String(id));
+  if (!existing) return { status: 'error', message: 'song not found' };
+  return { status: 'ok', song: existing };
+}
+
+function updateSong_(data) {
+  if (!data || !data.id) throw new Error('id가 필요합니다.');
+  const sheet = getSheet_();
+  const existing = findRowById_(sheet, String(data.id));
+  if (!existing) throw new Error('곡을 찾을 수 없습니다.');
+  
+  const now = new Date().toISOString();
+  const song = {
+    id: existing.id,
+    title: data.title ? String(data.title) : existing.title,
+    artist: data.artist ? String(data.artist) : existing.artist,
+    audioFileId: existing.audioFileId,
+    imageFileId: existing.imageFileId,
+    lyricsFileId: existing.lyricsFileId,
+    syncOffset: data.syncOffset !== undefined ? Number(data.syncOffset) : (existing.syncOffset || 0),
+    syncMinGap: data.syncMinGap !== undefined ? Number(data.syncMinGap) : (existing.syncMinGap || 0.22),
+    createdAt: existing.createdAt,
+    updatedAt: now
+  };
+  
+  if (data.audioData) {
+    try { DriveApp.getFileById(existing.audioFileId).setTrashed(true); } catch(e) {}
+    song.audioFileId = saveFile_(data.audioData, data.audioName || (song.title + '.mp3'), data.audioMime || 'audio/mpeg', CONFIG.AUDIO_FOLDER_ID);
+  }
+  if (data.imageData) {
+    try { DriveApp.getFileById(existing.imageFileId).setTrashed(true); } catch(e) {}
+    song.imageFileId = saveFile_(data.imageData, data.imageName || (song.title + '.jpg'), data.imageMime || 'image/jpeg', CONFIG.IMAGE_FOLDER_ID);
+  }
+  if (data.lrcData) {
+    try { DriveApp.getFileById(existing.lyricsFileId).setTrashed(true); } catch(e) {}
+    song.lyricsFileId = saveFile_(data.lrcData, data.lrcName || (song.title + '.lrc'), 'text/plain', CONFIG.LRC_FOLDER_ID);
+  }
+  
+  song.audioUrl = makeUrl_(song.audioFileId);
+  song.coverUrl = makeUrl_(song.imageFileId);
+  song.lyricsData = song.lyricsFileId ? readFile_(song.lyricsFileId) : (existing.lyricsData || '');
+  
+  updateRow_(sheet, existing.rowIndex, song);
+  return { status: 'success', action: 'update', song: song };
+}
+
 function makeUrl_(id) {
   return id ? 'https://drive.google.com/uc?export=download&id=' + id : '';
 }
