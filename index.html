@@ -127,15 +127,54 @@
             </div>
         </div>
 
+        <!-- Info Overlay (Modified from Copyright Overlay) -->
         <div id="copyright-overlay" class="ios-popup">
             <div class="popup-card glass-card">
                 <div class="popup-header">
-                    <span>저작권 정보</span>
+                    <span>플레이리스트 정보</span>
                     <button class="close-x"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <div class="popup-body">
-                    <div class="copyright-notice">본 플레이어는 비영리 목적의 내부 재생용입니다.</div>
-                    <div class="copy-list" id="dynamic-copy-list"></div>
+                <div class="popup-body" id="info-popup-body">
+                    <div class="info-menu-buttons">
+                        <button id="btn-inquiry" class="menu-btn inquiry-btn">
+                            <i class="fa-solid fa-envelope"></i> 플레이 리스트 문의
+                        </button>
+                        <button id="btn-show-login" class="menu-btn admin-btn">
+                            <i class="fa-solid fa-user-shield"></i> 관리자 로그인
+                        </button>
+                    </div>
+
+                    <!-- Login Section -->
+                    <div id="login-section" class="auth-section hidden-section">
+                        <h3>관리자 로그인</h3>
+                        <div class="input-group">
+                            <input type="text" id="login-id" placeholder="아이디">
+                            <input type="password" id="login-pw" placeholder="비밀번호">
+                        </div>
+                        <div class="auth-actions">
+                            <button id="btn-login-submit" class="auth-btn submit-btn">로그인</button>
+                            <button id="btn-go-signup" class="auth-btn link-btn">회원가입</button>
+                        </div>
+                        <button id="btn-back-to-menu" class="back-btn"><i class="fa-solid fa-chevron-left"></i> 뒤로가기</button>
+                    </div>
+
+                    <!-- Signup Section -->
+                    <div id="signup-section" class="auth-section hidden-section">
+                        <h3>관리자 회원가입</h3>
+                        <div class="input-group">
+                            <input type="text" id="signup-id" placeholder="아이디 (필수)">
+                            <input type="password" id="signup-pw" placeholder="비밀번호 (필수)">
+                            <input type="text" id="signup-name" placeholder="이름 (필수)">
+                            <input type="text" id="signup-phone" placeholder="전화번호 (필수)">
+                            <input type="text" id="signup-unique" placeholder="고유번호 (필수)">
+                            <input type="text" id="signup-company" placeholder="사명 (필수)">
+                            <input type="text" id="signup-position" placeholder="직책 (필수)">
+                        </div>
+                        <div class="auth-actions">
+                            <button id="btn-signup-submit" class="auth-btn submit-btn">가입신청</button>
+                        </div>
+                        <button id="btn-back-to-login" class="back-btn"><i class="fa-solid fa-chevron-left"></i> 뒤로가기</button>
+                    </div>
                 </div>
             </div>
         </div>

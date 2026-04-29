@@ -1,5 +1,135 @@
-/* admin-script.js */
 $(document).ready(function() {
+    // Login Protection
+    const adminUser = JSON.parse(localStorage.getItem('adminUser'));
+    if (!adminUser || !adminUser.isApproved) {
+        $('body').append('<div class="login-protection-overlay">권한이 없습니다. 로그인 후 이용해주세요.</div>');
+        setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+        return;
+    }
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
+        authDomain: "busan-youth-player.firebaseapp.com",
+        databaseURL: "https://busan-youth-player-default-rtdb.firebaseio.com",
+        projectId: "busan-youth-player",
+        storageBucket: "busan-youth-player.firebasestorage.app",
+        messagingSenderId: "406016035492",
+        appId: "1:406016035492:web:e3d03145aefa945c707431"
+    };
+
+    let userDb = null;
+    let firebaseLoadPromise = null;
+
+    async function ensureUserDb() {
+        if (userDb) return userDb;
+        if (!firebaseLoadPromise) {
+            firebaseLoadPromise = (async () => {
+                if (typeof window.firebase === 'undefined' || typeof window.firebase.database !== 'function') {
+                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
+                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js');
+                }
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                return firebase.database();
+            })();
+        }
+        const db = await firebaseLoadPromise;
+        userDb = db.ref('users');
+        return userDb;
+    }
+
+    function loadScriptOnce(src) {
+        return new Promise((resolve, reject) => {
+            if ([...document.scripts].some(script => script.src === src)) {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    // User Management Functions
+    async function fetchUsers() {
+        $('#admin-user-list').html('<div class="loading-spinner">사용자 불러오는 중...</div>');
+        try {
+            await ensureUserDb();
+            userDb.on('value', (snapshot) => {
+                const users = [];
+                snapshot.forEach(child => {
+                    users.push({ key: child.key, ...child.val() });
+                });
+                renderUsers(users);
+            });
+        } catch (error) {
+            console.error('Fetch Users Error:', error);
+            $('#admin-user-list').html('<div class="loading-spinner">사용자 목록을 불러오지 못했습니다.</div>');
+        }
+    }
+
+    function renderUsers(users) {
+        const $list = $('#admin-user-list').empty();
+        if (users.length === 0) {
+            $list.append('<div class="loading-spinner">등록된 사용자가 없습니다.</div>');
+            return;
+        }
+
+        // Sort: Pending first
+        users.sort((a, b) => (a.isApproved === b.isApproved) ? 0 : a.isApproved ? 1 : -1);
+
+        users.forEach(u => {
+            const statusClass = u.isApproved ? 'approved' : 'pending';
+            const statusText = u.isApproved ? '승인됨' : '승인 대기';
+            const actionBtns = u.isApproved ? 
+                `<button class="btn-reject" data-key="${u.key}">권한 회수</button>` :
+                `<button class="btn-approve" data-key="${u.key}">승인</button>`;
+
+            $list.append(`
+                <div class="admin-user-item">
+                    <div class="user-info-main">
+                        <div class="user-name-row">
+                            <span class="user-name">${u.name} (${u.id})</span>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="user-details">
+                            전화: ${u.phone} | 고유번호: ${u.unique}<br>
+                            사명: ${u.company} | 직책: ${u.position}
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        ${actionBtns}
+                        <button class="btn-reject" data-key="${u.key}" style="background: rgba(255,0,0,0.1); border-color: rgba(255,0,0,0.2);">삭제</button>
+                    </div>
+                </div>
+            `);
+        });
+    }
+
+    $(document).on('click', '.btn-approve', async function() {
+        const key = $(this).data('key');
+        if (confirm('이 사용자를 승인하시겠습니까?')) {
+            await userDb.child(key).update({ isApproved: true });
+        }
+    });
+
+    $(document).on('click', '.btn-reject', async function() {
+        const key = $(this).data('key');
+        const isDelete = $(this).text() === '삭제';
+        if (confirm(isDelete ? '이 사용자를 삭제하시겠습니까?' : '이 사용자의 승인을 취소하시겠습니까?')) {
+            if (isDelete) {
+                await userDb.child(key).remove();
+            } else {
+                await userDb.child(key).update({ isApproved: false });
+            }
+        }
+    });
+
+    $('#btn-refresh-users').on('click', () => fetchUsers());
+    fetchUsers();
+
     // Re-linked to the user's latest, authorized deployment!
     const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
         ? window.APP_CONFIG.GAS_URL

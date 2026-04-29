@@ -15,7 +15,7 @@ $(document).ready(function() {
         : "https://script.google.com/macros/s/AKfycby3Tl6TuBntpy44B6qSuL5m2VU83OhpURZKR445n2Pzv2yYlLC7gGqq8bVedd_08EpMMw/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = true;
     const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v8';
-    const PLAYLIST_CACHE_TTL = 1000 * 10;
+    const PLAYLIST_CACHE_TTL = 1000 * 60 * 60 * 24; // 24시간 캐시 유지 (빠른 로딩을 위해)
 
     let curIdx = -1;
     let isShuffle = false;
@@ -32,6 +32,7 @@ $(document).ready(function() {
     const fallbackImage = MusicEngine.placeholderImage || "";
     let firebaseLoadPromise = null;
     let chatDb = null;
+    let userDb = null; // New: Reference for users
     let chatListenersReady = false;
     let lyricsAutoScrollEnabled = true;
     let lyricsAutoScrollTimer = null;
@@ -288,16 +289,159 @@ $(document).ready(function() {
         syncHearts();
     }
 
-    function renderCopyright() {
-        const $list = $('#dynamic-copy-list').empty();
-        playlistData.forEach((s, i) => {
-            $list.append(`
-                <div class="copy-item">
-                    <span class="copy-title">${i + 1}. ${escapeHtml(s.title || '')}</span>
-                    <span style="font-size:0.75rem; opacity:0.6;">${escapeHtml(s.artist || (appSettings && appSettings.defaultArtist) || 'Andre Youth')}</span>
-                </div>
-            `);
+    function setupInfoOverlayEvents() {
+        // Menu Navigation
+        $('#btn-show-login').on('click', () => {
+            $('.info-menu-buttons').hide();
+            $('#login-section').removeClass('hidden-section').hide().fadeIn(300);
+            $('#login-id, #login-pw').val(''); // Clear inputs
         });
+
+        $('#btn-go-signup').on('click', () => {
+            $('#login-section').hide();
+            $('#signup-section').removeClass('hidden-section').hide().fadeIn(300);
+            $('#signup-section input').val(''); // Clear inputs
+        });
+
+        $('#btn-back-to-menu').on('click', () => {
+            $('.auth-section').hide();
+            $('.info-menu-buttons').fadeIn(300);
+        });
+
+        $('#btn-back-to-login').on('click', () => {
+            $('#signup-section').hide();
+            $('#login-section').fadeIn(300);
+            $('#login-id, #login-pw').val(''); // Clear inputs
+        });
+
+        $('#btn-inquiry').on('click', () => {
+            // Using mailto to open email client natively
+            window.location.href = "mailto:ej210651392@gmail.com?subject=Andre Youth Player - 플레이리스트 문의";
+        });
+
+        // Signup Submit
+        $('#btn-signup-submit').on('click', async () => {
+            const data = {
+                id: $('#signup-id').val().trim(),
+                pw: $('#signup-pw').val().trim(),
+                name: $('#signup-name').val().trim(),
+                phone: $('#signup-phone').val().trim(),
+                unique: $('#signup-unique').val().trim(),
+                company: $('#signup-company').val().trim(),
+                position: $('#signup-position').val().trim(),
+                isApproved: false,
+                isAdmin: false,
+                timestamp: Date.now()
+            };
+
+            if (!data.id || !data.pw || !data.name || !data.phone || !data.unique || !data.company || !data.position) {
+                alert('모든 필수 정보를 입력해주세요.');
+                return;
+            }
+
+            try {
+                await ensureUserDb();
+                
+                // Check if ID already exists
+                const snapshot = await userDb.orderByChild('id').equalTo(data.id).once('value');
+                if (snapshot.exists()) {
+                    alert('이미 존재하는 아이디입니다.');
+                    return;
+                }
+
+                await userDb.push(data);
+                alert('가입 신청이 완료되었습니다. 관리자 승인 후 로그인 가능합니다.');
+                $('#btn-back-to-login').trigger('click');
+                // Clear fields
+                $('#signup-section input').val('');
+            } catch (error) {
+                console.error('Signup Error:', error);
+                alert('가입 신청 중 오류가 발생했습니다.');
+            }
+        });
+
+        // Login Submit
+        $('#btn-login-submit').on('click', async () => {
+            const id = $('#login-id').val().trim();
+            const pw = $('#login-pw').val().trim();
+
+            if (!id || !pw) {
+                alert('아이디와 비밀번호를 입력해주세요.');
+                return;
+            }
+
+            // 최고 관리자(Master Admin) 하드코딩 패스
+            if (id === 'ej210651392@gmail.com' && pw === 'sadcandypo136!') {
+                alert('최고 관리자님, 환영합니다!');
+                localStorage.setItem('adminUser', JSON.stringify({
+                    id: id,
+                    name: '최고 관리자(Master)',
+                    isApproved: true,
+                    isAdmin: true
+                }));
+                window.location.href = 'admin.html';
+                return;
+            }
+
+            try {
+                await ensureUserDb();
+                const snapshot = await userDb.orderByChild('id').equalTo(id).once('value');
+                
+                if (!snapshot.exists()) {
+                    alert('존재하지 않는 아이디입니다.');
+                    return;
+                }
+
+                let userData = null;
+                snapshot.forEach(child => {
+                    if (child.val().pw === pw) {
+                        userData = child.val();
+                    }
+                });
+
+                if (!userData) {
+                    alert('비밀번호가 일치하지 않습니다.');
+                    return;
+                }
+
+                if (!userData.isApproved) {
+                    alert('아직 관리자 승인이 완료되지 않았습니다.');
+                    return;
+                }
+
+                // Success
+                alert(`${userData.name}님, 환영합니다!`);
+                localStorage.setItem('adminUser', JSON.stringify(userData));
+                
+                // Redirect to admin page if admin
+                window.location.href = 'admin.html';
+                
+            } catch (error) {
+                console.error('Login Error:', error);
+                alert('로그인 중 오류가 발생했습니다.');
+            }
+        });
+    }
+
+    async function ensureUserDb() {
+        if (userDb) return userDb;
+        if (!firebaseLoadPromise) {
+            firebaseLoadPromise = (async () => {
+                if (typeof window.firebase === 'undefined' || typeof window.firebase.database !== 'function') {
+                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
+                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js');
+                }
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                return firebase.database();
+            })();
+        }
+        const db = await firebaseLoadPromise;
+        userDb = db.ref('users');
+        return userDb;
+    }
+
+    function renderCopyright() {
+        // Deprecated: replaced by setupInfoOverlayEvents
     }
 
     function renderLyrics() {
@@ -898,7 +1042,14 @@ $(document).ready(function() {
             }
         }
     });
-    $('#btn-copyright').click(() => $('#copyright-overlay').addClass('active'));
+    $('#btn-copyright').click(() => {
+        // Reset overlay state
+        $('.auth-section').hide();
+        $('.info-menu-buttons').show();
+        $('#copyright-overlay').addClass('active');
+    });
+
+    setupInfoOverlayEvents();
     $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
 
     $('#album-trigger').click(function() {
