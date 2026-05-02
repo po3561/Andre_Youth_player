@@ -12,7 +12,7 @@ $(document).ready(function() {
     const audio = document.getElementById('audio-engine');
     const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
         ? window.APP_CONFIG.GAS_URL
-        : "https://script.google.com/macros/s/AKfycby3Tl6TuBntpy44B6qSuL5m2VU83OhpURZKR445n2Pzv2yYlLC7gGqq8bVedd_08EpMMw/exec";
+        : "https://script.google.com/macros/s/AKfycby_hiKUz2Y2dv6WFBGCmaiXl08AqPijiw6yZlLbxLJDTFud10FW19vSrrf9Z6IVz75oGg/exec";
     const ENABLE_REMOTE_PLAYLIST_SYNC = true;
     const PLAYLIST_CACHE_KEY = 'andreYouthPlaylistCache_v8';
     const PLAYLIST_CACHE_TTL = 1000 * 60 * 60 * 24; // 24시간 캐시 유지 (빠른 로딩을 위해)

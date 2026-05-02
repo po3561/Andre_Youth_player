@@ -140,7 +140,7 @@ $(document).ready(function() {
     // Re-linked to the user's latest, authorized deployment!
     const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
         ? window.APP_CONFIG.GAS_URL
-        : "https://script.google.com/macros/s/AKfycby3Tl6TuBntpy44B6qSuL5m2VU83OhpURZKR445n2Pzv2yYlLC7gGqq8bVedd_08EpMMw/exec";
+        : "https://script.google.com/macros/s/AKfycby_hiKUz2Y2dv6WFBGCmaiXl08AqPijiw6yZlLbxLJDTFud10FW19vSrrf9Z6IVz75oGg/exec";
     const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
     const state = {
         audioFile: null,
