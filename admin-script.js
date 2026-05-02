@@ -1212,25 +1212,19 @@ $(document).ready(function() {
 
     $('#btn-refresh-list').click(fetchSongs);
 
+    let cachedSettings = {};
+
     function readSettingsForm() {
-        return {
-            playlistTitle: $('#setting-playlist-title').val().trim(),
-            playlistSubtitle: $('#setting-playlist-subtitle').val().trim(),
-            defaultArtist: $('#setting-default-artist').val().trim(),
-            themePrimary: $('#setting-theme-primary').val().trim(),
-            lyricHintText: $('#setting-lyric-hint').val().trim(),
-            copyrightNotice: $('#setting-copyright-notice').val().trim()
-        };
+        return Object.assign({}, cachedSettings, {
+            playlistTitle: ($('#setting-playlist-title').val() || '').trim(),
+            playlistSubtitle: ($('#setting-playlist-subtitle').val() || '').trim()
+        });
     }
 
     function writeSettingsForm(settings) {
-        const data = settings || {};
-        $('#setting-playlist-title').val(data.playlistTitle || '');
-        $('#setting-playlist-subtitle').val(data.playlistSubtitle || '');
-        $('#setting-default-artist').val(data.defaultArtist || 'Andre Youth');
-        $('#setting-theme-primary').val(data.themePrimary || '#21ccf9');
-        $('#setting-lyric-hint').val(data.lyricHintText || 'TAP FOR LYRICS');
-        $('#setting-copyright-notice').val(data.copyrightNotice || '');
+        cachedSettings = settings || {};
+        $('#setting-playlist-title').val(cachedSettings.playlistTitle || '');
+        $('#setting-playlist-subtitle').val(cachedSettings.playlistSubtitle || '');
     }
 
     async function loadAppSettings() {

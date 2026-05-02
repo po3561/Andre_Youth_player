@@ -249,20 +249,7 @@ body.admin-page .admin-container {
     gap: 12px;
 }
 
-.admin-settings-grid .settings-wide {
-    grid-column: 1 / -1;
-}
 
-.admin-settings-grid textarea {
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1.5px solid rgba(255,255,255,0.2);
-    background: rgba(0,0,0,0.2);
-    color: #fff;
-    outline: none;
-    resize: vertical;
-    font-family: inherit;
-}
 
 @media (max-width: 520px) {
     .admin-settings-grid {
