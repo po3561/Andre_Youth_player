@@ -215,37 +215,97 @@ body.admin-page .admin-container {
 }
 
 .admin-edit-card {
-    height: 78vh;
+    height: 82vh;
     max-width: 520px;
+    background: rgba(18, 18, 28, 0.98) !important;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.admin-edit-card .popup-header {
+    background: rgba(33, 204, 249, 0.15);
+    border-bottom: 1px solid rgba(33, 204, 249, 0.25);
+}
+
+.admin-edit-card .close-x {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.8);
 }
 
 .admin-edit-body {
-    padding: 18px 20px;
-    background: rgba(255,255,255,0.96);
+    padding: 20px;
+    background: linear-gradient(180deg, rgba(18,18,28,0.98), rgba(12,12,20,0.99));
+    color: #fff;
+}
+
+.admin-edit-body .form-group {
+    margin-bottom: 16px;
+}
+
+.admin-edit-body .form-group label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 2px;
+}
+
+.admin-edit-body .form-group input {
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+    transition: 0.3s;
+}
+
+.admin-edit-body .form-group input:focus {
+    border-color: rgba(33, 204, 249, 0.6);
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 0 3px rgba(33, 204, 249, 0.12);
 }
 
 .admin-edit-body textarea {
     width: 100%;
     padding: 14px;
-    border-radius: 14px;
-    border: 1.5px solid rgba(0,0,0,0.08);
-    background: rgba(0,0,0,0.04);
-    color: #111;
+    border-radius: 12px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.88rem;
+    line-height: 1.6;
     resize: vertical;
+    outline: none;
+    transition: 0.3s;
+}
+
+.admin-edit-body textarea::placeholder {
+    color: rgba(255,255,255,0.35);
+}
+
+.admin-edit-body textarea:focus {
+    border-color: rgba(33, 204, 249, 0.6);
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 0 3px rgba(33, 204, 249, 0.12);
 }
 
 .admin-edit-meta {
     display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    margin-bottom: 14px;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 14px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
 }
 
 .edit-cover-thumb {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 .admin-edit-id-row {
@@ -257,14 +317,79 @@ body.admin-page .admin-container {
 
 .admin-edit-id {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 0.82rem;
-    color: rgba(0,0,0,0.62);
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.45);
     word-break: break-all;
 }
 
 .admin-edit-meta-text {
     min-width: 0;
     flex: 1;
+}
+
+.admin-edit-body .sync-help {
+    color: rgba(255,255,255,0.45);
+    font-size: 0.78rem;
+}
+
+.admin-edit-body .sync-advanced {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+.admin-edit-body .sync-advanced summary {
+    color: rgba(255,255,255,0.85);
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.admin-edit-body .sync-meta-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.admin-edit-body .sync-meta-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+}
+
+.admin-edit-body .sync-meta-item input {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.admin-edit-body .sync-meta-item input:focus {
+    border-color: rgba(33,204,249,0.6);
+}
+
+.admin-edit-body .drop-zone {
+    background: rgba(255,255,255,0.05);
+    border: 1.5px dashed rgba(255,255,255,0.2);
+}
+
+.admin-edit-body .drop-zone:hover {
+    border-color: rgba(33, 204, 249, 0.5);
+    background: rgba(33, 204, 249, 0.06);
+}
+
+.admin-edit-body .primary-btn {
+    margin-top: 16px;
+    width: 100%;
 }
 
 .admin-settings-grid {
