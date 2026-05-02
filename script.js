@@ -250,11 +250,15 @@ $(document).ready(function() {
 
     function seekByProgress(percent) {
         if (!Number.isFinite(percent) || Number.isNaN(audio.duration) || audio.duration <= 0) return;
-        const nextTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
-        audio.currentTime = nextTime;
-        $('#time-now').text(formatTime(nextTime));
-        if ($('#album-trigger').hasClass('show-lyrics')) {
-            updateLyricsUI(nextTime);
+        try {
+            const nextTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
+            audio.currentTime = nextTime;
+            $('#time-now').text(formatTime(nextTime));
+            if ($('#album-trigger').hasClass('show-lyrics')) {
+                updateLyricsUI(nextTime);
+            }
+        } catch (err) {
+            console.error("Seek error:", err);
         }
     }
 
@@ -1037,24 +1041,27 @@ $(document).ready(function() {
     $('#btn-vol-close').on('click touchstart', function(e) { e.stopPropagation(); $('#main-header').removeClass('mode-volume'); });
     $('#sb-volume-slider').on('input', function() { audio.volume = $(this).val() / 100; openSb(); });
     
-    $('#progress-bar').on('input', function() {
-        if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
-        isScrubbing = true;
-        const percent = parseFloat($(this).val());
-        const nextTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
-        $('#time-now').text(formatTime(nextTime));
-        if ($('#album-trigger').hasClass('show-lyrics')) {
-            updateLyricsUI(nextTime);
-        }
-    }).on('change', function() {
-        if (Number.isNaN(audio.duration) || audio.duration <= 0) {
-            isScrubbing = false;
-            return;
-        }
-        const percent = parseFloat($(this).val());
-        seekByProgress(percent);
-        isScrubbing = false;
-    });
+    $('#progress-bar')
+        .on('mousedown touchstart', function() {
+            isScrubbing = true;
+        })
+        .on('input', function() {
+            if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
+            const percent = parseFloat($(this).val());
+            const nextTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
+            $('#time-now').text(formatTime(nextTime));
+            if ($('#album-trigger').hasClass('show-lyrics')) {
+                updateLyricsUI(nextTime);
+            }
+        })
+        .on('mouseup touchend change', function() {
+            if (isScrubbing) {
+                isScrubbing = false;
+                if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
+                const percent = parseFloat($(this).val());
+                seekByProgress(percent);
+            }
+        });
 
     $('#btn-play-pause').on('click touchstart', function(e) {
         e.preventDefault();
