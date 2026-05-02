@@ -7,6 +7,13 @@ $(document).ready(function() {
         return;
     }
 
+    $('#btn-admin-logout').on('click', function() {
+        if (confirm('로그아웃 하시겠습니까?')) {
+            localStorage.removeItem('adminUser');
+            window.location.href = 'index.html';
+        }
+    });
+
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",

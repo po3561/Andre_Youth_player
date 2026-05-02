@@ -22,6 +22,30 @@ body.admin-page .admin-container {
     padding: 20px 25px; z-index: 100; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.5); 
 }
 
+.admin-header .nav-side { flex: 1; }
+.admin-header .nav-title { flex: 2; text-align: center; }
+.admin-header .nav-side-right { display: flex; justify-content: flex-end; }
+
+.header-text-btn {
+    width: auto !important;
+    padding: 0 15px !important;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    gap: 8px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-logout {
+    background: rgba(255,59,48,0.15);
+    color: #ff3b30;
+    border: 1px solid rgba(255,59,48,0.25);
+}
+
+.btn-logout:hover {
+    background: rgba(255,59,48,0.35);
+}
+
 .admin-main { flex: 1; min-height: 0; padding: 25px; overflow: visible; padding-bottom: 50px; }
 .admin-main::-webkit-scrollbar { width: 6px; }
 .admin-main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }

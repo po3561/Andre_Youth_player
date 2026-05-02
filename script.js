@@ -289,13 +289,34 @@ $(document).ready(function() {
         syncHearts();
     }
 
+    function checkAdminSession() {
+        try {
+            const adminUser = JSON.parse(localStorage.getItem('adminUser'));
+            if (adminUser && adminUser.isApproved) {
+                $('#btn-show-login')
+                    .html('<i class="fa-solid fa-screwdriver-wrench"></i> 관리자 페이지 바로가기')
+                    .off('click')
+                    .on('click', () => {
+                        window.location.href = 'admin.html';
+                    });
+            } else {
+                $('#btn-show-login')
+                    .html('<i class="fa-solid fa-user-shield"></i> 관리자 로그인')
+                    .off('click')
+                    .on('click', () => {
+                        $('.info-menu-buttons').hide();
+                        $('#login-section').removeClass('hidden-section').hide().fadeIn(300);
+                        $('#login-id, #login-pw').val('');
+                    });
+            }
+        } catch(e) {
+            console.error('Session check error', e);
+        }
+    }
+
     function setupInfoOverlayEvents() {
-        // Menu Navigation
-        $('#btn-show-login').on('click', () => {
-            $('.info-menu-buttons').hide();
-            $('#login-section').removeClass('hidden-section').hide().fadeIn(300);
-            $('#login-id, #login-pw').val(''); // Clear inputs
-        });
+        // Initial check
+        checkAdminSession();
 
         $('#btn-go-signup').on('click', () => {
             $('#login-section').hide();
@@ -1046,6 +1067,7 @@ $(document).ready(function() {
         // Reset overlay state
         $('.auth-section').hide();
         $('.info-menu-buttons').show();
+        checkAdminSession();
         $('#copyright-overlay').addClass('active');
     });
 
