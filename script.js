@@ -827,15 +827,33 @@ $(document).ready(function() {
                 $('#chat-input').val('');
             });
 
+            $('#chat-input').off('keypress.chat').on('keypress.chat', function(e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    $('#btn-send-chat').click();
+                }
+            });
+
             chatDb.limitToLast(30).on('child_added', (snap) => {
                 const key = snap.key;
                 const m = snap.val();
                 const isMe = m.sender === userId;
                 const iLike = myLikedMsgs.includes(key);
+                
+                // Add timestamp display if available
+                let timeStr = '';
+                if (m.timestamp) {
+                    const dt = new Date(m.timestamp);
+                    timeStr = `${dt.getHours().toString().padStart(2, '0')}:${dt.getMinutes().toString().padStart(2, '0')}`;
+                }
+
                 $('#chat-messages').append(`
-                    <div class="msg-row">
+                    <div class="msg-row" data-key="${key}">
                         <div class="msg-bubble-wrap ${isMe ? 'me' : 'other'}">
-                            <div class="message ${isMe ? 'me' : 'other'}" style="background:${isMe ? 'var(--primary)' : '#fff'}; color:${isMe ? '#fff' : '#333'}; padding:10px 15px; border-radius:15px;">${escapeHtml(m.text || '')}</div>
+                            <div class="message ${isMe ? 'me' : 'other'}">
+                                ${escapeHtml(m.text || '')}
+                                ${timeStr ? `<span class="msg-time">${timeStr}</span>` : ''}
+                            </div>
                             <button class="msg-like-btn ${iLike ? 'liked' : ''}" data-key="${key}">
                                 <i class="${iLike ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                                 <span class="like-count">${m.likeCount || ''}</span>
@@ -843,7 +861,19 @@ $(document).ready(function() {
                         </div>
                     </div>`);
                 const viewport = $('.chat-viewport')[0];
-                if (viewport) viewport.scrollTop = viewport.scrollHeight;
+                if (viewport) {
+                    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+                }
+            });
+
+            // Make sure real-time likes dynamically update counts
+            chatDb.limitToLast(30).on('child_changed', (snap) => {
+                const key = snap.key;
+                const m = snap.val();
+                const $row = $(`.msg-row[data-key="${key}"]`);
+                if ($row.length) {
+                    $row.find('.like-count').text(m.likeCount || '');
+                }
             });
 
             $(document).off('click.chatLike').on('click.chatLike', '.msg-like-btn', function() {
