@@ -239,6 +239,8 @@ $(document).ready(function() {
         }, 1200);
     }
 
+    let isScrubbing = false;
+
     function formatTime(s) {
         const safe = Number.isFinite(s) ? s : 0;
         const m = Math.floor(safe / 60);
@@ -1021,7 +1023,7 @@ $(document).ready(function() {
     audio.onplay = () => $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
     audio.onpause = () => $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
     audio.ontimeupdate = () => {
-        if (isNaN(audio.duration)) return;
+        if (isNaN(audio.duration) || isScrubbing) return;
         $('#progress-bar').val((audio.currentTime / audio.duration) * 100);
         $('#time-now').text(formatTime(audio.currentTime));
         $('#time-total').text(formatTime(audio.duration));
@@ -1034,11 +1036,26 @@ $(document).ready(function() {
     $('#btn-vol-trigger').on('click touchstart', function(e) { e.stopPropagation(); openSb(); });
     $('#btn-vol-close').on('click touchstart', function(e) { e.stopPropagation(); $('#main-header').removeClass('mode-volume'); });
     $('#sb-volume-slider').on('input', function() { audio.volume = $(this).val() / 100; openSb(); });
-    $('#progress-bar').on('input change', function() {
+    
+    $('#progress-bar').on('input', function() {
         if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
+        isScrubbing = true;
+        const percent = parseFloat($(this).val());
+        const nextTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
+        $('#time-now').text(formatTime(nextTime));
+        if ($('#album-trigger').hasClass('show-lyrics')) {
+            updateLyricsUI(nextTime);
+        }
+    }).on('change', function() {
+        if (Number.isNaN(audio.duration) || audio.duration <= 0) {
+            isScrubbing = false;
+            return;
+        }
         const percent = parseFloat($(this).val());
         seekByProgress(percent);
+        isScrubbing = false;
     });
+
     $('#btn-play-pause').on('click touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
