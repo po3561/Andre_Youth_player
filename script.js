@@ -926,8 +926,11 @@ $(document).ready(function() {
 
     // GAS 응답 데이터의 url/cover 필드 정규화 (audioUrl/coverUrl fallback)
     function normalizeSongs(songs) {
+        if (songs && typeof songs === 'object' && !Array.isArray(songs)) {
+            songs = Object.values(songs);
+        }
         if (!Array.isArray(songs)) return [];
-        return songs.map(s => {
+        return songs.filter(Boolean).map(s => {
             if (!s) return s;
             // url 필드가 없으면 audioUrl에서 생성
             if (!s.url && s.audioUrl) s.url = s.audioUrl;

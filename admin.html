@@ -162,7 +162,10 @@
             <div class="manage-card glass-card">
                 <div class="manage-header">
                     <h3>현재 등록된 곡 목록</h3>
-                    <button id="btn-refresh-list" class="icon-btn" aria-label="목록 갱신"><i class="fa-solid fa-rotate"></i></button>
+                    <div style="display:flex; gap:8px;">
+                        <button id="btn-reset-default" class="secondary-btn" style="padding:6px 12px; font-size:0.85rem;" title="기본 곡 목록으로 재설정"><i class="fa-solid fa-arrows-rotate"></i> 초기화</button>
+                        <button id="btn-refresh-list" class="icon-btn" aria-label="목록 갱신"><i class="fa-solid fa-rotate"></i></button>
+                    </div>
                 </div>
                 <div id="admin-song-list" class="admin-song-list">
                     <div class="loading-spinner">목록 불러오는 중...</div>
