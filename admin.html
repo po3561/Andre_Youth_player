@@ -47,6 +47,17 @@
                     <input type="text" id="song-artist" placeholder="기본값: 설정에 지정된 아티스트" autocomplete="off">
                 </div>
 
+                <div class="form-group">
+                    <label for="song-audio-url">음원 URL (직접 입력 또는 아래 파일 업로드)</label>
+                    <input type="text" id="song-audio-url" placeholder="https://... 형식의 음원 링크" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="song-cover-url">커버 이미지 URL (직접 입력 또는 아래 파일 업로드)</label>
+                    <input type="text" id="song-cover-url" placeholder="https://... 형식의 이미지 링크" autocomplete="off">
+                </div>
+
+
                 <div class="form-group lyrics-editor-zone">
                     <label for="lyrics-raw" class="premium-label"><i class="fa-solid fa-microchip"></i> 스마트 AI 가사 분석기 (텍스트 자동 연동)</label>
                     <textarea id="lyrics-raw" rows="6" placeholder="이곳에 노래 전체 가사를 붙여넣으세요. AI가 곡의 파형을 분석하여 자동으로 싱크를 맞춰줍니다."></textarea>
@@ -69,7 +80,6 @@
                         </label>
                     </div>
                     <p class="sync-help sync-note">AI가 오디오 파형과 가사 타임스탬프를 보고 시작 오프셋을 자동 추정합니다. 수동 설정은 필요할 때만 사용하세요.</p>
-                    <p id="backend-status" class="backend-status" role="status" aria-live="polite">Checking admin backend...</p>
                     <details class="sync-advanced">
                         <summary>고급 설정</summary>
                         <label class="sync-advanced-toggle">
@@ -194,6 +204,17 @@
                     <label for="edit-title">곡 제목</label>
                     <input type="text" id="edit-title" autocomplete="off">
                 </div>
+
+                <div class="form-group">
+                    <label for="edit-audio-url">음원 URL (직접 입력 또는 아래 파일 업로드)</label>
+                    <input type="text" id="edit-audio-url" placeholder="https://... 형식의 음원 링크" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-cover-url">커버 이미지 URL (직접 입력 또는 아래 파일 업로드)</label>
+                    <input type="text" id="edit-cover-url" placeholder="https://... 형식의 이미지 링크" autocomplete="off">
+                </div>
+
 
                 <div class="form-group">
                     <label for="edit-lyrics">가사(.lrc 텍스트)</label>

@@ -946,12 +946,15 @@ $(document).ready(function() {
                 $('#disp-title').text('불러오는 중...');
             }
 
-            const payload = await fetchBootstrapPayload({ includeLyrics: false, lyricsLimit: 0 });
-            const rawData = payload && Array.isArray(payload.songs) ? payload.songs : [];
+            await ensureUserDb();
+            const playlistSnap = await firebase.database().ref('users/playlist').once('value');
+            const rawData = playlistSnap.val() || [];
             const data = normalizeSongs(rawData);
 
-            if (payload && payload.settings) {
-                applyAppSettings(payload.settings);
+            const settingsSnap = await firebase.database().ref('users/appSettings').once('value');
+            const settings = settingsSnap.val() || null;
+            if (settings) {
+                applyAppSettings(settings);
             }
 
             if (Array.isArray(data) && data.length > 0) {
@@ -962,11 +965,9 @@ $(document).ready(function() {
                 playlistData = data;
                 // PUBLIC_PLAYLIST도 동기화하여 admin fallback 데이터 갱신
                 window.PUBLIC_PLAYLIST = data;
-                playlistRevision = String(payload && payload.revision ? payload.revision : '');
                 writePlaylistCache({
                     songs: data,
-                    settings: payload && payload.settings ? payload.settings : appSettings,
-                    revision: playlistRevision
+                    settings: settings || appSettings
                 });
                 failedTitles.clear();
                 render();
@@ -990,14 +991,11 @@ $(document).ready(function() {
         } catch (error) {
             console.error('Playlist Fetch Error:', error);
             if (!playlistData.length) {
-                if (error.message.includes('bootstrap')) {
-                    $('#disp-title').text('백엔드 설정 오류');
-                } else {
-                    $('#disp-title').text('데이터 로드 실패');
-                }
+                $('#disp-title').text('데이터 로드 실패');
             }
         }
     }
+
 
     audio.onended = () => {
         if (repeatMode === 2) {
@@ -1173,32 +1171,7 @@ $(document).ready(function() {
                 // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
-            // Fast-start bootstrap call; if delayed, keep cached UI and continue with async refresh.
-            fetchBootstrapPayload({ includeLyrics: true, lyricsLimit: 2 })
-                .then(payload => {
-                    if (payload && payload.settings) applyAppSettings(payload.settings);
-                    if (payload && Array.isArray(payload.songs) && payload.songs.length) {
-                        playlistRevision = String(payload && payload.revision ? payload.revision : '');
-                        playlistData = normalizeSongs(payload.songs);
-                        window.PUBLIC_PLAYLIST = playlistData;
-                        writePlaylistCache({
-                            songs: playlistData,
-                            settings: payload.settings || appSettings,
-                            revision: playlistRevision
-                        });
-                        render();
-                        renderCopyright();
-                        if (curIdx < 0) {
-                            const firstPlayable = getNextPlayableIndex(0);
-                            load(firstPlayable === -1 ? 0 : firstPlayable, true);
-                        }
-                    } else {
-                        fetchPlaylist();
-                    }
-                })
-                .catch(() => {
-                    fetchPlaylist();
-                });
+            fetchPlaylist();
         });
     }
 

@@ -137,10 +137,6 @@ $(document).ready(function() {
     $('#btn-refresh-users').on('click', () => fetchUsers());
     fetchUsers();
 
-    // Re-linked to the user's latest, authorized deployment!
-    const GAS_URL = (window.APP_CONFIG && window.APP_CONFIG.GAS_URL)
-        ? window.APP_CONFIG.GAS_URL
-        : "https://script.google.com/macros/s/AKfycby_hiKUz2Y2dv6WFBGCmaiXl08AqPijiw6yZlLbxLJDTFud10FW19vSrrf9Z6IVz75oGg/exec";
     const FALLBACK_COVER = "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&q=80&w=200";
     const state = {
         audioFile: null,
@@ -152,17 +148,10 @@ $(document).ready(function() {
         editAudioFile: null,
         editImageFile: null
     };
-    const PUBLIC_PLAYLIST = Array.isArray(window.PUBLIC_PLAYLIST) ? window.PUBLIC_PLAYLIST : [];
-    const $backendStatus = $('#backend-status');
-    let backendOnline = false;
-    const GAS_BRIDGE_SOURCE = 'andre-youth-gas-bridge';
-    const GAS_JSONP_TIMEOUT_MS = 30000;
-    const GAS_BRIDGE_TIMEOUT_MS = 300000;
-    const pendingGasBridgeRequests = new Map();
-    let gasBridgeListenerInstalled = false;
 
     fetchSongs();
     loadAppSettings().catch(() => {});
+
 
     $(document).on('dragover dragenter drop', function(e) {
         e.preventDefault();
@@ -222,169 +211,6 @@ $(document).ready(function() {
             .text(message || '');
     }
 
-    async function ensureBackendOnline() {
-        if (backendOnline) return true;
-
-        try {
-            const ping = await gasJsonpGet({ action: 'ping' }, {
-                timeoutMs: 6000
-            });
-            if (ping && ping.status === 'ok') {
-                backendOnline = true;
-                updateBackendStatus(true, 'GAS backend online.');
-                return true;
-            }
-        } catch (error) {
-            console.warn('Backend ping failed:', error);
-        }
-
-        backendOnline = false;
-        updateBackendStatus(false, 'Admin backend offline. Please deploy GAS first.');
-        return false;
-    }
-
-    function randomGasRequestId() {
-        return `gas-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    }
-
-    function isTrustedGasOrigin(origin) {
-        try {
-            const hostname = new URL(origin).hostname;
-            return hostname === 'script.google.com'
-                || hostname === 'script.googleusercontent.com'
-                || hostname.endsWith('.googleusercontent.com');
-        } catch (error) {
-            return false;
-        }
-    }
-
-    function encodeGasFieldValue(value) {
-        if (value === undefined || value === null) return '';
-        if (typeof value === 'string') return value;
-        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-        return JSON.stringify(value);
-    }
-
-    function installGasBridgeListener() {
-        if (gasBridgeListenerInstalled) return;
-        window.addEventListener('message', function(event) {
-            if (!isTrustedGasOrigin(event.origin)) return;
-
-            const data = event.data;
-            if (!data || data.source !== GAS_BRIDGE_SOURCE || !data.requestId) return;
-
-            const pending = pendingGasBridgeRequests.get(data.requestId);
-            if (!pending) return;
-
-            pendingGasBridgeRequests.delete(data.requestId);
-            clearTimeout(pending.timeoutId);
-            pending.cleanup();
-
-            const payload = data.payload || {};
-            if (payload && payload.status === 'error') {
-                pending.reject(new Error(payload.message || 'GAS request failed'));
-                return;
-            }
-
-            pending.resolve(payload);
-        });
-        gasBridgeListenerInstalled = true;
-    }
-
-    function gasJsonpGet(params, options) {
-        const timeoutMs = options && Number.isFinite(options.timeoutMs) ? options.timeoutMs : GAS_JSONP_TIMEOUT_MS;
-        return new Promise((resolve, reject) => {
-            const requestId = randomGasRequestId();
-            const callbackName = `__gas_jsonp_${requestId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-            const url = new URL(GAS_URL);
-            const query = Object.assign({}, params || {}, {
-                callback: callbackName,
-                requestId: requestId
-            });
-
-            Object.keys(query).forEach(key => {
-                const value = query[key];
-                if (value === undefined || value === null) return;
-                url.searchParams.set(key, encodeGasFieldValue(value));
-            });
-
-            const script = document.createElement('script');
-            let settled = false;
-
-            const cleanup = () => {
-                if (settled) return;
-                settled = true;
-                clearTimeout(timeoutId);
-                try {
-                    delete window[callbackName];
-                } catch (error) {
-                    window[callbackName] = undefined;
-                }
-                if (script.parentNode) {
-                    script.parentNode.removeChild(script);
-                }
-            };
-
-            const timeoutId = setTimeout(() => {
-                cleanup();
-                reject(new Error('GAS request timed out'));
-            }, timeoutMs);
-
-            window[callbackName] = function(payload) {
-                cleanup();
-                if (payload && payload.status === 'error') {
-                    reject(new Error(payload.message || 'GAS request failed'));
-                    return;
-                }
-                resolve(payload);
-            };
-
-            script.onerror = function() {
-                cleanup();
-                reject(new Error('GAS request failed'));
-            };
-            script.async = true;
-            script.src = url.toString();
-            document.head.appendChild(script);
-        });
-    }
-
-    async function gasBridgePost(fields, options) {
-        const timeoutMs = options && Number.isFinite(options.timeoutMs) ? options.timeoutMs : GAS_BRIDGE_TIMEOUT_MS;
-        
-        const payload = Object.assign({}, fields || {});
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-        try {
-            // Memory Crash Bypass: Send raw JSON via text/plain to avoid Google Apps Script parsing loop crashes.
-            const response = await fetch(GAS_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8'
-                },
-                body: JSON.stringify(payload),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error('네트워크 응답이 실패했습니다.');
-            }
-
-            const jsonResponse = await response.json();
-            return jsonResponse;
-            
-        } catch (error) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                throw new Error('구글 드라이브 업로드 시간 초과. (파일이 크면 실패할 수 있습니다)');
-            }
-            throw error;
-        }
-    }
 
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
@@ -394,6 +220,16 @@ $(document).ready(function() {
             reader.onerror = error => reject(error);
         });
     }
+
+    function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = error => reject(error);
+        });
+    }
+
 
     function readNumber($input, fallback) {
         const value = Number.parseFloat($input.val());
@@ -1043,8 +879,12 @@ $(document).ready(function() {
             alert('곡 제목을 입력해주세요.');
             return;
         }
-        if (!state.audioFile || !state.image) {
-            alert('음원과 이미지는 필수 항목입니다.');
+
+        const audioUrlInput = $('#song-audio-url').val().trim();
+        const coverUrlInput = $('#song-cover-url').val().trim();
+
+        if (!audioUrlInput && !state.audioFile) {
+            alert('음원 파일 또는 음원 URL은 필수 항목입니다.');
             return;
         }
 
@@ -1052,7 +892,7 @@ $(document).ready(function() {
         const $progressZone = $('#upload-progress-container').show();
         const $bar = $('#progress-fill').css('width', '0%').css('background', 'linear-gradient(90deg, #00ff88, #21ccf9)');
         const $percent = $('#progress-percent').text('0%');
-        const $status = $('#upload-status-text').text('파일 읽기 중...');
+        const $status = $('#upload-status-text').text('파일 읽기 및 변환 중...');
 
         const updateProgress = (p, text) => {
             $bar.css('width', p + '%');
@@ -1061,53 +901,58 @@ $(document).ready(function() {
         };
 
         try {
-            if (!(await ensureBackendOnline())) {
-                throw new Error('Admin backend offline. Upload is disabled until GAS is deployed.');
-            }
-
             const artist = $('#song-artist').val().trim() || $('#setting-default-artist').val().trim() || 'Andre Youth';
 
-            const payload = {
+            let finalAudioUrl = audioUrlInput;
+            if (!finalAudioUrl && state.audioFile) {
+                updateProgress(30, '음원 파일 변환 중...');
+                finalAudioUrl = await fileToDataUrl(state.audioFile);
+            }
+
+            let finalCoverUrl = coverUrlInput;
+            if (!finalCoverUrl && state.image) {
+                updateProgress(50, '커버 이미지 변환 중...');
+                finalCoverUrl = await fileToDataUrl(state.image);
+            }
+
+            const skipAi = $('#sync-skip-ai').is(':checked');
+            const rawLyrics = $('#lyrics-raw').val().trim();
+            let finalLyrics = '';
+
+            if (!skipAi && state.generatedLrc) {
+                finalLyrics = state.generatedLrc;
+            } else if (rawLyrics) {
+                finalLyrics = rawLyrics;
+            }
+
+            const songId = 'song_' + Date.now().toString(36);
+
+            const newSong = {
+                id: songId,
                 title,
                 artist,
-                audioName: `${title}.mp3`,
-                audioMime: state.audioFile.type,
-                audioData: await fileToBase64(state.audioFile),
-                imageName: `${title}.jpg`,
-                imageMime: state.image.type,
-                imageData: await fileToBase64(state.image),
+                url: finalAudioUrl || '',
+                cover: finalCoverUrl || FALLBACK_COVER,
+                lyrics: finalLyrics,
                 syncOffset: readNumber($('#sync-offset'), 0),
                 syncMinGap: readNumber($('#sync-min-gap'), 0.22)
             };
 
-            const skipAi = $('#sync-skip-ai').is(':checked');
-            const rawLyrics = $('#lyrics-raw').val().trim();
+            updateProgress(70, '파이어베이스에 저장 중...');
+            await ensureUserDb();
 
-            if (!skipAi && state.generatedLrc) {
-                payload.lrcName = `${title}.lrc`;
-                payload.lrcData = btoa(unescape(encodeURIComponent(state.generatedLrc)));
-            } else if (rawLyrics) {
-                payload.lrcName = `${title}.lrc`;
-                payload.lrcData = btoa(unescape(encodeURIComponent(rawLyrics)));
+            const snap = await firebase.database().ref('users/playlist').once('value');
+            const currentPlaylist = snap.val() || [];
+            if (!Array.isArray(currentPlaylist)) {
+                currentPlaylist = [];
             }
-            
-            updateProgress(50, '구글 드라이브로 전송 중...');
+            currentPlaylist.push(newSong);
 
-            const result = await gasBridgePost(Object.assign({ action: 'create' }, payload), {
-                timeoutMs: GAS_BRIDGE_TIMEOUT_MS
-            });
+            await firebase.database().ref('users/playlist').set(currentPlaylist);
 
-            if (result.status === "success") {
-                updateProgress(95, '공개 접근 권한 설정 및 DB 기록 중...');
-                // Wait a bit for Drive indexing
-                await new Promise(r => setTimeout(r, 1000));
-                
-                updateProgress(100, '성공! 최신 목록으로 이동합니다.');
-                $bar.css('background', '#00ff88');
-                setTimeout(() => location.href = 'index.html?sync=true', 1500);
-            } else {
-                throw new Error(result.message || "Unknown error");
-            }
+            updateProgress(100, '성공! 최신 목록으로 이동합니다.');
+            $bar.css('background', '#00ff88');
+            setTimeout(() => location.href = 'index.html?sync=true', 1500);
         } catch (error) {
             console.error("Upload Error:", error);
             $bar.css('width', '100%').css('background', '#ff3b30');
@@ -1120,91 +965,64 @@ $(document).ready(function() {
 
     async function fetchSongs() {
         const $list = $('#admin-song-list');
-        updateBackendStatus(null, 'Checking admin backend...');
         $list.html('<div class="loading-spinner">목록 불러오는 중...</div>');
 
         try {
-            if (!(await ensureBackendOnline())) {
-                $list.empty();
-                updateBackendStatus(false, 'Admin backend offline. Showing the public snapshot until GAS is deployed.');
-                renderPublicSnapshotFallback();
+            await ensureUserDb();
+            const snap = await firebase.database().ref('users/playlist').once('value');
+            const data = snap.val() || [];
+
+            $list.empty();
+
+            if (!Array.isArray(data) || data.length === 0) {
+                $list.append('<div class="loading-spinner">등록된 곡이 없습니다.</div>');
                 return;
             }
+            
+            data.forEach(song => {
+                const songKey = song.id ?? song.key ?? song.title ?? '';
+                const $item = $('<div>').addClass('admin-song-item').attr('data-song-key', songKey);
+                const $info = $('<div>').addClass('admin-song-info');
+                const coverSrc = normalizeCoverUrl(song.cover || song.coverUrl || '');
+                const $img = $('<img>')
+                    .addClass('song-cover-thumb')
+                    .attr('src', coverSrc || FALLBACK_COVER)
+                    .attr('alt', `${song.title || '곡'} 커버`);
 
-        let data = [];
-        try {
-            const bootstrap = await gasJsonpGet({ action: 'bootstrap' }, {
-                timeoutMs: 6000
+                $img.on('error', function() {
+                    if (this.src !== FALLBACK_COVER) {
+                        this.src = FALLBACK_COVER;
+                    }
+                });
+
+                $info.append($img, $('<strong>').text(song.title || '제목 없음'));
+
+                const $editButton = $('<button>')
+                    .addClass('btn-edit-song')
+                    .attr('type', 'button')
+                    .attr('aria-label', '수정')
+                    .data('song', song)
+                    .html('<i class="fa-solid fa-pen-to-square"></i>');
+
+                const $deleteButton = $('<button>')
+                    .addClass('btn-delete-song')
+                    .attr('type', 'button')
+                    .attr('aria-label', '삭제')
+                    .data('song', song)
+                    .html('<i class="fa-solid fa-trash-can"></i>');
+
+                const $actions = $('<div>').addClass('admin-song-actions');
+                $actions.append($editButton, $deleteButton);
+                $item.append($info, $actions);
+                $list.append($item);
             });
-            data = Array.isArray(bootstrap && bootstrap.songs) ? bootstrap.songs : [];
-        } catch (bootstrapError) {
-            // Fallback for environments where bootstrap is not yet deployed
-            const listData = await gasJsonpGet({ action: 'list' }, {
-                timeoutMs: GAS_JSONP_TIMEOUT_MS
-            });
-            data = Array.isArray(listData) ? listData : [];
-        }
-        updateBackendStatus(true, 'GAS backend online.');
-        $list.empty();
-
-        if (!Array.isArray(data) || data.length === 0) {
-            $list.append('<div class="loading-spinner">등록된 곡이 없습니다.</div>');
-            return;
-        }
-        
-        // Draw actual items from 'data' representing real status
-        data.forEach(song => {
-            const songKey = song.id ?? song.key ?? song.title ?? '';
-            const $item = $('<div>').addClass('admin-song-item').attr('data-song-key', songKey);
-            const $info = $('<div>').addClass('admin-song-info');
-            const coverSrc = normalizeCoverUrl(song.cover || song.coverUrl || '');
-            const $img = $('<img>')
-                .addClass('song-cover-thumb')
-                .attr('src', coverSrc || FALLBACK_COVER)
-                .attr('alt', `${song.title || '곡'} 커버`);
-
-            $img.on('error', function() {
-                if (this.src !== FALLBACK_COVER) {
-                    this.src = FALLBACK_COVER;
-                }
-            });
-
-            $info.append($img, $('<strong>').text(song.title || '제목 없음'));
-
-            const $editButton = $('<button>')
-                .addClass('btn-edit-song')
-                .attr('type', 'button')
-                .attr('aria-label', '수정')
-                .data('song', {
-                    id: song.id ?? song.key ?? '',
-                    title: song.title ?? ''
-                })
-                .html('<i class="fa-solid fa-pen-to-square"></i>');
-
-            const $deleteButton = $('<button>')
-                .addClass('btn-delete-song')
-                .attr('type', 'button')
-                .attr('aria-label', '삭제')
-                .data('song', {
-                    id: song.id ?? song.key ?? '',
-                    title: song.title ?? ''
-                })
-                .html('<i class="fa-solid fa-trash-can"></i>');
-
-            const $actions = $('<div>').addClass('admin-song-actions');
-            $actions.append($editButton, $deleteButton);
-            $item.append($info, $actions);
-            $list.append($item);
-        });
 
         } catch(error) {
             console.error("fetchSongs error:", error);
             $list.html('<div class="loading-spinner" style="color:#ff3b30;">목록 로드 실패</div>');
-            backendOnline = false;
-            updateBackendStatus(false, 'Admin backend offline. Showing the public snapshot.');
-            renderPublicSnapshotFallback();
         }
     }
+
 
     // Google Drive cover URL -> thumbnail URL 정규화
     function normalizeCoverUrl(url) {
@@ -1237,24 +1055,14 @@ $(document).ready(function() {
     async function loadAppSettings() {
         const $status = $('#settings-status').text('설정 불러오는 중...');
         try {
-            if (!(await ensureBackendOnline())) {
-                throw new Error('Admin backend offline');
-            }
-
-            let data = null;
-            try {
-                data = await gasJsonpGet({ action: 'settings' }, { timeoutMs: 6000 });
-            } catch (settingsError) {
-                const bootstrap = await gasJsonpGet({ action: 'bootstrap' }, { timeoutMs: 6000 });
-                if (bootstrap && bootstrap.settings) {
-                    data = { status: 'ok', settings: bootstrap.settings };
-                }
-            }
-            if (data && data.status === 'ok' && data.settings) {
-                writeSettingsForm(data.settings);
+            await ensureUserDb();
+            const snap = await firebase.database().ref('users/appSettings').once('value');
+            const settings = snap.val();
+            if (settings) {
+                writeSettingsForm(settings);
                 $status.text('설정을 불러왔습니다.');
             } else {
-                throw new Error((data && data.message) || '설정 로드 실패');
+                $status.text('기본 설정을 불러옵니다.');
             }
         } catch (error) {
             $status.text('설정 불러오기 실패: ' + error.message);
@@ -1265,26 +1073,17 @@ $(document).ready(function() {
         const $status = $('#settings-status').text('설정 저장 중...');
         const $btn = $('#btn-save-settings').prop('disabled', true);
         try {
-            if (!(await ensureBackendOnline())) {
-                throw new Error('Admin backend offline');
-            }
+            await ensureUserDb();
             const settings = readSettingsForm();
-            const res = await gasBridgePost({
-                action: 'update-settings',
-                settings: JSON.stringify(settings)
-            }, { timeoutMs: GAS_BRIDGE_TIMEOUT_MS });
-
-            if (res && res.status === 'success') {
-                $status.text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
-            } else {
-                throw new Error((res && res.message) || '설정 저장 실패');
-            }
+            await firebase.database().ref('users/appSettings').set(settings);
+            $status.text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
         } catch (error) {
             $status.text('설정 저장 실패: ' + error.message);
         } finally {
             $btn.prop('disabled', false);
         }
     }
+
 
     $('#btn-load-settings').on('click', loadAppSettings);
     $('#btn-save-settings').on('click', saveAppSettings);
@@ -1333,33 +1132,28 @@ $(document).ready(function() {
     $(document).on('click', '.btn-delete-song', async function() {
         const song = $(this).data('song') || {};
         const label = song.title || song.id || '이 곡';
-        if (!confirm(`'${label}' 곡을 정말 삭제할까요? 드라이브에서도 삭제됩니다.`)) return;
+        if (!confirm(`'${label}' 곡을 정말 삭제할까요?`)) return;
 
         const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
 
         try {
-            if (!(await ensureBackendOnline())) {
-                throw new Error('Admin backend offline. Delete is disabled until GAS is deployed.');
+            await ensureUserDb();
+            const snap = await firebase.database().ref('users/playlist').once('value');
+            let songs = snap.val() || [];
+            if (Array.isArray(songs)) {
+                songs = songs.filter(s => s.id !== song.id);
+                await firebase.database().ref('users/playlist').set(songs);
             }
-
-            const res = await gasBridgePost({
-                action: 'delete',
-                id: song.id || '',
-                title: song.title || ''
-            }, {
-                timeoutMs: GAS_BRIDGE_TIMEOUT_MS
-            });
-            if (res.status === "success") {
-                alert('삭제되었습니다.');
-                fetchSongs();
-            } else {
-                throw new Error(res.message || '삭제 실패');
-            }
+            alert('삭제되었습니다.');
+            fetchSongs();
         } catch (error) {
             alert('삭제 실패: ' + error.message);
             $btn.prop('disabled', false).html('<i class="fa-solid fa-trash-can"></i>');
         }
     });
+
+
+
 
     function openEditModal(song) {
         state.editSongId = song && song.id ? String(song.id) : null;
@@ -1368,7 +1162,9 @@ $(document).ready(function() {
         $('#edit-status').text('');
         $('#edit-song-id').text(state.editSongId || '');
         $('#edit-title').val(song && song.title ? String(song.title) : '');
-        $('#edit-lyrics').val(song && song.lyricsData ? String(song.lyricsData) : '');
+        $('#edit-audio-url').val(song && song.url ? String(song.url) : '');
+        $('#edit-cover-url').val(song && song.cover ? String(song.cover) : '');
+        $('#edit-lyrics').val(song && (song.lyrics || song.lyricsData) ? String(song.lyrics || song.lyricsData) : '');
         $('#edit-sync-offset').val(Number.isFinite(Number(song && song.syncOffset)) ? Number(song.syncOffset) : 0);
         $('#edit-sync-min-gap').val(Number.isFinite(Number(song && song.syncMinGap)) ? Number(song.syncMinGap) : 0.22);
         const editCoverSrc = normalizeCoverUrl((song && (song.coverUrl || song.cover)) ? (song.coverUrl || song.cover) : '');
@@ -1398,34 +1194,12 @@ $(document).ready(function() {
         if (e.target === this) closeEditModal();
     });
 
-    async function fetchSongById(id) {
-        if (!id) return null;
-        const data = await gasJsonpGet({ action: 'song', id: String(id) }, { timeoutMs: GAS_JSONP_TIMEOUT_MS });
-        return data && typeof data === 'object' ? data : null;
-    }
-
-    $(document).on('click', '.btn-edit-song', async function() {
+    $(document).on('click', '.btn-edit-song', function() {
         const song = $(this).data('song') || {};
-        if (!(await ensureBackendOnline())) {
-            alert('Admin backend offline. Edit is disabled until GAS is deployed.');
-            return;
-        }
-
-        try {
-            $('#edit-status').text('데이터 불러오는 중...');
-            const full = await fetchSongById(song.id);
-            if (!full) throw new Error('곡 정보를 불러오지 못했습니다.');
-            openEditModal(full);
-            $('#edit-status').text('');
-        } catch (error) {
-            console.error('Edit open failed:', error);
-            alert('곡 로드 실패: ' + error.message);
+        if (song.id) {
+            openEditModal(song);
         }
     });
-
-    function encodeUtf8Base64(text) {
-        return btoa(unescape(encodeURIComponent(String(text || ''))));
-    }
 
     $('#btn-edit-save').on('click', async function() {
         const id = state.editSongId;
@@ -1441,46 +1215,47 @@ $(document).ready(function() {
         const $btn = $(this).prop('disabled', true);
 
         try {
-            if (!(await ensureBackendOnline())) {
-                throw new Error('Admin backend offline. Update is disabled until GAS is deployed.');
+            await ensureUserDb();
+            const snap = await firebase.database().ref('users/playlist').once('value');
+            const currentPlaylist = snap.val() || [];
+
+            if (!Array.isArray(currentPlaylist)) {
+                throw new Error('곡 목록 데이터 형식이 올바르지 않습니다.');
             }
 
-            const payload = {
-                action: 'update',
-                id,
-                title,
-                artist: 'Andre Youth',
-                syncOffset: Number.parseFloat($('#edit-sync-offset').val()) || 0,
-                syncMinGap: Number.parseFloat($('#edit-sync-min-gap').val()) || 0.22
-            };
-
-            const lyricsText = $('#edit-lyrics').val();
-            if (lyricsText && lyricsText.trim()) {
-                payload.lrcName = `${title}.lrc`;
-                payload.lrcData = encodeUtf8Base64(lyricsText.trim());
+            const songIdx = currentPlaylist.findIndex(s => s.id === id);
+            if (songIdx === -1) {
+                throw new Error('해당 곡을 찾을 수 없습니다.');
             }
 
+            const currentSong = currentPlaylist[songIdx];
+
+            let finalAudioUrl = $('#edit-audio-url').val().trim() || currentSong.url;
             if (state.editAudioFile) {
-                payload.audioName = `${title}.mp3`;
-                payload.audioMime = state.editAudioFile.type || 'audio/mpeg';
-                payload.audioData = await fileToBase64(state.editAudioFile);
+                $status.text('음원 파일 변환 중...');
+                finalAudioUrl = await fileToDataUrl(state.editAudioFile);
             }
 
+            let finalCoverUrl = $('#edit-cover-url').val().trim() || currentSong.cover;
             if (state.editImageFile) {
-                payload.imageName = `${title}.jpg`;
-                payload.imageMime = state.editImageFile.type || 'image/jpeg';
-                payload.imageData = await fileToBase64(state.editImageFile);
+                $status.text('커버 이미지 변환 중...');
+                finalCoverUrl = await fileToDataUrl(state.editImageFile);
             }
 
-            const res = await gasBridgePost(payload, { timeoutMs: GAS_BRIDGE_TIMEOUT_MS });
-            if (res && res.status === 'success') {
-                $status.text('저장 완료. 목록을 갱신합니다...');
-                await new Promise(r => setTimeout(r, 600));
-                closeEditModal();
-                fetchSongs();
-            } else {
-                throw new Error((res && res.message) || '업데이트 실패');
-            }
+            currentSong.title = title;
+            currentSong.url = finalAudioUrl || '';
+            currentSong.cover = finalCoverUrl || FALLBACK_COVER;
+            currentSong.lyrics = $('#edit-lyrics').val().trim();
+            currentSong.syncOffset = parseFloat($('#edit-sync-offset').val()) || 0;
+            currentSong.syncMinGap = parseFloat($('#edit-sync-min-gap').val()) || 0.22;
+
+            $status.text('파이어베이스에 저장 중...');
+            await firebase.database().ref('users/playlist').set(currentPlaylist);
+
+            $status.text('저장 완료!');
+            await new Promise(r => setTimeout(r, 600));
+            closeEditModal();
+            fetchSongs();
         } catch (error) {
             console.error('Update failed:', error);
             $status.text('저장 실패: ' + error.message);
