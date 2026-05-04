@@ -305,7 +305,7 @@ input[type=range] { width: 100%; height: 4px; accent-color: var(--primary); curs
     font-weight: 500;
 }
 
-.message.other { 
+.message.other, .message.anonymous { 
     background: #ffffff; 
     color: #2b2c2d; 
     border-bottom-left-radius: 4px; 

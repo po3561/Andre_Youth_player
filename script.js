@@ -843,7 +843,7 @@ $(document).ready(function() {
             chatDb.limitToLast(30).on('child_added', (snap) => {
                 const key = snap.key;
                 const m = snap.val();
-                const isMe = m.sender === userId;
+                if (!m) return;
                 const iLike = myLikedMsgs.includes(key);
                 
                 // Add timestamp display if available
@@ -855,8 +855,8 @@ $(document).ready(function() {
 
                 $('#chat-messages').append(`
                     <div class="msg-row" data-key="${key}">
-                        <div class="msg-bubble-wrap ${isMe ? 'me' : 'other'}">
-                            <div class="message ${isMe ? 'me' : 'other'}">
+                        <div class="msg-bubble-wrap anonymous">
+                            <div class="message anonymous">
                                 ${escapeHtml(m.text || '')}
                                 ${timeStr ? `<span class="msg-time">${timeStr}</span>` : ''}
                             </div>
