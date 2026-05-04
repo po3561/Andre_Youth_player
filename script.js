@@ -684,8 +684,8 @@ $(document).ready(function() {
         $('#disp-artist').text(s.artist || 'Andre Youth');
 
         lastActiveLyricIdx = -1;
-        if (s.lyricsData) {
-            currentLyrics = MusicEngine.parseLyrics(s.lyricsData, Number(s.syncOffset) || 0);
+        if (s.lyricsData || s.lyrics) {
+            currentLyrics = MusicEngine.parseLyrics(s.lyricsData || s.lyrics, Number(s.syncOffset) || 0);
             renderLyrics();
         } else {
             $('#lyrics-scroll-area').html('<div class="lyric-line no-data">등록된 가사가 없습니다.</div>');
@@ -727,6 +727,15 @@ $(document).ready(function() {
                         console.error('Playback System Error:', e.name, e.message);
                         if (e.name === 'NotAllowedError') {
                             $('#disp-title').text('화면을 클릭하면 재생됩니다.');
+                        } else if (e.name === 'NotSupportedError' || e.message.includes('supported source')) {
+                            const failed = playlistData[curIdx];
+                            if (failed?.title) failedTitles.add(failed.title);
+                            const nextIdx = getNextPlayableIndex(curIdx + 1);
+                            if (nextIdx === -1 || nextIdx === i) {
+                                $('#disp-title').text('재생 가능한 곡이 없습니다.');
+                                return;
+                            }
+                            load(nextIdx, play);
                         }
                     });
                 }
@@ -915,7 +924,6 @@ $(document).ready(function() {
         syncHearts();
     }
 
-    // GAS 응답 데이터의 url/cover 필드 정규화 (audioUrl/coverUrl fallback)
     function normalizeSongs(songs) {
         if (songs && typeof songs === 'object' && !Array.isArray(songs)) {
             songs = Object.values(songs);
@@ -929,6 +937,9 @@ $(document).ready(function() {
             // cover 필드가 없으면 coverUrl에서 생성
             if (!s.cover && s.coverUrl) s.cover = s.coverUrl;
             if (!s.cover && s.imageFileId) s.cover = 'https://drive.google.com/thumbnail?id=' + s.imageFileId + '&sz=w1000';
+            // lyrics와 lyricsData 상호 변환
+            if (!s.lyricsData && s.lyrics) s.lyricsData = s.lyrics;
+            if (!s.lyrics && s.lyricsData) s.lyrics = s.lyricsData;
             return s;
         });
     }

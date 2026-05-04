@@ -934,6 +934,7 @@ $(document).ready(function() {
                 url: finalAudioUrl || '',
                 cover: finalCoverUrl || FALLBACK_COVER,
                 lyrics: finalLyrics,
+                lyricsData: finalLyrics,
                 syncOffset: readNumber($('#sync-offset'), 0),
                 syncMinGap: readNumber($('#sync-min-gap'), 0.22)
             };
@@ -1341,6 +1342,7 @@ $(document).ready(function() {
             currentSong.url = finalAudioUrl || '';
             currentSong.cover = finalCoverUrl || FALLBACK_COVER;
             currentSong.lyrics = $('#edit-lyrics').val().trim();
+            currentSong.lyricsData = $('#edit-lyrics').val().trim();
             currentSong.syncOffset = parseFloat($('#edit-sync-offset').val()) || 0;
             currentSong.syncMinGap = parseFloat($('#edit-sync-min-gap').val()) || 0.22;
 
