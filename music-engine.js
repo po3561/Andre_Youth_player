@@ -50,7 +50,7 @@ const MusicEngine = {
 
         const id = idMatch[1];
         if (type === 'audio') {
-            return `https://drive.usercontent.google.com/download?id=${id}&export=download`;
+            return `https://drive.google.com/uc?id=${id}&export=download`;
         }
 
         // 이미지는 thumbnail API로 (빠르고 CORS 무관)

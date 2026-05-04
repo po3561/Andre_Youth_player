@@ -1114,6 +1114,7 @@ $(document).ready(function() {
             ];
 
             await firebase.database().ref('users/playlist').set(defaultSongs);
+            localStorage.removeItem('andreYouthPlaylistCache_v8');
             alert('초기 곡 목록으로 재설정되었습니다!');
             fetchSongs();
         } catch (error) {
@@ -1232,6 +1233,7 @@ $(document).ready(function() {
             let songs = Array.isArray(rawSongs) ? rawSongs : [];
             songs = songs.filter(s => s.id !== song.id);
             await firebase.database().ref('users/playlist').set(songs);
+            localStorage.removeItem('andreYouthPlaylistCache_v8');
             alert('삭제되었습니다.');
             fetchSongs();
         } catch (error) {
@@ -1239,6 +1241,7 @@ $(document).ready(function() {
             $btn.prop('disabled', false).html('<i class="fa-solid fa-trash-can"></i>');
         }
     });
+
 
 
 
@@ -1343,6 +1346,7 @@ $(document).ready(function() {
 
             $status.text('파이어베이스에 저장 중...');
             await firebase.database().ref('users/playlist').set(currentPlaylist);
+            localStorage.removeItem('andreYouthPlaylistCache_v8');
 
             $status.text('저장 완료!');
             await new Promise(r => setTimeout(r, 600));
