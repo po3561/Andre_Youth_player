@@ -822,6 +822,9 @@ $(document).ready(function() {
         }
 
         const db = await firebaseLoadPromise;
+        if (!chatDb) {
+            chatDb = firebase.database().ref('messages');
+        }
         if (!chatListenersReady) {
             chatListenersReady = true;
 
