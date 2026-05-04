@@ -450,8 +450,7 @@ $(document).ready(function() {
         });
     }
 
-    async function ensureUserDb() {
-        if (userDb) return userDb;
+    async function ensureFirebase() {
         if (!firebaseLoadPromise) {
             firebaseLoadPromise = (async () => {
                 if (typeof window.firebase === 'undefined' || typeof window.firebase.database !== 'function') {
@@ -462,7 +461,12 @@ $(document).ready(function() {
                 return firebase.database();
             })();
         }
-        const db = await firebaseLoadPromise;
+        return await firebaseLoadPromise;
+    }
+
+    async function ensureUserDb() {
+        if (userDb) return userDb;
+        const db = await ensureFirebase();
         userDb = db.ref('users');
         return userDb;
     }
@@ -805,25 +809,9 @@ $(document).ready(function() {
 
     async function ensureChatDb() {
         if (chatDb) return chatDb;
-        if (!firebaseLoadPromise) {
-            firebaseLoadPromise = (async () => {
-                if (typeof window.firebase === 'undefined' || typeof window.firebase.database !== 'function') {
-                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
-                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js');
-                }
-
-                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                chatDb = firebase.database().ref('messages');
-                return chatDb;
-            })().catch(error => {
-                firebaseLoadPromise = null;
-                throw error;
-            });
-        }
-
-        const db = await firebaseLoadPromise;
+        const db = await ensureFirebase();
         if (!chatDb) {
-            chatDb = firebase.database().ref('messages');
+            chatDb = db.ref('messages');
         }
         if (!chatListenersReady) {
             chatListenersReady = true;
@@ -1045,6 +1033,12 @@ $(document).ready(function() {
     $('#btn-vol-close').on('click touchstart', function(e) { e.stopPropagation(); $('#main-header').removeClass('mode-volume'); });
     $('#sb-volume-slider').on('input', function() { audio.volume = $(this).val() / 100; openSb(); });
     
+    function seekByProgress(percent) {
+        if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
+        const targetTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
+        audio.currentTime = targetTime;
+    }
+
     $('#progress-bar')
         .on('mousedown touchstart', function() {
             isScrubbing = true;
@@ -1058,7 +1052,13 @@ $(document).ready(function() {
                 updateLyricsUI(nextTime);
             }
         })
-        .on('mouseup touchend change', function() {
+        .on('change', function() {
+            isScrubbing = false;
+            if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
+            const percent = parseFloat($(this).val());
+            seekByProgress(percent);
+        })
+        .on('mouseup touchend', function() {
             if (isScrubbing) {
                 isScrubbing = false;
                 if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
