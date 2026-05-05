@@ -33,6 +33,7 @@ const MusicEngine = {
     getFallbacks(id) {
         return [
             `https://docs.google.com/uc?export=open&id=${id}`,
+            `https://docs.google.com/uc?export=download&id=${id}`,
             `https://corsproxy.io/?${encodeURIComponent('https://drive.google.com/uc?id=' + id + '&export=download')}`,
             `https://api.allorigins.win/raw?url=${encodeURIComponent('https://drive.google.com/uc?id=' + id + '&export=download')}`
         ];

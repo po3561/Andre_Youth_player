@@ -91,26 +91,42 @@ $(document).ready(function () {
         const fallbacks = idMatch ? MusicEngine.getFallbacks(idMatch[1]) : [originalUrl];
         let tryIdx = 0;
 
-        const tryPlay = (url) => {
-            audio.src = url;
-            audio.load();
-            if (shouldPlay) {
-                $('#song-loading-overlay').fadeIn(200);
-                audio.play().then(() => {
+        const tryPlay = async (url) => {
+            try {
+                audio.pause();
+                audio.src = url;
+                audio.load();
+                
+                if (shouldPlay) {
+                    $('#song-loading-overlay').fadeIn(200);
+                    // Add a tiny delay to ensure audio.load() has settled
+                    await new Promise(r => setTimeout(r, 100));
+                    
+                    await audio.play();
                     $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
                     $('#song-loading-overlay').fadeOut(300);
-                }).catch(e => {
-                    console.error(`Play failed for ${url}:`, e);
+                }
+            } catch (e) {
+                console.error(`Play failed for ${url}:`, e.name, e.message);
+                
+                // Only retry if it's not a manual abort and we have more fallbacks
+                if (e.name !== 'AbortError' || tryIdx > 0) { 
                     tryIdx++;
                     if (tryIdx < fallbacks.length) {
-                        console.log(`Trying fallback ${tryIdx}...`);
-                        tryPlay(fallbacks[tryIdx]);
-                    } else {
-                        $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
-                        $('#song-loading-overlay').fadeOut(300);
-                        alert("음원을 재생할 수 없습니다. 서버 상태를 확인해주세요.");
+                        console.log(`Retrying with fallback ${tryIdx} in 500ms...`);
+                        setTimeout(() => tryPlay(fallbacks[tryIdx]), 500);
+                        return;
                     }
-                });
+                }
+                
+                if (e.name !== 'AbortError') {
+                    $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+                    $('#song-loading-overlay').fadeOut(300);
+                    // Only alert if we really exhausted all options and it wasn't a simple abort
+                    if (tryIdx >= fallbacks.length) {
+                        alert("음원을 재생할 수 없습니다. 잠시 후 다시 시도해주세요.");
+                    }
+                }
             }
         };
 
