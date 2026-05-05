@@ -19,90 +19,91 @@
         </div>
     </div>
 
-    <div id="app-background"></div>
+    <div id="song-loading-overlay">
+        <div class="loader-bars">
+            <span></span><span></span><span></span>
+        </div>
+    </div>
 
+    <div id="app-background"></div>
+    
     <div id="app-container">
+        <!-- Header -->
         <header class="header">
             <div class="header-left">
-                <button class="icon-btn" id="btn-open-chat" title="실시간 채팅 열기">
-                    <i class="fa-solid fa-comment-dots"></i>
-                </button>
-                <button class="icon-btn" id="btn-inquiry" title="플레이리스트 문의하기">
-                    <i class="fa-solid fa-envelope"></i>
+                <button class="icon-btn" id="btn-open-chat" title="채팅 열기">
+                    <i class="fa-solid fa-comment"></i>
                 </button>
             </div>
             <div class="header-title">
-                <h2 id="top-subtitle">Andre Youth Playlist</h2>
-                <h1 id="top-title">믿음으로 기대하다</h1>
+                <h2 id="top-subtitle">음악으로 길을 잇다</h2>
+                <h1 id="top-title">Andre Youth Player</h1>
             </div>
             <div class="header-right">
-                <button class="icon-btn" id="btn-vol-pop" title="음량 조절">
-                    <i class="fa-solid fa-volume-high"></i>
+                <button class="icon-btn" id="btn-inquiry" title="문의하기">
+                    <i class="fa-solid fa-envelope"></i>
                 </button>
-                <button class="icon-btn" id="btn-admin-login" title="관리자 페이지 이동">
-                    <i class="fa-solid fa-user-shield"></i>
+                <button class="icon-btn" id="btn-admin-login" title="관리자 로그인">
+                    <i class="fa-solid fa-lock"></i>
                 </button>
             </div>
         </header>
 
-        <!-- Full-Width Volume Bar (Refined) -->
-        <div class="full-width-vol-container">
-            <i class="fa-solid fa-volume-off"></i>
-            <input type="range" id="volume-slider" min="0" max="100" value="80" title="음량 조절">
-            <i class="fa-solid fa-volume-high"></i>
-        </div>
-
-
-        <main class="player-main">
-            <div class="artwork-container" id="album-trigger" title="가사 보기/숨기기">
-                <img src="" id="artwork" alt="Album Cover">
-                <div id="song-loading-overlay">
-                    <div class="loader-bars">
-                        <span></span><span></span><span></span>
-                    </div>
-                </div>
+        <!-- Main Player -->
+        <main class="player-content">
+            <div class="album-section" id="album-trigger">
+                <img src="" alt="Album Artwork" id="artwork">
                 <div class="lyrics-overlay" id="lyrics-overlay">
-                    <div id="lyrics-scroll"></div>
+                    <div id="lyrics-scroll">
+                        <!-- Lyrics lines will be injected here -->
+                    </div>
                 </div>
             </div>
 
-            <div class="track-info">
-                <div class="info-content">
-                    <h3 id="disp-title">곡 제목</h3>
-                    <p id="disp-artist">아티스트</p>
-                </div>
-                <button class="icon-btn btn-scrap-main" id="btn-scrap" title="좋아요 추가/취소">
+            <div class="song-info">
+                <h2 id="disp-title">Andre Youth</h2>
+                <p id="disp-artist">Select a song to play</p>
+                <button class="scrap-btn" id="btn-scrap" title="좋아요">
                     <i class="fa-regular fa-heart"></i>
                 </button>
             </div>
 
-            <div class="progress-container">
-                <div class="progress-bar-wrap" id="progress-bar-area" title="재생 위치 조절">
-                    <div id="progress-fill"></div>
-                    <div id="progress-knob"></div>
+            <div class="controls-section">
+                <div class="progress-container">
+                    <div class="progress-bar-wrap" id="progress-bar-area" title="재생 위치 조절">
+                        <div id="progress-fill"></div>
+                        <div id="progress-knob"></div>
+                    </div>
+                    <div class="time-stamps">
+                        <span id="time-now">0:00</span>
+                        <span id="time-total">0:00</span>
+                    </div>
                 </div>
-                <div class="time-stamps">
-                    <span id="time-now">0:00</span>
-                    <span id="time-total">0:00</span>
-                </div>
-            </div>
 
-            <div class="main-controls">
-                <button class="control-btn" id="btn-shuffle" title="셔플 모드 켜기/끄기">
-                    <i class="fa-solid fa-shuffle"></i>
-                </button>
-                <button class="control-btn" id="btn-prev" title="이전 곡">
-                    <i class="fa-solid fa-backward-step"></i>
-                </button>
-                <button class="control-btn play-pause" id="btn-play-pause" title="재생/일시정지">
-                    <i class="fa-solid fa-play"></i>
-                </button>
-                <button class="control-btn" id="btn-next" title="다음 곡">
-                    <i class="fa-solid fa-forward-step"></i>
-                </button>
-                <button class="control-btn" id="btn-repeat" title="반복 모드 변경">
-                    <i class="fa-solid fa-repeat"></i>
-                </button>
+                <div class="main-controls">
+                    <button class="control-btn" id="btn-shuffle" title="셔플 모드 켜기/끄기">
+                        <i class="fa-solid fa-shuffle"></i>
+                    </button>
+                    <button class="control-btn" id="btn-prev" title="이전 곡">
+                        <i class="fa-solid fa-backward-step"></i>
+                    </button>
+                    <button class="control-btn play-pause" id="btn-play-pause" title="재생/일시정지">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+                    <button class="control-btn" id="btn-next" title="다음 곡">
+                        <i class="fa-solid fa-forward-step"></i>
+                    </button>
+                    <button class="control-btn" id="btn-repeat" title="반복 모드 변경">
+                        <i class="fa-solid fa-repeat"></i>
+                    </button>
+                </div>
+
+                <!-- Volume Popover Area (Optional or persistent) -->
+                <div class="full-width-vol-container">
+                    <i class="fa-solid fa-volume-low"></i>
+                    <input type="range" id="volume-slider" min="0" max="100" value="80">
+                    <i class="fa-solid fa-volume-high"></i>
+                </div>
             </div>
         </main>
 
@@ -110,6 +111,9 @@
             <button class="icon-btn btn-open-list-wrap" id="btn-open-list" title="재생 목록 열기">
                 <i class="fa-solid fa-list-ul"></i>
                 <span>목록</span>
+            </button>
+            <button class="icon-btn" id="btn-vol-pop" title="볼륨 조절">
+                <i class="fa-solid fa-volume-high"></i>
             </button>
         </footer>
     </div>
@@ -162,7 +166,6 @@
                 <div class="auth-toggle">
                     계정이 없으신가요? <span onclick="toggleAuthMode(true)">회원가입</span>
                 </div>
-                <button class="secondary-link" id="btn-go-admin" style="display:none;">관리자 대시보드 바로가기</button>
             </div>
             <!-- Signup Form (Hidden by default) -->
             <div class="popup-form" id="admin-signup-form" style="display:none;">
@@ -174,14 +177,15 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <audio id="audio-engine" preload="auto"></audio>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="music-engine.js"></script>
     <script src="script.js"></script>
 </body>

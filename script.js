@@ -274,7 +274,9 @@ $(document).ready(function () {
         $('#btn-open-chat').on('click', () => {
             $('#modal-container, #chat-popup').addClass('active');
             $('#chat-messages').empty();
-            chatRef.limitToLast(50).off('child_added').on('child_added', (snap) => {
+            const query = chatRef.limitToLast(50);
+            query.off('child_added');
+            query.on('child_added', (snap) => {
                 const m = snap.val(); if (!m) return;
                 const html = `<div class="msg-bubble ${m.sender === userId ? 'mine' : ''}">${m.text}</div>`;
                 $('#chat-messages').append(html).scrollTop($('#chat-messages')[0].scrollHeight);
@@ -286,7 +288,15 @@ $(document).ready(function () {
 
         $('#btn-send-chat').on('click', () => {
             const txt = $('#chat-input').val().trim(); if (!txt) return;
-            chatRef.push({ text: txt, sender: userId, timestamp: Date.now() }); $('#chat-input').val('');
+            chatRef.push({ text: txt, sender: userId, timestamp: Date.now() }); 
+            $('#chat-input').val('');
+        });
+
+        $('#chat-input').on('keydown', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                $('#btn-send-chat').click();
+            }
         });
 
         $('#btn-submit-inquiry').on('click', async () => {
@@ -303,6 +313,9 @@ $(document).ready(function () {
             let email = $('#admin-email').val().trim(), pw = $('#admin-password').val().trim();
             if (!email || !pw) return alert('정보를 입력해주세요.');
             if (!email.includes('@')) email += '@admin.com';
+            if (typeof firebase.auth !== 'function') {
+                return alert('인증 시스템을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+            }
             firebase.auth().signInWithEmailAndPassword(email, pw)
                 .then((userCredential) => {
                     localStorage.setItem('adminUser', JSON.stringify({ uid: userCredential.user.uid, email: userCredential.user.email, isApproved: true, loginTime: Date.now() }));

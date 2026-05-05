@@ -22,8 +22,10 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg-dark);
     color: var(--text-main);
-    overflow: hidden;
-    height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: -webkit-fill-available;
+    min-height: 100vh;
     width: 100vw;
 }
 
@@ -46,8 +48,9 @@ body {
 #app-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    padding: 20px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 20px 20px 100px;
     max-width: 500px;
     margin: 0 auto;
     position: relative;
@@ -264,6 +267,7 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 5;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
 }
 
@@ -752,8 +756,21 @@ body {
 }
 
 /* Control buttons fix */
-.ctrl-btn, .icon-btn {
+.main-controls, .footer-bar, .header {
+    position: relative;
+    z-index: 10;
+}
+
+.ctrl-btn, .icon-btn, .control-btn {
     outline: none !important;
     -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+    position: relative;
+    z-index: 11;
+}
+
+/* Ensure no ghost overlays block clicks */
+#splash-screen.hidden {
+    display: none !important;
 }
 

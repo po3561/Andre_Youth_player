@@ -37,6 +37,7 @@ $(document).ready(function() {
             firebaseLoadPromise = (async () => {
                 if (typeof window.firebase === 'undefined' || typeof window.firebase.database !== 'function') {
                     await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
+                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js');
                     await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js');
                     await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js');
                 }
