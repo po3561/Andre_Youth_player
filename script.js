@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    // 1. Configuration & Firebase Initialization
+    // 1. Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -14,51 +14,52 @@ $(document).ready(function () {
     const db = firebase.database();
     const playlistRef = db.ref('users/playlist');
     const settingsRef = db.ref('users/appSettings');
+    const chatRef = db.ref('messages');
+    const inqRef = db.ref('users/inquiries');
 
-    // 2. Global State
+    // 2. State
     let playlistData = [];
     let curIdx = 0;
     let isShuffle = false;
-    let repeatMode = 0; // 0: None, 1: All, 2: One
+    let repeatMode = 0;
     let isScrubbing = false;
     let currentLyrics = [];
     let lastActiveLyricIdx = -1;
     let favorites = JSON.parse(localStorage.getItem('andre_favs')) || [];
+    let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('chatUserId', userId);
 
     const audio = document.getElementById('audio-engine');
     const fallbackCover = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=60';
 
-    // 3. Core Functions
+    // 3. Core Logic
     function init() {
         bindEvents();
         fetchData();
-        // Load volume from local storage
         const vol = localStorage.getItem('player_vol') || 80;
         $('#volume-slider').val(vol);
         audio.volume = vol / 100;
+
+        window.closeAllModals = () => {
+            $('#modal-container').removeClass('active');
+            $('.floating-popup').removeClass('active');
+            chatRef.off('child_added');
+        };
     }
 
     function fetchData() {
-        // Real-time listener for playlist
         playlistRef.on('value', (snapshot) => {
             let data = snapshot.val();
-            if (data && typeof data === 'object' && !Array.isArray(data)) {
-                data = Object.values(data);
-            }
+            if (data && typeof data === 'object' && !Array.isArray(data)) data = Object.values(data);
             playlistData = data || [];
             renderPlaylist();
-            
-            // Sync current song if it exists in new data, else reset
-            if (playlistData.length > 0 && curIdx === -1) {
-                loadSong(0, false);
-            }
+            if (playlistData.length > 0 && audio.src === "") loadSong(0, false);
         });
 
-        // App Settings sync
         settingsRef.on('value', (snapshot) => {
             const settings = snapshot.val();
             if (settings) {
-                if (settings.playlistSubtitle) $('#top-title').text(settings.playlistSubtitle);
+                if (settings.playlistSubtitle) $('#top-subtitle').text(settings.playlistSubtitle);
                 if (settings.themePrimary) document.documentElement.style.setProperty('--primary', settings.themePrimary);
             }
         });
@@ -66,11 +67,9 @@ $(document).ready(function () {
 
     async function loadSong(index, shouldPlay = true) {
         if (!playlistData.length || index < 0 || index >= playlistData.length) return;
-        
         curIdx = index;
         const song = playlistData[curIdx];
         
-        // UI Updates
         $('#disp-title').text(song.title || 'Untitled');
         $('#disp-artist').text(song.artist || 'Unknown Artist');
         
@@ -78,12 +77,12 @@ $(document).ready(function () {
         $('#artwork').attr('src', coverUrl);
         $('#app-background').css('background-image', `url(${coverUrl})`);
         
-        // Lyrics initialization
+        // Lyrics Fix: Properly handle lyrics load
         const lrc = song.lyricsData || song.lyrics || "";
         currentLyrics = MusicEngine.parseLyrics(lrc);
+        lastActiveLyricIdx = -1;
         renderLyrics();
 
-        // Audio Source
         const audioUrl = MusicEngine.fixUrl(song.url || song.audioUrl, 'audio');
         audio.src = audioUrl;
         audio.load();
@@ -92,12 +91,38 @@ $(document).ready(function () {
         syncFavoriteState();
 
         if (shouldPlay) {
-            try {
-                await audio.play();
-                $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
-            } catch (e) {
-                console.warn("Playback blocked or failed:", e);
-                $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+            try { await audio.play(); $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>'); }
+            catch (e) { $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); }
+        }
+    }
+
+    function renderLyrics() {
+        const $scroll = $('#lyrics-scroll').empty();
+        if (!currentLyrics.length) {
+            $scroll.append('<div class="lyric-line no-data">가사가 없습니다.</div>');
+            return;
+        }
+        currentLyrics.forEach((l, i) => {
+            $scroll.append(`<div class="lyric-line" id="lrc-${i}" data-time="${l.time}">${l.text}</div>`);
+        });
+        $('#lyrics-scroll').scrollTop(0);
+    }
+
+    function updateLyricsSync(time) {
+        if (!currentLyrics.length) return;
+        let activeIdx = -1;
+        for (let i = 0; i < currentLyrics.length; i++) {
+            if (time >= currentLyrics[i].time) activeIdx = i;
+            else break;
+        }
+        if (activeIdx !== -1 && activeIdx !== lastActiveLyricIdx) {
+            $('.lyric-line').removeClass('active');
+            const $active = $(`#lrc-${activeIdx}`).addClass('active');
+            lastActiveLyricIdx = activeIdx;
+            const container = $('#lyrics-scroll')[0];
+            if (container && $active.length) {
+                const targetScroll = $active[0].offsetTop - (container.offsetHeight / 2) + 20;
+                container.scrollTo({ top: targetScroll, behavior: 'smooth' });
             }
         }
     }
@@ -105,10 +130,9 @@ $(document).ready(function () {
     function renderPlaylist() {
         const $container = $('#song-list-container').empty();
         playlistData.forEach((song, i) => {
-            const isActive = i === curIdx ? 'active' : '';
             const cover = MusicEngine.fixUrl(song.cover || song.profile, 'image') || fallbackCover;
             $container.append(`
-                <div class="song-item ${isActive}" data-index="${i}">
+                <div class="song-item ${i === curIdx ? 'active' : ''}" data-index="${i}">
                     <img src="${cover}" alt="cover">
                     <div class="song-item-info">
                         <h4>${song.title || 'Untitled'}</h4>
@@ -121,38 +145,6 @@ $(document).ready(function () {
 
     function updateActiveInList() {
         $('.song-item').removeClass('active').eq(curIdx).addClass('active');
-    }
-
-    function renderLyrics() {
-        const $scroll = $('#lyrics-scroll').empty();
-        if (!currentLyrics.length) {
-            $scroll.append('<div class="lyric-line no-data">가사가 없습니다.</div>');
-            return;
-        }
-        currentLyrics.forEach((l, i) => {
-            $scroll.append(`<div class="lyric-line" id="lrc-${i}" data-time="${l.time}">${l.text}</div>`);
-        });
-    }
-
-    function updateLyricsSync(time) {
-        if (!currentLyrics.length) return;
-        let activeIdx = -1;
-        for (let i = 0; i < currentLyrics.length; i++) {
-            if (time >= currentLyrics[i].time) activeIdx = i;
-            else break;
-        }
-
-        if (activeIdx !== -1 && activeIdx !== lastActiveLyricIdx) {
-            $('.lyric-line').removeClass('active');
-            const $active = $(`#lrc-${activeIdx}`).addClass('active');
-            lastActiveLyricIdx = activeIdx;
-
-            const container = $('#lyrics-scroll')[0];
-            if (container && $active.length) {
-                const targetScroll = $active[0].offsetTop - (container.offsetHeight / 2) + 20;
-                container.scrollTo({ top: targetScroll, behavior: 'smooth' });
-            }
-        }
     }
 
     function next() {
@@ -168,6 +160,12 @@ $(document).ready(function () {
         loadSong(p, true);
     }
 
+    function formatTime(s) {
+        const m = Math.floor(s / 60);
+        const sc = Math.floor(s % 60);
+        return `${m}:${sc < 10 ? '0' + sc : sc}`;
+    }
+
     function syncFavoriteState() {
         const song = playlistData[curIdx];
         const isFav = song && favorites.includes(song.title);
@@ -175,26 +173,21 @@ $(document).ready(function () {
         $('#btn-scrap').css('color', isFav ? 'var(--primary)' : 'white');
     }
 
-    // 4. Event Binding
+    // 4. Events
     function bindEvents() {
-        // Play/Pause
-        $('#btn-play-pause').on('click', function() {
-            if (audio.paused) {
-                audio.play();
-                $(this).html('<i class="fa-solid fa-pause"></i>');
-            } else {
-                audio.pause();
-                $(this).html('<i class="fa-solid fa-play"></i>');
-            }
+        // Playback
+        $('#btn-play-pause').on('click', () => {
+            if (audio.paused) { audio.play(); $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>'); }
+            else { audio.pause(); $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); }
         });
-
         $('#btn-next').on('click', next);
         $('#btn-prev').on('click', prev);
 
-        // Progress Bar
+        // Progress
         $('#progress-bar-area').on('mousedown touchstart', (e) => { isScrubbing = true; handleSeek(e); });
         $(document).on('mousemove touchmove', (e) => { if (isScrubbing) handleSeek(e); });
         $(document).on('mouseup touchend', () => { isScrubbing = false; });
+        audio.ontimeupdate = () => { if (!isScrubbing) updateProgressUI(); updateLyricsSync(audio.currentTime); };
 
         function handleSeek(e) {
             if (isNaN(audio.duration)) return;
@@ -206,11 +199,6 @@ $(document).ready(function () {
             updateProgressUI();
         }
 
-        audio.ontimeupdate = () => {
-            if (!isScrubbing) updateProgressUI();
-            updateLyricsSync(audio.currentTime);
-        };
-
         function updateProgressUI() {
             if (isNaN(audio.duration)) return;
             const per = (audio.currentTime / audio.duration) * 100;
@@ -220,19 +208,8 @@ $(document).ready(function () {
             $('#time-total').text(formatTime(audio.duration));
         }
 
-        function formatTime(s) {
-            const m = Math.floor(s / 60);
-            const sc = Math.floor(s % 60);
-            return `${m}:${sc < 10 ? '0' + sc : sc}`;
-        }
-
-        // Shuffle & Repeat
-        $('#btn-shuffle').on('click', function() {
-            isShuffle = !isShuffle;
-            $(this).toggleClass('active', isShuffle);
-            $(this).css('color', isShuffle ? 'var(--primary)' : 'white');
-        });
-
+        // Shuffle/Repeat
+        $('#btn-shuffle').on('click', function() { isShuffle = !isShuffle; $(this).toggleClass('active', isShuffle).css('color', isShuffle ? 'var(--primary)' : 'white'); });
         $('#btn-repeat').on('click', function() {
             repeatMode = (repeatMode + 1) % 3;
             const $i = $(this).find('i');
@@ -240,103 +217,64 @@ $(document).ready(function () {
             else if (repeatMode === 1) { $i.attr('class', 'fa-solid fa-repeat'); $(this).css('color', 'var(--primary)'); }
             else { $i.attr('class', 'fa-solid fa-repeat-1'); $(this).css('color', 'var(--primary)'); }
         });
+        audio.onended = () => { if (repeatMode === 2) { audio.currentTime = 0; audio.play(); } else if (repeatMode === 1 || curIdx < playlistData.length - 1) next(); };
 
-        audio.onended = () => {
-            if (repeatMode === 2) { audio.currentTime = 0; audio.play(); }
-            else if (repeatMode === 1 || curIdx < playlistData.length - 1) next();
-        };
+        // Lyrics/Artwork toggle
+        $('#album-trigger').on('click', () => { $('#artwork').toggleClass('lyrics-mode'); $('#lyrics-overlay').toggleClass('active'); });
 
-        // Lyrics Toggle
-        $('#album-trigger').on('click', function() {
-            $(this).find('#artwork').toggleClass('lyrics-mode');
-            $('#lyrics-overlay').toggleClass('active');
+        // Volume Popover
+        $('#btn-vol-pop').on('click', (e) => { e.stopPropagation(); $('#volume-popover').toggleClass('active'); });
+        $(document).on('click', (e) => { if (!$(e.target).closest('.vol-pop-vertical').length) $('#volume-popover').removeClass('active'); });
+        $('#volume-slider').on('input', function() { const v = $(this).val(); audio.volume = v / 100; localStorage.setItem('player_vol', v); });
+
+        // Modals
+        $('#btn-open-chat').on('click', () => {
+            $('#modal-container').addClass('active'); $('#chat-popup').addClass('active');
+            chatRef.limitToLast(50).on('child_added', (snap) => {
+                const m = snap.val(); if (!m) return;
+                const html = `<div class="msg-bubble ${m.sender === userId ? 'mine' : ''}">${m.text}</div>`;
+                $('#chat-messages').append(html).scrollTop($('#chat-messages')[0].scrollHeight);
+            });
+        });
+        $('#btn-inquiry').on('click', () => { $('#modal-container').addClass('active'); $('#inquiry-popup').addClass('active'); });
+        $('#btn-admin-login').on('click', () => { $('#modal-container').addClass('active'); $('#admin-popup').addClass('active'); });
+
+        $('#btn-send-chat').on('click', () => {
+            const txt = $('#chat-input').val().trim(); if (!txt) return;
+            chatRef.push({ text: txt, sender: userId, timestamp: Date.now() }); $('#chat-input').val('');
+        });
+        $('#chat-input').on('keypress', (e) => { if (e.which === 13) $('#btn-send-chat').click(); });
+
+        $('#btn-submit-inquiry').on('click', async () => {
+            const title = $('#inq-title').val().trim(), content = $('#inq-content').val().trim(), contact = $('#inq-contact').val().trim();
+            if (!title || !content) return alert('제목과 내용을 입력해주세요.');
+            try { await inqRef.push({ title, content, contact, timestamp: Date.now(), status: 'new' }); alert('문의가 성공적으로 전송되었습니다.'); $('#inq-title, #inq-content, #inq-contact').val(''); closeAllModals(); }
+            catch (e) { alert('전송 중 오류 발생'); }
         });
 
-        // Volume Popover Toggle
-        $('#btn-vol-pop').on('click', function(e) {
-            e.stopPropagation();
-            $('#volume-popover').toggleClass('active');
+        $('#btn-do-login').on('click', () => {
+            const email = $('#admin-email').val(), pw = $('#admin-password').val();
+            if (email === 'admin@andre.com' && pw === 'admin1234') { alert('인증 성공!'); $('#btn-go-admin').show(); }
+            else alert('인증 정보 오류');
         });
-
-        $(document).on('click', function() {
-            $('#volume-popover').removeClass('active');
-        });
-
-        $('#volume-popover').on('click', function(e) { e.stopPropagation(); });
-
-        $('#volume-slider').on('input', function() {
-            const v = $(this).val();
-            audio.volume = v / 100;
-            localStorage.setItem('player_vol', v);
-        });
-
+        $('#btn-go-admin').on('click', () => window.location.href = 'admin.html');
 
         // Playlist Sheet
         $('#btn-open-list').on('click', () => $('#playlist-sheet').addClass('active'));
         $('#sheet-handle').on('click', () => $('#playlist-sheet').removeClass('active'));
-        
-        // Swipe to close sheet
-        let touchStartY = 0;
-        $('#playlist-sheet').on('touchstart', (e) => { touchStartY = e.touches[0].clientY; });
-        $('#playlist-sheet').on('touchmove', (e) => {
-            const diff = e.touches[0].clientY - touchStartY;
-            if (diff > 100) $('#playlist-sheet').removeClass('active');
-        });
+        $(document).on('click', '.song-item', function() { loadSong($(this).data('index'), true); $('#playlist-sheet').removeClass('active'); });
 
-        $(document).on('click', '.song-item', function() {
-            const idx = $(this).data('index');
-            loadSong(idx, true);
-            $('#playlist-sheet').removeClass('active');
-        });
+        // Swipe sheet
+        let tY = 0;
+        $('#playlist-sheet').on('touchstart', (e) => tY = e.touches[0].clientY);
+        $('#playlist-sheet').on('touchmove', (e) => { if (e.touches[0].clientY - tY > 100) $('#playlist-sheet').removeClass('active'); });
 
-        // Chat Logic
-        const chatRef = db.ref('messages');
-        let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('chatUserId', userId);
-
-        $('#btn-open-chat').on('click', () => {
-            $('#chat-overlay').addClass('active');
-            chatRef.limitToLast(50).off('child_added').on('child_added', (snap) => {
-                const m = snap.val();
-                if (!m) return;
-                const isMine = m.sender === userId;
-                const html = `<div class="msg-bubble ${isMine ? 'mine' : ''}">${m.text}</div>`;
-                $('#chat-messages').append(html);
-                $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
-            });
-        });
-
-        $('#btn-close-chat').on('click', () => {
-            $('#chat-overlay').removeClass('active');
-        });
-
-        $('#btn-send-chat').on('click', () => {
-            const txt = $('#chat-input').val().trim();
-            if (!txt) return;
-            chatRef.push({ text: txt, sender: userId, timestamp: Date.now() });
-            $('#chat-input').val('');
-        });
-
-        $('#chat-input').on('keypress', (e) => { if (e.which === 13) $('#btn-send-chat').click(); });
-
-
-        // Favorites
+        // Scrap
         $('#btn-scrap').on('click', function() {
-            const song = playlistData[curIdx];
-            if (!song) return;
+            const song = playlistData[curIdx]; if (!song) return;
             const idx = favorites.indexOf(song.title);
-            if (idx === -1) favorites.push(song.title);
-            else favorites.splice(idx, 1);
-            localStorage.setItem('andre_favs', JSON.stringify(favorites));
-            syncFavoriteState();
-        });
-
-        // Other buttons
-        $('#btn-inquiry').on('click', () => {
-            window.location.href = "mailto:ej210651392@gmail.com?subject=Andre Youth Player 문의";
-        });
-        $('#btn-admin-login').on('click', () => {
-             window.location.href = 'admin.html';
+            if (idx === -1) favorites.push(song.title); else favorites.splice(idx, 1);
+            localStorage.setItem('andre_favs', JSON.stringify(favorites)); syncFavoriteState();
         });
     }
 

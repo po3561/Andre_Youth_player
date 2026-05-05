@@ -37,9 +37,12 @@
             </div>
         </header>
 
-        <!-- Volume Popover -->
-        <div id="volume-popover" class="vol-pop">
-            <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="80" title="음량 조절">
+        <!-- Volume Popover (Vertical Accordion) -->
+        <div id="volume-popover" class="vol-pop-vertical">
+            <div class="vol-slider-track">
+                <input type="range" class="volume-slider-v" id="volume-slider" min="0" max="100" value="80" orient="vertical" title="음량 조절">
+            </div>
+            <i class="fa-solid fa-volume-high"></i>
         </div>
 
         <main class="player-main">
@@ -104,19 +107,47 @@
         <div class="song-list" id="song-list-container"></div>
     </div>
 
-    <div id="chat-overlay" class="ios-popup">
-        <div class="popup-header">
-            <h3>실시간 익명 채팅</h3>
-            <button class="close-x" id="btn-close-chat" title="채팅창 닫기">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+    <!-- Floating Popups Container -->
+    <div id="modal-container" class="modal-overlay">
+        <!-- Anonymous Chat Popup -->
+        <div id="chat-popup" class="floating-popup">
+            <div class="popup-header">
+                <h3>실시간 익명 채팅</h3>
+                <button class="close-btn" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="chat-messages" class="chat-content"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="메세지를 입력하세요...">
+                <button id="btn-send-chat"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
         </div>
-        <div id="chat-messages" class="chat-content"></div>
-        <div class="chat-input-area">
-            <input type="text" id="chat-input" placeholder="메시지를 입력하세요..." title="채팅 입력">
-            <button id="btn-send-chat" title="메시지 전송">
-                <i class="fa-solid fa-paper-plane"></i>
-            </button>
+
+        <!-- Inquiry Popup -->
+        <div id="inquiry-popup" class="floating-popup">
+            <div class="popup-header">
+                <h3>플레이리스트 문의</h3>
+                <button class="close-btn" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="popup-form">
+                <input type="text" id="inq-title" placeholder="제목">
+                <textarea id="inq-content" placeholder="문의 내용 (곡 요청 등)"></textarea>
+                <input type="text" id="inq-contact" placeholder="연락처 (이메일/번호)">
+                <button class="submit-btn" id="btn-submit-inquiry">문의 전송하기</button>
+            </div>
+        </div>
+
+        <!-- Admin Login Popup -->
+        <div id="admin-popup" class="floating-popup">
+            <div class="popup-header">
+                <h3>관리자 인증</h3>
+                <button class="close-btn" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="popup-form">
+                <input type="email" id="admin-email" placeholder="이메일">
+                <input type="password" id="admin-password" placeholder="비밀번호">
+                <button class="submit-btn" id="btn-do-login">로그인</button>
+                <button class="secondary-link" id="btn-go-admin" style="display:none;">관리자 대시보드 바로가기</button>
+            </div>
         </div>
     </div>
 

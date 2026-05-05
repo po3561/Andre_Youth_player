@@ -106,25 +106,63 @@ body {
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* Volume Popover */
-.vol-pop {
+/* Volume Popover (Vertical Accordion) */
+.vol-pop-vertical {
     position: absolute;
-    top: 70px;
-    right: 20px;
-    background: rgba(30, 30, 30, 0.9);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
-    padding: 15px;
+    top: 60px;
+    right: 55px;
+    background: rgba(30, 30, 30, 0.95);
+    -webkit-backdrop-filter: blur(25px);
+    backdrop-filter: blur(25px);
+    padding: 15px 10px;
     border-radius: 20px;
     border: 1px solid var(--border-glass);
-    z-index: 50;
+    z-index: 100;
     display: none;
-    width: 200px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.vol-pop.active { display: flex; align-items: center; }
-.vol-pop .volume-slider { width: 100%; margin: 0; }
+.vol-pop-vertical.active { display: flex; }
+
+.vol-slider-track {
+    height: 150px;
+    width: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.volume-slider-v {
+    -webkit-appearance: none;
+    width: 4px;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    transform: rotate(180deg);
+    writing-mode: bt-lr; /* IE/Edge fallback */
+    appearance: slider-vertical; /* Standard */
+}
+
+.volume-slider-v::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 
 
 /* Main Artwork */
@@ -429,79 +467,101 @@ body {
 .song-item-info p { font-size: 14px; color: var(--text-dim); }
 
 /* IOS Popup Overlay (Chat) */
-.ios-popup {
+/* Modal Overlay & Floating Popups */
+.modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    -webkit-backdrop-filter: blur(25px);
-    backdrop-filter: blur(25px);
-    z-index: 300;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    z-index: 500;
     display: none;
-    flex-direction: column;
-    padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
 }
 
-.ios-popup.active { display: flex; }
+.modal-overlay.active { display: flex; }
+
+.floating-popup {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(35, 35, 35, 0.95);
+    border-radius: 28px;
+    border: 1px solid var(--border-glass);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: popupFade 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-popup.active { display: flex; }
+
+@keyframes popupFade {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
 
 .popup-header {
+    padding: 20px 25px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 0;
+    border-bottom: 1px solid var(--border-glass);
 }
 
-.chat-content {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 10px 0;
+.popup-header h3 { font-size: 18px; font-weight: 700; }
+.close-btn { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; }
+
+.popup-form {
+    padding: 25px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 15px;
 }
 
-.chat-input-area {
-    display: flex;
-    gap: 10px;
-    padding: 20px 0;
-}
-
-#chat-input {
-    flex-grow: 1;
+.popup-form input, .popup-form textarea {
     background: var(--glass);
     border: 1px solid var(--border-glass);
-    border-radius: 20px;
-    padding: 12px 20px;
+    border-radius: 14px;
+    padding: 12px 18px;
     color: white;
+    font-family: inherit;
     outline: none;
+    transition: var(--transition-smooth);
 }
 
-#btn-send-chat {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
+.popup-form input:focus, .popup-form textarea:focus {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.popup-form textarea { height: 120px; resize: none; }
+
+.submit-btn {
     background: var(--primary);
-    border: none;
     color: white;
-    cursor: pointer;
-}
-
-.msg-bubble {
-    background: var(--glass);
-    padding: 10px 15px;
-    border-radius: 18px;
-    max-width: 80%;
-    align-self: flex-start;
-    border: 1px solid var(--border-glass);
-    font-size: 15px;
-}
-
-.msg-bubble.mine {
-    align-self: flex-end;
-    background: var(--primary);
     border: none;
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.submit-btn:active { transform: scale(0.95); opacity: 0.9; }
+
+.secondary-link {
+    background: none;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    border-radius: 14px;
+    padding: 10px;
+    font-size: 14px;
+    margin-top: 10px;
+    cursor: pointer;
 }
 
 .no-data {
