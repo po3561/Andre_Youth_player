@@ -40,15 +40,20 @@ $(document).ready(function () {
     localStorage.setItem('player_uid', userId);
 
     function init() {
-        bindEvents();
-        fetchData();
-        const vol = localStorage.getItem('player_vol') || 80;
-        $('#volume-slider').val(vol);
-        if (audio) audio.volume = vol / 100;
-        
+        // Ensure splash screen fades out even if there are errors later
         setTimeout(() => {
             $('#splash-screen').fadeOut(500);
-        }, 1500);
+        }, 1000);
+
+        try {
+            bindEvents();
+            fetchData();
+            const vol = localStorage.getItem('player_vol') || 80;
+            $('#volume-slider').val(vol);
+            if (audio) audio.volume = vol / 100;
+        } catch (e) {
+            console.error("Initialization error:", e);
+        }
     }
 
     function fetchData() {
@@ -315,10 +320,11 @@ $(document).ready(function () {
             loadSong($(this).data('index'), true); $('#playlist-sheet').removeClass('active');
         });
 
-        window.closeAllModals = () => { 
+        function closeAllModals() { 
             $('.modal-overlay, .floating-popup').removeClass('active'); 
-            chatRef.off(); 
-        };
+            if (chatRef) chatRef.off(); 
+        }
+        window.closeAllModals = closeAllModals; 
 
         window.toggleAuthMode = (isSignup) => {
             if (isSignup) {
