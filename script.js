@@ -313,7 +313,14 @@ $(document).ready(function () {
                     localStorage.setItem('adminUser', JSON.stringify({ email: res.user.email, isApproved: true }));
                     window.location.href = 'admin.html';
                 })
-                .catch(err => alert('로그인 실패: ' + err.message));
+                .catch(err => {
+                    let msg = '로그인 실패';
+                    if (err.code === 'auth/user-not-found') msg = '등록되지 않은 이메일입니다.';
+                    else if (err.code === 'auth/wrong-password') msg = '비밀번호가 틀렸습니다.';
+                    else if (err.code === 'auth/invalid-email') msg = '이메일 형식이 올바르지 않습니다.';
+                    else msg = '오류: ' + err.message;
+                    alert(msg);
+                });
         });
 
         $('#btn-do-signup').on('click', () => {
