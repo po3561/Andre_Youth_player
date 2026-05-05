@@ -173,6 +173,20 @@ $(document).ready(function () {
         $('#btn-scrap').css('color', isFav ? 'var(--primary)' : 'white');
     }
 
+    // ... same init, fetchData ...
+
+    window.toggleAuthMode = (isSignup) => {
+        if (isSignup) {
+            $('#admin-popup-title').text('관리자 회원가입');
+            $('#admin-auth-form').hide();
+            $('#admin-signup-form').show();
+        } else {
+            $('#admin-popup-title').text('관리자 인증');
+            $('#admin-auth-form').show();
+            $('#admin-signup-form').hide();
+        }
+    };
+
     // 4. Events
     function bindEvents() {
         // Playback
@@ -208,29 +222,50 @@ $(document).ready(function () {
             $('#time-total').text(formatTime(audio.duration));
         }
 
-        // Shuffle/Repeat
-        $('#btn-shuffle').on('click', function() { isShuffle = !isShuffle; $(this).toggleClass('active', isShuffle).css('color', isShuffle ? 'var(--primary)' : 'white'); });
+        // Shuffle/Repeat (Fixed: Icons won't disappear)
+        $('#btn-shuffle').on('click', function() {
+            isShuffle = !isShuffle;
+            $(this).toggleClass('active', isShuffle);
+            $(this).css('color', isShuffle ? 'var(--primary)' : 'white');
+            $(this).html('<i class="fa-solid fa-shuffle"></i>'); // Ensure icon stays
+        });
+
         $('#btn-repeat').on('click', function() {
             repeatMode = (repeatMode + 1) % 3;
-            const $i = $(this).find('i');
-            if (repeatMode === 0) { $i.attr('class', 'fa-solid fa-repeat'); $(this).css('color', 'white'); }
-            else if (repeatMode === 1) { $i.attr('class', 'fa-solid fa-repeat'); $(this).css('color', 'var(--primary)'); }
-            else { $i.attr('class', 'fa-solid fa-repeat-1'); $(this).css('color', 'var(--primary)'); }
+            const $btn = $(this);
+            if (repeatMode === 0) {
+                $btn.html('<i class="fa-solid fa-repeat"></i>').css('color', 'white');
+            } else if (repeatMode === 1) {
+                $btn.html('<i class="fa-solid fa-repeat"></i>').css('color', 'var(--primary)');
+            } else {
+                $btn.html('<i class="fa-solid fa-repeat-1"></i>').css('color', 'var(--primary)');
+            }
         });
-        audio.onended = () => { if (repeatMode === 2) { audio.currentTime = 0; audio.play(); } else if (repeatMode === 1 || curIdx < playlistData.length - 1) next(); };
+
+        audio.onended = () => {
+            if (repeatMode === 2) { audio.currentTime = 0; audio.play(); }
+            else if (repeatMode === 1 || curIdx < playlistData.length - 1) next();
+        };
 
         // Lyrics/Artwork toggle
-        $('#album-trigger').on('click', () => { $('#artwork').toggleClass('lyrics-mode'); $('#lyrics-overlay').toggleClass('active'); });
+        $('#album-trigger').on('click', () => {
+            $('#artwork').toggleClass('lyrics-mode');
+            $('#lyrics-overlay').toggleClass('active');
+            // Force redraw lyrics to ensure they show
+            renderLyrics();
+        });
 
-        // Volume Popover
-        $('#btn-vol-pop').on('click', (e) => { e.stopPropagation(); $('#volume-popover').toggleClass('active'); });
-        $(document).on('click', (e) => { if (!$(e.target).closest('.vol-pop-vertical').length) $('#volume-popover').removeClass('active'); });
-        $('#volume-slider').on('input', function() { const v = $(this).val(); audio.volume = v / 100; localStorage.setItem('player_vol', v); });
+        // Volume Bar (Full-Width Always Active)
+        $('#volume-slider').on('input', function() {
+            const v = $(this).val();
+            audio.volume = v / 100;
+            localStorage.setItem('player_vol', v);
+        });
 
         // Modals
         $('#btn-open-chat').on('click', () => {
             $('#modal-container').addClass('active'); $('#chat-popup').addClass('active');
-            chatRef.limitToLast(50).on('child_added', (snap) => {
+            chatRef.limitToLast(50).off('child_added').on('child_added', (snap) => {
                 const m = snap.val(); if (!m) return;
                 const html = `<div class="msg-bubble ${m.sender === userId ? 'mine' : ''}">${m.text}</div>`;
                 $('#chat-messages').append(html).scrollTop($('#chat-messages')[0].scrollHeight);
@@ -243,20 +278,31 @@ $(document).ready(function () {
             const txt = $('#chat-input').val().trim(); if (!txt) return;
             chatRef.push({ text: txt, sender: userId, timestamp: Date.now() }); $('#chat-input').val('');
         });
-        $('#chat-input').on('keypress', (e) => { if (e.which === 13) $('#btn-send-chat').click(); });
 
         $('#btn-submit-inquiry').on('click', async () => {
             const title = $('#inq-title').val().trim(), content = $('#inq-content').val().trim(), contact = $('#inq-contact').val().trim();
             if (!title || !content) return alert('제목과 내용을 입력해주세요.');
-            try { await inqRef.push({ title, content, contact, timestamp: Date.now(), status: 'new' }); alert('문의가 성공적으로 전송되었습니다.'); $('#inq-title, #inq-content, #inq-contact').val(''); closeAllModals(); }
-            catch (e) { alert('전송 중 오류 발생'); }
+            try { await inqRef.push({ title, content, contact, timestamp: Date.now(), status: 'new' }); alert('문의 전송 완료!'); $('#inq-title, #inq-content, #inq-contact').val(''); closeAllModals(); }
+            catch (e) { alert('전송 실패'); }
         });
 
+        // Auth Logic (Fixed Credentials & Added Signup)
         $('#btn-do-login').on('click', () => {
             const email = $('#admin-email').val(), pw = $('#admin-password').val();
-            if (email === 'admin@andre.com' && pw === 'admin1234') { alert('인증 성공!'); $('#btn-go-admin').show(); }
-            else alert('인증 정보 오류');
+            // Firebase Auth integration
+            firebase.auth().signInWithEmailAndPassword(email, pw)
+                .then(() => { alert('관리자 인증 성공!'); $('#btn-go-admin').show(); })
+                .catch(err => alert('인증 실패: ' + err.message));
         });
+
+        $('#btn-do-signup').on('click', () => {
+            const email = $('#signup-email').val(), pw = $('#signup-password').val();
+            if (!email || !pw) return alert('모두 입력해주세요.');
+            firebase.auth().createUserWithEmailAndPassword(email, pw)
+                .then(() => { alert('회원가입 성공! 이제 로그인해주세요.'); toggleAuthMode(false); })
+                .catch(err => alert('가입 실패: ' + err.message));
+        });
+
         $('#btn-go-admin').on('click', () => window.location.href = 'admin.html');
 
         // Playlist Sheet

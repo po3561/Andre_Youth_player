@@ -37,13 +37,13 @@
             </div>
         </header>
 
-        <!-- Volume Popover (Vertical Accordion) -->
-        <div id="volume-popover" class="vol-pop-vertical">
-            <div class="vol-slider-track">
-                <input type="range" class="volume-slider-v" id="volume-slider" min="0" max="100" value="80" orient="vertical" title="음량 조절">
-            </div>
+        <!-- Full-Width Volume Bar (Refined) -->
+        <div class="full-width-vol-container">
+            <i class="fa-solid fa-volume-off"></i>
+            <input type="range" id="volume-slider" min="0" max="100" value="80" title="음량 조절">
             <i class="fa-solid fa-volume-high"></i>
         </div>
+
 
         <main class="player-main">
             <div class="artwork-container" id="album-trigger" title="가사 보기/숨기기">
@@ -136,19 +136,32 @@
             </div>
         </div>
 
-        <!-- Admin Login Popup -->
+        <!-- Admin Auth Popup (Login & Sign Up) -->
         <div id="admin-popup" class="floating-popup">
             <div class="popup-header">
-                <h3>관리자 인증</h3>
+                <h3 id="admin-popup-title">관리자 인증</h3>
                 <button class="close-btn" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="popup-form">
+            <div class="popup-form" id="admin-auth-form">
                 <input type="email" id="admin-email" placeholder="이메일">
                 <input type="password" id="admin-password" placeholder="비밀번호">
                 <button class="submit-btn" id="btn-do-login">로그인</button>
+                <div class="auth-toggle">
+                    계정이 없으신가요? <span onclick="toggleAuthMode(true)">회원가입</span>
+                </div>
                 <button class="secondary-link" id="btn-go-admin" style="display:none;">관리자 대시보드 바로가기</button>
             </div>
+            <!-- Signup Form (Hidden by default) -->
+            <div class="popup-form" id="admin-signup-form" style="display:none;">
+                <input type="email" id="signup-email" placeholder="사용할 이메일">
+                <input type="password" id="signup-password" placeholder="비밀번호">
+                <button class="submit-btn" id="btn-do-signup">회원가입 완료</button>
+                <div class="auth-toggle">
+                    이미 계정이 있나요? <span onclick="toggleAuthMode(false)">로그인</span>
+                </div>
+            </div>
         </div>
+
     </div>
 
     <audio id="audio-engine" preload="auto"></audio>
