@@ -83,17 +83,39 @@ $(document).ready(function () {
 
         const audioUrl = MusicEngine.fixUrl(song.url || song.audioUrl, 'audio');
         if (audio) {
+            audio.pause();
             audio.src = audioUrl;
             audio.load();
             updateActiveInList();
             syncFavoriteState();
 
             if (shouldPlay) {
+                // Show loading state
+                $('#song-loading-overlay').fadeIn(200);
+                
                 audio.play().then(() => {
                     $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
+                    $('#song-loading-overlay').fadeOut(300);
                 }).catch(e => {
                     console.error("Play error:", e);
                     $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+                    $('#song-loading-overlay').fadeOut(300);
+                    // Try fallback without proxy if proxy failed
+                    if (audioUrl.includes('allorigins')) {
+                        console.log("Retrying without proxy...");
+                        const directUrl = song.url || song.audioUrl;
+                        if (directUrl && (directUrl.includes('drive.google.com') || directUrl.includes('docs.google.com'))) {
+                             const idMatch = directUrl.match(/id=([a-zA-Z0-9_-]+)/) || directUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                             if (idMatch) {
+                                 audio.src = `https://docs.google.com/uc?export=download&id=${idMatch[1]}`;
+                                 audio.play().then(() => {
+                                     $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
+                                 }).catch(err => {
+                                     alert("음원을 재생할 수 없습니다. 링크를 확인해주세요.");
+                                 });
+                             }
+                        }
+                    }
                 });
             }
         }
@@ -226,6 +248,7 @@ $(document).ready(function () {
         $('#volume-slider').on('input', function() { audio.volume = $(this).val() / 100; localStorage.setItem('player_vol', $(this).val()); });
 
         $('#btn-open-chat').on('click', () => {
+            closeAllModals();
             $('#modal-container, #chat-popup').addClass('active');
             $('#chat-messages').empty();
             chatRef.limitToLast(50).on('child_added', snap => {
@@ -235,9 +258,33 @@ $(document).ready(function () {
             });
         });
 
+        $('#btn-inquiry').on('click', () => {
+            closeAllModals();
+            $('#modal-container, #inquiry-popup').addClass('active');
+        });
+
+        $('#btn-admin-login').on('click', () => {
+            closeAllModals();
+            $('#modal-container, #admin-popup').addClass('active');
+        });
+
         $('#btn-send-chat').on('click', () => {
             const t = $('#chat-input').val().trim(); if (!t) return;
             chatRef.push({ text: t, sender: userId, timestamp: Date.now() }); $('#chat-input').val('');
+        });
+
+        $('#btn-submit-inquiry').on('click', () => {
+            const title = $('#inq-title').val().trim();
+            const content = $('#inq-content').val().trim();
+            const contact = $('#inq-contact').val().trim();
+            if (!title || !content) return alert('제목과 내용을 입력해주세요.');
+            
+            inqRef.push({ title, content, contact, timestamp: Date.now(), userId })
+                .then(() => {
+                    alert('문의가 전송되었습니다.');
+                    closeAllModals();
+                    $('#inq-title, #inq-content, #inq-contact').val('');
+                });
         });
 
         $('#btn-do-login').on('click', () => {
@@ -245,7 +292,11 @@ $(document).ready(function () {
             if (!e || !p) return alert('정보를 입력하세요.');
             if (!e.includes('@')) e += '@admin.com';
             firebase.auth().signInWithEmailAndPassword(e, p)
-                .then(() => window.location.href = 'admin.html')
+                .then((res) => {
+                    // Store minimal user info for admin-script.js check
+                    localStorage.setItem('adminUser', JSON.stringify({ email: res.user.email, isApproved: true }));
+                    window.location.href = 'admin.html';
+                })
                 .catch(err => alert('로그인 실패: ' + err.message));
         });
 
@@ -253,7 +304,10 @@ $(document).ready(function () {
             const e = $('#signup-email').val().trim(), p = $('#signup-password').val().trim();
             if (!e || !p) return alert('정보를 입력하세요.');
             firebase.auth().createUserWithEmailAndPassword(e, p)
-                .then(() => alert('가입 성공! 이제 로그인하세요.'))
+                .then(() => {
+                    alert('가입 성공! 이제 로그인하세요.');
+                    toggleAuthMode(false);
+                })
                 .catch(err => alert('가입 실패: ' + err.message));
         });
 
@@ -261,7 +315,39 @@ $(document).ready(function () {
             loadSong($(this).data('index'), true); $('#playlist-sheet').removeClass('active');
         });
 
-        window.closeAllModals = () => { $('.modal-overlay, .floating-popup').removeClass('active'); chatRef.off(); };
+        window.closeAllModals = () => { 
+            $('.modal-overlay, .floating-popup').removeClass('active'); 
+            chatRef.off(); 
+        };
+
+        window.toggleAuthMode = (isSignup) => {
+            if (isSignup) {
+                $('#admin-auth-form').hide();
+                $('#admin-signup-form').show();
+                $('#admin-popup-title').text('관리자 회원가입');
+            } else {
+                $('#admin-auth-form').show();
+                $('#admin-signup-form').hide();
+                $('#admin-popup-title').text('관리자 인증');
+            }
+        };
+
+        window.syncFavoriteState = () => {
+            const song = playlistData[curIdx];
+            if (!song) return;
+            const isFav = favorites.includes(song.id || song.title);
+            $('#btn-scrap i').attr('class', isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
+        };
+
+        $('#btn-scrap').on('click', () => {
+            const song = playlistData[curIdx];
+            if (!song) return;
+            const id = song.id || song.title;
+            if (favorites.includes(id)) favorites = favorites.filter(f => f !== id);
+            else favorites.push(id);
+            localStorage.setItem('andre_favs', JSON.stringify(favorites));
+            syncFavoriteState();
+        });
     }
 
     init();
