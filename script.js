@@ -249,7 +249,7 @@ $(document).ready(function () {
 
         $('#btn-open-chat').on('click', () => {
             closeAllModals();
-            $('#modal-overlay, #chat-popup').addClass('active');
+            $('#modal-container, #chat-popup').addClass('active');
             $('#chat-messages').empty();
             chatRef.limitToLast(50).on('child_added', snap => {
                 const m = snap.val(); if (!m) return;
@@ -260,12 +260,12 @@ $(document).ready(function () {
 
         $('#btn-inquiry').on('click', () => {
             closeAllModals();
-            $('#modal-overlay, #inquiry-popup').addClass('active');
+            $('#modal-container, #inquiry-popup').addClass('active');
         });
 
         $('#btn-admin-login').on('click', () => {
             closeAllModals();
-            $('#modal-overlay, #admin-login-popup').addClass('active');
+            $('#modal-container, #admin-popup').addClass('active');
         });
 
         $('#btn-send-chat').on('click', () => {
