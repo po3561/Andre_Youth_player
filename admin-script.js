@@ -1,11 +1,15 @@
 $(document).ready(function() {
-    // Login Protection
-    const adminUser = JSON.parse(localStorage.getItem('adminUser'));
-    if (!adminUser || !adminUser.isApproved) {
-        $('body').append('<div class="login-protection-overlay">권한이 없습니다. 로그인 후 이용해주세요.</div>');
-        setTimeout(() => { window.location.href = 'index.html'; }, 2000);
-        return;
+    // Login Protection (More robust)
+    function checkAuth() {
+        const adminUser = JSON.parse(localStorage.getItem('adminUser'));
+        if (!adminUser || !adminUser.isApproved) {
+            window.location.href = 'index.html';
+            return false;
+        }
+        return true;
     }
+    
+    if (!checkAuth()) return;
 
     $('#btn-admin-logout').on('click', function() {
         if (confirm('로그아웃 하시겠습니까?')) {

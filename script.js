@@ -319,12 +319,15 @@ $(document).ready(function () {
 
         // Auth Logic (Fixed Redirect & Session)
         $('#btn-do-login').off('click').on('click', () => {
-            const email = $('#admin-email').val().trim(), pw = $('#admin-password').val().trim();
+            let email = $('#admin-email').val().trim();
+            const pw = $('#admin-password').val().trim();
             if (!email || !pw) return alert('정보를 입력해주세요.');
+
+            // Allow simple username by appending dummy domain if not email
+            if (!email.includes('@')) email += '@admin.com';
 
             firebase.auth().signInWithEmailAndPassword(email, pw)
                 .then((userCredential) => {
-                    // Set admin session for admin.html
                     const adminData = {
                         uid: userCredential.user.uid,
                         email: userCredential.user.email,
