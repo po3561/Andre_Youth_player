@@ -255,22 +255,30 @@ $(document).ready(function () {
             renderLyrics();
         });
 
-        // Volume Bar (Full-Width Always Active)
-        $('#volume-slider').on('input', function() {
-            const v = $(this).val();
-            audio.volume = v / 100;
-            localStorage.setItem('player_vol', v);
+        // Volume Bar Toggle (New Logic)
+        $('#btn-vol-pop').on('click', function(e) {
+            e.stopPropagation();
+            $('.full-width-vol-container').toggleClass('active');
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.full-width-vol-container').length && !$(e.target).closest('#btn-vol-pop').length) {
+                $('.full-width-vol-container').removeClass('active');
+            }
         });
 
         // Modals
         $('#btn-open-chat').on('click', () => {
-            $('#modal-container').addClass('active'); $('#chat-popup').addClass('active');
+            $('#modal-container').addClass('active');
+            $('#chat-popup').addClass('active');
+            $('#chat-messages').empty(); // Clear for reload
             chatRef.limitToLast(50).off('child_added').on('child_added', (snap) => {
                 const m = snap.val(); if (!m) return;
                 const html = `<div class="msg-bubble ${m.sender === userId ? 'mine' : ''}">${m.text}</div>`;
                 $('#chat-messages').append(html).scrollTop($('#chat-messages')[0].scrollHeight);
             });
         });
+
         $('#btn-inquiry').on('click', () => { $('#modal-container').addClass('active'); $('#inquiry-popup').addClass('active'); });
         $('#btn-admin-login').on('click', () => { $('#modal-container').addClass('active'); $('#admin-popup').addClass('active'); });
 
