@@ -39,6 +39,11 @@ $(document).ready(function () {
         const vol = localStorage.getItem('player_vol') || 80;
         $('#volume-slider').val(vol);
         audio.volume = vol / 100;
+        
+        // Hide splash screen after initial load
+        setTimeout(() => {
+            $('#splash-screen').addClass('hidden');
+        }, 1800);
 
         window.closeAllModals = () => {
             $('#modal-container').removeClass('active');
@@ -65,19 +70,6 @@ $(document).ready(function () {
         });
     }
 
-    function parseLyrics(str) {
-        if (!str) return [];
-        const lines = str.split('\n');
-        return lines.map(l => {
-            const m = l.match(/\[(\d+):(\d+\.\d+)\](.*)/);
-            if (m) {
-                const sec = parseInt(m[1]) * 60 + parseFloat(m[2]);
-                return { time: sec, text: m[3].trim() };
-            }
-            return { time: 0, text: l.trim() };
-        }).filter(l => l.text);
-    }
-
     async function loadSong(index, shouldPlay = true) {
         if (!playlistData.length || index < 0 || index >= playlistData.length) return;
         curIdx = index;
@@ -102,10 +94,18 @@ $(document).ready(function () {
         updateActiveInList();
         syncFavoriteState();
 
+        $('#song-loading-overlay').addClass('active');
+
         if (shouldPlay) {
-            try { await audio.play(); $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>'); }
-            catch (e) { $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); }
+            try { 
+                await audio.play(); 
+                $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>'); 
+            }
+            catch (e) { 
+                $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); 
+            }
         }
+        $('#song-loading-overlay').removeClass('active');
     }
 
     function renderLyrics() {
@@ -128,8 +128,10 @@ $(document).ready(function () {
             else break;
         }
         if (activeIdx !== -1 && activeIdx !== lastActiveLyricIdx) {
-            $('.lyric-line').removeClass('active');
+            $('.lyric-line').removeClass('active near');
             const $active = $(`#lrc-${activeIdx}`).addClass('active');
+            $(`#lrc-${activeIdx-1}, #lrc-${activeIdx+1}`).addClass('near');
+
             lastActiveLyricIdx = activeIdx;
             const container = $('#lyrics-scroll')[0];
             if (container && $active.length) {
@@ -142,21 +144,24 @@ $(document).ready(function () {
     function renderPlaylist() {
         const $container = $('#song-list-container').empty();
         playlistData.forEach((song, i) => {
+            const isCurrent = i === curIdx;
             const cover = MusicEngine.fixUrl(song.cover || song.profile, 'image') || fallbackCover;
+            const playingAni = isCurrent ? `<div class="playing-bars"><span></span><span></span><span></span></div>` : '';
             $container.append(`
-                <div class="song-item ${i === curIdx ? 'active' : ''}" data-index="${i}">
+                <div class="song-item ${isCurrent ? 'active' : ''}" data-index="${i}">
                     <img src="${cover}" alt="cover">
                     <div class="song-item-info">
                         <h4>${song.title || 'Untitled'}</h4>
                         <p>${song.artist || 'Unknown'}</p>
                     </div>
+                    ${playingAni}
                 </div>
             `);
         });
     }
 
     function updateActiveInList() {
-        $('.song-item').removeClass('active').eq(curIdx).addClass('active');
+        renderPlaylist(); // Simplified: just re-render to update bars
     }
 
     function next() {
@@ -185,8 +190,6 @@ $(document).ready(function () {
         $('#btn-scrap').css('color', isFav ? 'var(--primary)' : 'white');
     }
 
-    // ... same init, fetchData ...
-
     window.toggleAuthMode = (isSignup) => {
         if (isSignup) {
             $('#admin-popup-title').text('관리자 회원가입');
@@ -201,7 +204,6 @@ $(document).ready(function () {
 
     // 4. Events
     function bindEvents() {
-        // Playback
         $('#btn-play-pause').on('click', () => {
             if (audio.paused) { audio.play(); $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>'); }
             else { audio.pause(); $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); }
@@ -209,7 +211,6 @@ $(document).ready(function () {
         $('#btn-next').on('click', next);
         $('#btn-prev').on('click', prev);
 
-        // Progress
         $('#progress-bar-area').on('mousedown touchstart', (e) => { isScrubbing = true; handleSeek(e); });
         $(document).on('mousemove touchmove', (e) => { if (isScrubbing) handleSeek(e); });
         $(document).on('mouseup touchend', () => { isScrubbing = false; });
@@ -234,24 +235,18 @@ $(document).ready(function () {
             $('#time-total').text(formatTime(audio.duration));
         }
 
-        // Shuffle/Repeat (Fixed: Icons won't disappear)
         $('#btn-shuffle').on('click', function() {
             isShuffle = !isShuffle;
-            $(this).toggleClass('active', isShuffle);
-            $(this).css('color', isShuffle ? 'var(--primary)' : 'white');
-            $(this).html('<i class="fa-solid fa-shuffle"></i>'); // Ensure icon stays
+            $(this).toggleClass('active', isShuffle).css('color', isShuffle ? 'var(--primary)' : 'white');
+            $(this).html('<i class="fa-solid fa-shuffle"></i>');
         });
 
         $('#btn-repeat').on('click', function() {
             repeatMode = (repeatMode + 1) % 3;
             const $btn = $(this);
-            if (repeatMode === 0) {
-                $btn.html('<i class="fa-solid fa-repeat"></i>').css('color', 'white');
-            } else if (repeatMode === 1) {
-                $btn.html('<i class="fa-solid fa-repeat"></i>').css('color', 'var(--primary)');
-            } else {
-                $btn.html('<i class="fa-solid fa-repeat-1"></i>').css('color', 'var(--primary)');
-            }
+            if (repeatMode === 0) $btn.html('<i class="fa-solid fa-repeat"></i>').css('color', 'white');
+            else if (repeatMode === 1) $btn.html('<i class="fa-solid fa-repeat"></i>').css('color', 'var(--primary)');
+            else $btn.html('<i class="fa-solid fa-repeat-1"></i>').css('color', 'var(--primary)');
         });
 
         audio.onended = () => {
@@ -259,31 +254,26 @@ $(document).ready(function () {
             else if (repeatMode === 1 || curIdx < playlistData.length - 1) next();
         };
 
-        // Lyrics/Artwork toggle
         $('#album-trigger').on('click', () => {
             $('#artwork').toggleClass('lyrics-mode');
             $('#lyrics-overlay').toggleClass('active');
-            // Force redraw lyrics to ensure they show
             renderLyrics();
         });
 
-        // Volume Bar Toggle (New Logic)
-        $('#btn-vol-pop').on('click', function(e) {
-            e.stopPropagation();
-            $('.full-width-vol-container').toggleClass('active');
+        $('#btn-vol-pop').on('click', (e) => { e.stopPropagation(); $('.full-width-vol-container').toggleClass('active'); });
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('.full-width-vol-container, #btn-vol-pop').length) $('.full-width-vol-container').removeClass('active');
+        });
+        
+        $('#volume-slider').on('input', function() {
+            const v = $(this).val();
+            audio.volume = v / 100;
+            localStorage.setItem('player_vol', v);
         });
 
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.full-width-vol-container').length && !$(e.target).closest('#btn-vol-pop').length) {
-                $('.full-width-vol-container').removeClass('active');
-            }
-        });
-
-        // Modals
         $('#btn-open-chat').on('click', () => {
-            $('#modal-container').addClass('active');
-            $('#chat-popup').addClass('active');
-            $('#chat-messages').empty(); // Clear for reload
+            $('#modal-container, #chat-popup').addClass('active');
+            $('#chat-messages').empty();
             chatRef.limitToLast(50).off('child_added').on('child_added', (snap) => {
                 const m = snap.val(); if (!m) return;
                 const html = `<div class="msg-bubble ${m.sender === userId ? 'mine' : ''}">${m.text}</div>`;
@@ -291,82 +281,59 @@ $(document).ready(function () {
             });
         });
 
-        $('#btn-inquiry').on('click', () => { $('#modal-container').addClass('active'); $('#inquiry-popup').addClass('active'); });
-        $('#btn-admin-login').on('click', () => { $('#modal-container').addClass('active'); $('#admin-popup').addClass('active'); });
+        $('#btn-inquiry').on('click', () => $('#modal-container, #inquiry-popup').addClass('active'));
+        $('#btn-admin-login').on('click', () => $('#modal-container, #admin-popup').addClass('active'));
 
         $('#btn-send-chat').on('click', () => {
             const txt = $('#chat-input').val().trim(); if (!txt) return;
             chatRef.push({ text: txt, sender: userId, timestamp: Date.now() }); $('#chat-input').val('');
         });
 
-        // Inquiries (Admin sync path)
-        const inqRef = db.ref('users/inquiries');
-        $('#btn-submit-inquiry').off('click').on('click', async () => {
+        $('#btn-submit-inquiry').on('click', async () => {
             const title = $('#inq-title').val().trim(), content = $('#inq-content').val().trim(), contact = $('#inq-contact').val().trim();
             if (!title || !content) return alert('제목과 내용을 입력해주세요.');
             try { 
-                await inqRef.push({ 
-                    title, content, contact, 
-                    timestamp: firebase.database.ServerValue.TIMESTAMP, 
-                    status: 'new' 
-                }); 
-                alert('문의 전송 완료!'); 
-                $('#inq-title, #inq-content, #inq-contact').val(''); 
-                closeAllModals(); 
+                await inqRef.push({ title, content, contact, timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'new' }); 
+                alert('문의 전송 완료!'); $('#inq-title, #inq-content, #inq-contact').val(''); closeAllModals(); 
             }
             catch (e) { alert('전송 실패: ' + e.message); }
         });
 
-        // Auth Logic (Fixed Redirect & Session)
-        $('#btn-do-login').off('click').on('click', () => {
-            let email = $('#admin-email').val().trim();
-            const pw = $('#admin-password').val().trim();
+        $('#btn-do-login').on('click', () => {
+            let email = $('#admin-email').val().trim(), pw = $('#admin-password').val().trim();
             if (!email || !pw) return alert('정보를 입력해주세요.');
-
-            // Allow simple username by appending dummy domain if not email
             if (!email.includes('@')) email += '@admin.com';
-
             firebase.auth().signInWithEmailAndPassword(email, pw)
                 .then((userCredential) => {
-                    const adminData = {
-                        uid: userCredential.user.uid,
-                        email: userCredential.user.email,
-                        isApproved: true,
-                        loginTime: Date.now()
-                    };
-                    localStorage.setItem('adminUser', JSON.stringify(adminData));
-                    alert('관리자 인증 성공! 대시보드로 이동합니다.');
-                    window.location.href = 'admin.html';
+                    localStorage.setItem('adminUser', JSON.stringify({ uid: userCredential.user.uid, email: userCredential.user.email, isApproved: true, loginTime: Date.now() }));
+                    alert('관리자 인증 성공!'); window.location.href = 'admin.html';
                 })
                 .catch(err => alert('인증 실패: ' + err.message));
         });
 
-        $('#btn-do-signup').on('click', () => {
-            const email = $('#signup-email').val(), pw = $('#signup-password').val();
-            if (!email || !pw) return alert('모두 입력해주세요.');
-            firebase.auth().createUserWithEmailAndPassword(email, pw)
-                .then(() => { alert('회원가입 성공! 이제 로그인해주세요.'); toggleAuthMode(false); })
-                .catch(err => alert('가입 실패: ' + err.message));
-        });
-
-        $('#btn-go-admin').on('click', () => window.location.href = 'admin.html');
-
-        // Playlist Sheet
         $('#btn-open-list').on('click', () => $('#playlist-sheet').addClass('active'));
         $('#sheet-handle').on('click', () => $('#playlist-sheet').removeClass('active'));
         $(document).on('click', '.song-item', function() { loadSong($(this).data('index'), true); $('#playlist-sheet').removeClass('active'); });
 
-        // Swipe sheet
-        let tY = 0;
-        $('#playlist-sheet').on('touchstart', (e) => tY = e.touches[0].clientY);
-        $('#playlist-sheet').on('touchmove', (e) => { if (e.touches[0].clientY - tY > 100) $('#playlist-sheet').removeClass('active'); });
-
-        // Scrap
         $('#btn-scrap').on('click', function() {
             const song = playlistData[curIdx]; if (!song) return;
             const idx = favorites.indexOf(song.title);
             if (idx === -1) favorites.push(song.title); else favorites.splice(idx, 1);
             localStorage.setItem('andre_favs', JSON.stringify(favorites)); syncFavoriteState();
+        });
+
+        $(document).on('keydown', (e) => {
+            if ($(e.target).is('input, textarea')) return;
+            switch(e.code) {
+                case 'Space': e.preventDefault(); $('#btn-play-pause').click(); break;
+                case 'ArrowRight': audio.currentTime = Math.min(audio.duration, audio.currentTime + 10); break;
+                case 'ArrowLeft': audio.currentTime = Math.max(0, audio.currentTime - 10); break;
+                case 'ArrowUp': e.preventDefault(); let vUp = Math.min(1, audio.volume + 0.1); audio.volume = vUp; $('#volume-slider').val(vUp * 100); break;
+                case 'ArrowDown': e.preventDefault(); let vDown = Math.max(0, audio.volume - 0.1); audio.volume = vDown; $('#volume-slider').val(vDown * 100); break;
+                case 'KeyM': audio.muted = !audio.muted; break;
+                case 'KeyS': $('#btn-shuffle').click(); break;
+                case 'KeyR': $('#btn-repeat').click(); break;
+            }
         });
     }
 

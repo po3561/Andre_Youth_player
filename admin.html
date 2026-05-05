@@ -55,15 +55,7 @@
                 <div class="form-group">
                     <label for="song-cover-url">커버 이미지 URL (직접 입력 또는 아래 파일 업로드)</label>
                     <input type="text" id="song-cover-url" placeholder="https://... 형식의 이미지 링크" autocomplete="off">
-                    <!-- Inquiry Management Section -->
-        <div class="section">
-            <div class="section-header">
-                <h2><i class="fa-solid fa-envelope-open-text"></i> 접수된 문의 목록</h2>
-            </div>
-            <div id="inquiry-list" class="inquiry-grid">
-                <!-- Inquiries will be loaded here -->
-            </div>
-        </div>
+                </div>
 
         <style>
             .inquiry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
@@ -189,7 +181,6 @@
                 </div>
             </div>
 
-            <!-- User Management Section (New) -->
             <div class="manage-card glass-card">
                 <div class="manage-header">
                     <h3>사용자 및 승인 관리</h3>
@@ -197,6 +188,17 @@
                 </div>
                 <div id="admin-user-list" class="admin-user-list">
                     <div class="loading-spinner">사용자 목록 불러오는 중...</div>
+                </div>
+            </div>
+
+            <!-- Inquiry Management Section -->
+            <div class="manage-card glass-card">
+                <div class="manage-header">
+                    <h3>1:1 문의 관리</h3>
+                    <button id="btn-refresh-inquiries" class="icon-btn" aria-label="문의 목록 갱신"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+                <div id="inquiry-list" class="inquiry-grid">
+                    <div class="loading-spinner">문의 목록 불러오는 중...</div>
                 </div>
             </div>
         </main>

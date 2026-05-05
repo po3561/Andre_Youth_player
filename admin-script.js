@@ -223,6 +223,16 @@ $(document).ready(function() {
         return `[${mm}:${ss}.${cs}]`;
     }
 
+    function normalizeCoverUrl(url) {
+        if (!url) return FALLBACK_COVER;
+        return MusicEngine.fixUrl(url, 'image');
+    }
+
+    function normalizeAudioUrl(url) {
+        if (!url) return '';
+        return MusicEngine.fixUrl(url, 'audio');
+    }
+
     function formatSignedSeconds(seconds) {
         const safe = Number.isFinite(seconds) ? seconds : 0;
         const sign = safe > 0 ? '+' : '';
@@ -1056,6 +1066,9 @@ $(document).ready(function() {
     }
 
     $('#btn-refresh-list').click(fetchSongs);
+    $('#btn-refresh-inquiries').click(() => {
+        if (typeof initInquiryManager === 'function') initInquiryManager();
+    });
 
     $('#btn-reset-default').click(async function() {
         if (!confirm('현재 플레이리스트를 삭제하고 초기 기본 곡 목록으로 재설정하시겠습니까?')) return;

@@ -1,12 +1,14 @@
 :root {
     --primary: #fa243c; /* Apple Music Red */
+    --primary-glow: rgba(250, 36, 60, 0.4);
     --bg-dark: #000000;
     --card-bg: rgba(255, 255, 255, 0.1);
     --text-main: #ffffff;
     --text-dim: rgba(255, 255, 255, 0.6);
     --glass: rgba(255, 255, 255, 0.08);
     --border-glass: rgba(255, 255, 255, 0.12);
-    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-fast: all 0.2s ease;
 }
 
 * {
@@ -228,18 +230,162 @@ body {
 #lyrics-scroll::-webkit-scrollbar { display: none; }
 
 .lyric-line {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text-dim);
+    font-size: 24px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.25);
     text-align: left;
-    line-height: 1.4;
+    line-height: 1.3;
     transition: var(--transition-smooth);
-    cursor: pointer;
+    padding: 10px 0;
+    filter: blur(1px);
+    transform-origin: left center;
 }
 
 .lyric-line.active {
     color: white;
+    transform: scale(1.15);
+    filter: blur(0);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.lyric-line.near {
+    color: rgba(255, 255, 255, 0.6);
+    filter: blur(0.5px);
     transform: scale(1.05);
+}
+
+/* Loading Overlay */
+#song-loading-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
+    border-radius: 24px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    backdrop-filter: blur(4px);
+}
+
+#song-loading-overlay.active { display: flex; }
+
+.loader-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 40px;
+}
+
+.loader-bars span {
+    width: 6px;
+    background: var(--primary);
+    border-radius: 3px;
+    animation: barGrow 1s ease-in-out infinite;
+}
+
+.loader-bars span:nth-child(2) { animation-delay: 0.2s; }
+.loader-bars span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes barGrow {
+    0%, 100% { height: 10px; }
+    50% { height: 40px; }
+}
+
+/* Splash Screen */
+#splash-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s ease, visibility 0.8s;
+}
+
+#splash-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.splash-content {
+    text-align: center;
+}
+
+.splash-logo {
+    width: 80px;
+    height: 80px;
+    background: var(--primary);
+    color: white;
+    font-size: 40px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    margin: 0 auto 20px;
+    box-shadow: 0 10px 30px var(--primary-glow);
+    animation: splashPulse 2s infinite;
+}
+
+.splash-content h2 {
+    font-size: 24px;
+    letter-spacing: 2px;
+    margin-bottom: 30px;
+}
+
+.splash-loader {
+    width: 40px;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+}
+
+.splash-loader::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: var(--primary);
+    animation: splashLoading 1.5s infinite;
+}
+
+@keyframes splashPulse {
+    0% { transform: scale(1); box-shadow: 0 10px 30px var(--primary-glow); }
+    50% { transform: scale(1.05); box-shadow: 0 15px 45px var(--primary-glow); }
+    100% { transform: scale(1); box-shadow: 0 10px 30px var(--primary-glow); }
+}
+
+@keyframes splashLoading {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Playing Animation in List */
+.playing-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+    margin-left: auto;
+}
+
+.playing-bars span {
+    width: 3px;
+    background: var(--primary);
+    border-radius: 1px;
+    animation: barPlay 0.8s ease-in-out infinite;
+}
+
+.playing-bars span:nth-child(2) { animation-delay: 0.2s; }
+.playing-bars span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes barPlay {
+    0%, 100% { height: 4px; }
+    50% { height: 14px; }
 }
 
 /* Info & Controls */

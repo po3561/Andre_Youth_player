@@ -11,6 +11,14 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
+    <div id="splash-screen">
+        <div class="splash-content">
+            <div class="splash-logo">A</div>
+            <h2>Andre Youth</h2>
+            <div class="splash-loader"></div>
+        </div>
+    </div>
+
     <div id="app-background"></div>
 
     <div id="app-container">
@@ -48,6 +56,11 @@
         <main class="player-main">
             <div class="artwork-container" id="album-trigger" title="가사 보기/숨기기">
                 <img src="" id="artwork" alt="Album Cover">
+                <div id="song-loading-overlay">
+                    <div class="loader-bars">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
                 <div class="lyrics-overlay" id="lyrics-overlay">
                     <div id="lyrics-scroll"></div>
                 </div>
