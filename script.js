@@ -40,6 +40,7 @@ $(document).ready(function () {
     let lyricsProgrammaticScrollTimer = null;
     let lastActiveLyricIdx = -1;
     let lastLyricsScrollAt = 0;
+    let userDb = null;
 
     localStorage.setItem('chatUserId', userId);
 
