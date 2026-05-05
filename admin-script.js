@@ -28,27 +28,10 @@ $(document).ready(function() {
         appId: "1:406016035492:web:e3d03145aefa945c707431"
     };
 
-    let userDb = null;
-    let firebaseLoadPromise = null;
-
-    async function ensureUserDb() {
-        if (userDb) return userDb;
-        if (!firebaseLoadPromise) {
-            firebaseLoadPromise = (async () => {
-                if (typeof window.firebase === 'undefined' || typeof window.firebase.database !== 'function') {
-                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
-                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js');
-                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js');
-                    await loadScriptOnce('https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js');
-                }
-                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                return firebase.database();
-            })();
-        }
-        const db = await firebaseLoadPromise;
-        userDb = db.ref('users');
-        return userDb;
-    }
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let userDb = db.ref('users');
+    const playlistRef = db.ref('users/playlist');
 
     function loadScriptOnce(src) {
         return new Promise((resolve, reject) => {

@@ -1,23 +1,7 @@
 /**
- * Music Engine for Andre Youth Player
- * Shared helpers for audio playback and Google Drive URL normalization.
+ * Music Engine for Andre Youth Player (Hyper-Stable Version)
  */
-const PLACEHOLDER_IMAGE =
-    'data:image/svg+xml;charset=UTF-8,' +
-    encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
-            <defs>
-                <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0%" stop-color="#21ccf9"/>
-                    <stop offset="100%" stop-color="#0b1220"/>
-                </linearGradient>
-            </defs>
-            <rect width="400" height="400" rx="64" fill="url(#g)"/>
-            <circle cx="200" cy="160" r="62" fill="rgba(255,255,255,0.18)"/>
-            <path d="M96 304c18-52 58-78 104-78s86 26 104 78" fill="rgba(255,255,255,0.18)"/>
-            <circle cx="200" cy="160" r="28" fill="rgba(255,255,255,0.7)"/>
-        </svg>`
-    );
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1514525253361-bee8718a300c?q=80&w=400&auto=format&fit=crop';
 
 const MusicEngine = {
     audio: document.getElementById('audio-engine') || new Audio(),
@@ -26,33 +10,30 @@ const MusicEngine = {
 
     init() {
         this.audio.id = 'audio-engine';
-        this.audio.preload = 'metadata';
-        if (!document.getElementById('audio-engine')) {
-            document.body.appendChild(this.audio);
-        }
+        this.audio.crossOrigin = "anonymous";
+        if (!document.getElementById('audio-engine')) document.body.appendChild(this.audio);
     },
 
-    /**
-     * Google Drive URL을 재생/표시 가능한 직접 URL로 변환합니다.
-     */
     fixUrl(url, type) {
         if (!url) return type === 'image' ? this.placeholderImage : '';
-        if (url.startsWith('data:')) return url;
-        if (url.includes('drive.google.com/thumbnail')) return url;
-        if (!url.includes('drive.google.com') && !url.includes('docs.google.com')) return url;
-
+        if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+        
+        // Extract ID
         const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (!idMatch || !idMatch[1]) return url;
-
         const id = idMatch[1];
-        if (type === 'audio') {
-            // No proxy needed for simple audio tag streaming
-            return `https://drive.google.com/uc?id=${id}&export=download`;
+
+        if (type === 'image') {
+            return `https://lh3.googleusercontent.com/d/${id}=w1000`; // Google Photos/Drive Direct High-Res Link
         }
-        return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+
+        // Audio: Use multiple proxy strategy
+        const directUrl = `https://drive.google.com/uc?id=${id}&export=download`;
+        // Use a more robust proxy or direct link with a backup
+        return `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
     },
 
-    parseLyrics(lrcText, offsetSec = 0) {
+    parseLyrics(lrcText) {
         if (!lrcText) return [];
         const lines = lrcText.split('\n');
         const result = [];
@@ -61,22 +42,12 @@ const MusicEngine = {
         lines.forEach(line => {
             const match = timeReg.exec(line);
             if (match) {
-                const minutes = parseInt(match[1], 10);
-                const seconds = parseFloat(match[2]);
-                const time = Math.max(0, minutes * 60 + seconds + (Number.isFinite(offsetSec) ? offsetSec : 0));
+                const time = parseInt(match[1]) * 60 + parseFloat(match[2]);
                 const text = line.replace(timeReg, '').trim();
                 if (text) result.push({ time, text });
-            } else {
-                const text = line.trim();
-                if (text && !line.startsWith('[')) {
-                    result.push({ time: 0, text });
-                }
             }
         });
-
-        result.sort((a, b) => a.time - b.time);
-        this.lyrics = result;
-        return result;
+        return result.sort((a, b) => a.time - b.time);
     }
 };
 
