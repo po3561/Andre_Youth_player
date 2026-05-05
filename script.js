@@ -26,8 +26,8 @@ $(document).ready(function () {
     let currentLyrics = [];
     let lastActiveLyricIdx = -1;
     let favorites = JSON.parse(localStorage.getItem('andre_favs')) || [];
-    let userId = localStorage.getItem('chatUserId') || 'user_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('chatUserId', userId);
+    const userId = localStorage.getItem('player_uid') || ('user_' + Math.random().toString(36).substr(2, 9));
+    localStorage.setItem('player_uid', userId);
 
     const audio = document.getElementById('audio-engine');
     const fallbackCover = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=60';
@@ -65,6 +65,19 @@ $(document).ready(function () {
         });
     }
 
+    function parseLyrics(str) {
+        if (!str) return [];
+        const lines = str.split('\n');
+        return lines.map(l => {
+            const m = l.match(/\[(\d+):(\d+\.\d+)\](.*)/);
+            if (m) {
+                const sec = parseInt(m[1]) * 60 + parseFloat(m[2]);
+                return { time: sec, text: m[3].trim() };
+            }
+            return { time: 0, text: l.trim() };
+        }).filter(l => l.text);
+    }
+
     async function loadSong(index, shouldPlay = true) {
         if (!playlistData.length || index < 0 || index >= playlistData.length) return;
         curIdx = index;
@@ -73,11 +86,10 @@ $(document).ready(function () {
         $('#disp-title').text(song.title || 'Untitled');
         $('#disp-artist').text(song.artist || 'Unknown Artist');
         
-        const coverUrl = MusicEngine.fixUrl(song.cover || song.profile, 'image') || fallbackCover;
+        const coverUrl = (song.cover || song.profile) || fallbackCover;
         $('#artwork').attr('src', coverUrl);
         $('#app-background').css('background-image', `url(${coverUrl})`);
         
-        // Lyrics Fix: Properly handle lyrics load
         const lrc = song.lyricsData || song.lyrics || "";
         currentLyrics = MusicEngine.parseLyrics(lrc);
         lastActiveLyricIdx = -1;
@@ -287,11 +299,22 @@ $(document).ready(function () {
             chatRef.push({ text: txt, sender: userId, timestamp: Date.now() }); $('#chat-input').val('');
         });
 
-        $('#btn-submit-inquiry').on('click', async () => {
+        // Inquiries (Admin sync path)
+        const inqRef = db.ref('users/inquiries');
+        $('#btn-submit-inquiry').off('click').on('click', async () => {
             const title = $('#inq-title').val().trim(), content = $('#inq-content').val().trim(), contact = $('#inq-contact').val().trim();
             if (!title || !content) return alert('제목과 내용을 입력해주세요.');
-            try { await inqRef.push({ title, content, contact, timestamp: Date.now(), status: 'new' }); alert('문의 전송 완료!'); $('#inq-title, #inq-content, #inq-contact').val(''); closeAllModals(); }
-            catch (e) { alert('전송 실패'); }
+            try { 
+                await inqRef.push({ 
+                    title, content, contact, 
+                    timestamp: firebase.database.ServerValue.TIMESTAMP, 
+                    status: 'new' 
+                }); 
+                alert('문의 전송 완료!'); 
+                $('#inq-title, #inq-content, #inq-contact').val(''); 
+                closeAllModals(); 
+            }
+            catch (e) { alert('전송 실패: ' + e.message); }
         });
 
         // Auth Logic (Fixed Credentials & Added Signup)

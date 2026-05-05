@@ -1310,4 +1310,51 @@ $(document).ready(function() {
             $btn.prop('disabled', false);
         }
     });
+
+    // --- Inquiry Management (New) ---
+    function initInquiryManager() {
+        const inqRef = firebase.database().ref('users/inquiries');
+        const $list = $('#inquiry-list');
+        
+        if (!$list.length) return; 
+
+        inqRef.on('value', snap => {
+            const data = snap.val();
+            $list.empty();
+            if (!data) {
+                $list.append('<div class="no-data" style="color:#aaa; text-align:center; padding:40px;">접수된 문의가 없습니다.</div>');
+                return;
+            }
+            
+            Object.keys(data).reverse().forEach(key => {
+                const inq = data[key];
+                const dateStr = new Date(inq.timestamp).toLocaleString();
+                const $item = $(`
+                    <div class="inquiry-item" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); animation: fadeIn 0.4s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                            <h4 style="color: #00ff88; margin: 0; font-size: 17px;">${inq.title}</h4>
+                            <button class="btn-delete-inq" data-key="${key}" style="background: rgba(255,59,48,0.1); border: none; color: #ff3b30; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #eee;">${inq.content}</p>
+                        <div style="font-size: 12px; color: #888; margin-top: 15px; display: flex; gap: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                            <span><i class="fa-solid fa-phone" style="margin-right: 5px;"></i> ${inq.contact || '미입력'}</span>
+                            <span><i class="fa-solid fa-clock" style="margin-right: 5px;"></i> ${dateStr}</span>
+                        </div>
+                    </div>
+                `);
+                $list.append($item);
+            });
+        });
+
+        $(document).on('click', '.btn-delete-inq', function() {
+            const key = $(this).data('key');
+            if (confirm('이 문의를 삭제하시겠습니까?')) {
+                inqRef.child(key).remove();
+            }
+        });
+    }
+
+    initInquiryManager();
 });
+
+
