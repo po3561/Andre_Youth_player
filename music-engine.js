@@ -18,19 +18,24 @@ const MusicEngine = {
         if (!url) return type === 'image' ? this.placeholderImage : '';
         if (url.startsWith('data:') || url.startsWith('blob:')) return url;
         
-        // Extract ID
         const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (!idMatch || !idMatch[1]) return url;
         const id = idMatch[1];
 
         if (type === 'image') {
-            return `https://lh3.googleusercontent.com/d/${id}=w1000`; // Google Photos/Drive Direct High-Res Link
+            return `https://lh3.googleusercontent.com/d/${id}=w1000`;
         }
 
-        // Audio: Use multiple proxy strategy
-        const directUrl = `https://drive.google.com/uc?id=${id}&export=download`;
-        // Use a more robust proxy or direct link with a backup
-        return `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
+        // Return the primary URL, but we'll handle fallbacks in script.js
+        return `https://docs.google.com/uc?export=open&id=${id}`;
+    },
+
+    getFallbacks(id) {
+        return [
+            `https://docs.google.com/uc?export=open&id=${id}`,
+            `https://corsproxy.io/?${encodeURIComponent('https://drive.google.com/uc?id=' + id + '&export=download')}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent('https://drive.google.com/uc?id=' + id + '&export=download')}`
+        ];
     },
 
     parseLyrics(lrcText) {

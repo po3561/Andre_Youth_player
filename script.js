@@ -86,43 +86,38 @@ $(document).ready(function () {
         lastActiveLyricIdx = -1;
         renderLyrics();
 
-        const audioUrl = MusicEngine.fixUrl(song.url || song.audioUrl, 'audio');
-        if (audio) {
-            audio.pause();
-            audio.src = audioUrl;
-            audio.load();
-            updateActiveInList();
-            syncFavoriteState();
+        const originalUrl = song.url || song.audioUrl;
+        const idMatch = originalUrl ? (originalUrl.match(/id=([a-zA-Z0-9_-]+)/) || originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/)) : null;
+        const fallbacks = idMatch ? MusicEngine.getFallbacks(idMatch[1]) : [originalUrl];
+        let tryIdx = 0;
 
+        const tryPlay = (url) => {
+            audio.src = url;
+            audio.load();
             if (shouldPlay) {
-                // Show loading state
                 $('#song-loading-overlay').fadeIn(200);
-                
                 audio.play().then(() => {
                     $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
                     $('#song-loading-overlay').fadeOut(300);
                 }).catch(e => {
-                    console.error("Play error:", e);
-                    $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
-                    $('#song-loading-overlay').fadeOut(300);
-                    // Try fallback without proxy if proxy failed
-                    if (audioUrl.includes('allorigins')) {
-                        console.log("Retrying without proxy...");
-                        const directUrl = song.url || song.audioUrl;
-                        if (directUrl && (directUrl.includes('drive.google.com') || directUrl.includes('docs.google.com'))) {
-                             const idMatch = directUrl.match(/id=([a-zA-Z0-9_-]+)/) || directUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                             if (idMatch) {
-                                 audio.src = `https://docs.google.com/uc?export=download&id=${idMatch[1]}`;
-                                 audio.play().then(() => {
-                                     $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
-                                 }).catch(err => {
-                                     alert("음원을 재생할 수 없습니다. 링크를 확인해주세요.");
-                                 });
-                             }
-                        }
+                    console.error(`Play failed for ${url}:`, e);
+                    tryIdx++;
+                    if (tryIdx < fallbacks.length) {
+                        console.log(`Trying fallback ${tryIdx}...`);
+                        tryPlay(fallbacks[tryIdx]);
+                    } else {
+                        $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+                        $('#song-loading-overlay').fadeOut(300);
+                        alert("음원을 재생할 수 없습니다. 서버 상태를 확인해주세요.");
                     }
                 });
             }
+        };
+
+        if (audio) {
+            updateActiveInList();
+            syncFavoriteState();
+            tryPlay(fallbacks[0]);
         }
     }
 
