@@ -14,7 +14,7 @@ $(document).ready(function () {
     const db = firebase.database();
     const playlistRef = db.ref('users/playlist');
     const settingsRef = db.ref('users/appSettings');
-    const chatRef = db.ref('messages');
+    const chatRef = db.ref('chats');
     const inqRef = db.ref('users/inquiries');
 
     // 2. State
@@ -317,12 +317,24 @@ $(document).ready(function () {
             catch (e) { alert('전송 실패: ' + e.message); }
         });
 
-        // Auth Logic (Fixed Credentials & Added Signup)
-        $('#btn-do-login').on('click', () => {
-            const email = $('#admin-email').val(), pw = $('#admin-password').val();
-            // Firebase Auth integration
+        // Auth Logic (Fixed Redirect & Session)
+        $('#btn-do-login').off('click').on('click', () => {
+            const email = $('#admin-email').val().trim(), pw = $('#admin-password').val().trim();
+            if (!email || !pw) return alert('정보를 입력해주세요.');
+
             firebase.auth().signInWithEmailAndPassword(email, pw)
-                .then(() => { alert('관리자 인증 성공!'); $('#btn-go-admin').show(); })
+                .then((userCredential) => {
+                    // Set admin session for admin.html
+                    const adminData = {
+                        uid: userCredential.user.uid,
+                        email: userCredential.user.email,
+                        isApproved: true,
+                        loginTime: Date.now()
+                    };
+                    localStorage.setItem('adminUser', JSON.stringify(adminData));
+                    alert('관리자 인증 성공! 대시보드로 이동합니다.');
+                    window.location.href = 'admin.html';
+                })
                 .catch(err => alert('인증 실패: ' + err.message));
         });
 
