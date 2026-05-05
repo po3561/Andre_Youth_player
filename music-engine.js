@@ -10,7 +10,8 @@ const MusicEngine = {
 
     init() {
         this.audio.id = 'audio-engine';
-        this.audio.crossOrigin = "anonymous";
+        // Remove crossOrigin to bypass strict CORS requirements for simple playback
+        this.audio.removeAttribute('crossorigin');
         if (!document.getElementById('audio-engine')) document.body.appendChild(this.audio);
     },
 
@@ -31,9 +32,11 @@ const MusicEngine = {
     },
 
     getFallbacks(id) {
+        const ts = Date.now();
         return [
-            `https://docs.google.com/uc?export=open&id=${id}`,
-            `https://docs.google.com/uc?export=download&id=${id}`,
+            `https://lh3.googleusercontent.com/d/${id}?t=${ts}`, // High success rate trick
+            `https://docs.google.com/uc?export=download&id=${id}&t=${ts}`,
+            `https://drive.google.com/uc?id=${id}&export=download`,
             `https://corsproxy.io/?${encodeURIComponent('https://drive.google.com/uc?id=' + id + '&export=download')}`,
             `https://api.allorigins.win/raw?url=${encodeURIComponent('https://drive.google.com/uc?id=' + id + '&export=download')}`
         ];
