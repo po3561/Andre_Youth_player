@@ -164,6 +164,7 @@ body {
 .modal-overlay.active { display: flex; }
 .floating-popup { 
     display: none; 
+    position: absolute; /* 절대 위치 지정으로 중첩 방지 */
     width: 100%; 
     max-width: 400px; 
     background: #1c1c1e; 
