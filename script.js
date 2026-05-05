@@ -32,8 +32,8 @@ $(document).ready(function () {
     const fallbackImage = MusicEngine.placeholderImage || "";
     let firebaseLoadPromise = null;
     let chatDb = null;
-    let userDb = null; // New: Reference for users
     let chatListenersReady = false;
+    let playlistListenerActive = false;
     let lyricsAutoScrollEnabled = true;
     let lyricsAutoScrollTimer = null;
     let lyricsProgrammaticScrollLock = false;
@@ -171,35 +171,15 @@ $(document).ready(function () {
         return playlistData.filter(item => item && item.title).length <= 1;
     }
 
-    const audioSourceCache = new Map();
-    let activeAudioObjectUrl = null;
-    let audioLoadToken = 0;
-
-    async function resolveAudioSource(song, fixedAudio) {
-        if (!fixedAudio) return '';
-        const cacheKey = song?.audioFileId || song?.url || fixedAudio;
-
-        // Return from memory cache if available
-        if (audioSourceCache.has(cacheKey)) {
-            return audioSourceCache.get(cacheKey);
-        }
-
-        // Use the URL directly (it now points to api.codetabs.com proxy which handles CORS)
-        audioSourceCache.set(cacheKey, fixedAudio);
-        return fixedAudio;
-    }
-
     function preloadNextTrack() {
         const nextIdx = isShuffle ? getRandomPlayableIndex() : getNextPlayableIndex(curIdx + 1);
         if (nextIdx === -1 || nextIdx === curIdx) return;
-
         const nextSong = playlistData[nextIdx];
         if (nextSong && nextSong.url) {
             const fixed = MusicEngine.fixUrl(nextSong.url, 'audio');
-            // Background resolve (won't block UI)
-            void resolveAudioSource(nextSong, fixed).then(url => {
-                console.log('Next track preloaded:', nextSong.title);
-            }).catch(() => { });
+            const preload = new Audio();
+            preload.src = fixed;
+            preload.preload = 'auto';
         }
     }
 
@@ -643,105 +623,57 @@ $(document).ready(function () {
         });
     }
 
-    function load(i, play = false) {
-        if (!playlistData.length) return;
+    async function load(index, play = false) {
+        if (!playlistData.length || index < 0 || index >= playlistData.length) return;
 
-        // Find best playable index starting from i
-        let targetIdx = i;
-        const s = playlistData[targetIdx];
+        curIdx = index;
+        const song = playlistData[curIdx];
+        if (!song) return;
 
-        // If the current candidate is invalid (no URL or marked failed), find the next one
-        if (!s || !getSongUrl(s) || failedTitles.has(s.title)) {
-            targetIdx = getNextPlayableIndex(targetIdx + 1);
-            if (targetIdx === -1 || targetIdx === i) {
-                // If I came back to the same failed index or no playable left
-                if ($('#disp-title').text() !== 'Loading...') {
-                    $('#disp-title').text('재생 가능한 곡이 없습니다.');
-                }
-                return;
-            }
-            return load(targetIdx, play);
-        }
-
-        curIdx = targetIdx;
-        const finalSong = playlistData[curIdx];
-
-        const fixedAudio = MusicEngine.fixUrl(getSongUrl(s), 'audio');
-        const fixedCover = songImage(s);
-
-        const loadToken = ++audioLoadToken;
+        // Reset state
         audio.pause();
-        audio.removeAttribute('src');
-        audio.removeAttribute('crossorigin');
-        audio.load();
+        lastActiveLyricIdx = -1;
+        setLyricsAutoScrollEnabled(true);
 
+        // Update UI
+        const fixedCover = songImage(song);
         setImageWithFallback($('#album-img'), fixedCover);
         setImageWithFallback($('#artist-avatar'), fixedCover);
         $('#bg-image').css('background-image', `url('${fixedCover}')`);
         $('#album-trigger').removeClass('show-lyrics').css('background-image', `url('${fixedCover}')`);
-        setLyricsAutoScrollEnabled(true);
-        $('#disp-title').text(s.title || 'Untitled');
-        $('#disp-artist').text(s.artist || 'Andre Youth');
+        
+        $('#disp-title').text(song.title || 'Untitled');
+        $('#disp-artist').text(song.artist || 'Andre Youth');
 
-        lastActiveLyricIdx = -1;
-        if (s.lyricsData || s.lyrics) {
-            currentLyrics = MusicEngine.parseLyrics(s.lyricsData || s.lyrics, Number(s.syncOffset) || 0);
+        // Lyrics
+        const lyricsText = song.lyricsData || song.lyrics || "";
+        if (lyricsText) {
+            currentLyrics = MusicEngine.parseLyrics(lyricsText, Number(song.syncOffset) || 0);
             renderLyrics();
         } else {
             $('#lyrics-scroll-area').html('<div class="lyric-line no-data">등록된 가사가 없습니다.</div>');
             currentLyrics = [];
-            void ensureLyricsForSong(s).then(updatedSong => {
-                if (curIdx !== targetIdx || !updatedSong || !updatedSong.lyricsData) return;
-                currentLyrics = MusicEngine.parseLyrics(updatedSong.lyricsData, Number(updatedSong.syncOffset) || 0);
-                renderLyrics();
-                updateLyricsUI(audio.currentTime);
-            });
         }
+
+        // Audio Source
+        const fixedAudio = MusicEngine.fixUrl(getSongUrl(song), 'audio');
+        audio.src = fixedAudio;
+        audio.load();
 
         render();
         syncHearts();
         warmupLyricsAround(curIdx);
 
-        void resolveAudioSource(s, fixedAudio)
-            .then(async resolvedAudio => {
-                if (loadToken !== audioLoadToken) {
-                    if (resolvedAudio && resolvedAudio.startsWith('blob:')) {
-                        URL.revokeObjectURL(resolvedAudio);
-                    }
-                    return;
-                }
-
-                if (activeAudioObjectUrl && activeAudioObjectUrl.startsWith('blob:') && activeAudioObjectUrl !== resolvedAudio) {
-                    URL.revokeObjectURL(activeAudioObjectUrl);
-                }
-                activeAudioObjectUrl = resolvedAudio && resolvedAudio.startsWith('blob:') ? resolvedAudio : null;
-
-                audio.src = resolvedAudio;
-                audio.load();
-
-                if (play) {
-                    audio.play().then(() => {
-                        // Successfully playing, trigger preload for next track
-                        preloadNextTrack();
-                    }).catch(e => {
-                        console.error('Playback System Error:', e.name, e.message);
-                        if (e.name === 'NotAllowedError') {
-                            $('#disp-title').text('화면을 클릭하면 재생됩니다.');
-                        }
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Audio Source Error:', error);
-                const failed = playlistData[curIdx];
-                if (failed?.title) failedTitles.add(failed.title);
-                const nextIdx = getNextPlayableIndex(curIdx + 1);
-                if (nextIdx === -1 || nextIdx === i) {
-                    $('#disp-title').text('재생 가능한 곡이 없습니다.');
-                    return;
-                }
-                load(nextIdx, play);
-            });
+        if (play) {
+            try {
+                await audio.play();
+                $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
+                preloadNextTrack();
+            } catch (e) {
+                console.warn('Playback blocked by browser:', e.name);
+                $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+            }
+        }
     }
 
     function next() {
@@ -943,66 +875,64 @@ $(document).ready(function () {
             }
 
             await ensureUserDb();
-            const playlistSnap = await firebase.database().ref('users/playlist').once('value');
-            const rawData = playlistSnap.val() || [];
-            const data = normalizeSongs(rawData);
+            const playlistRef = firebase.database().ref('users/playlist');
 
-            const settingsSnap = await firebase.database().ref('users/appSettings').once('value');
-            const settings = settingsSnap.val() || null;
-            if (settings) {
-                applyAppSettings(settings);
-            }
-
-            if (Array.isArray(data) && data.length > 0) {
-                // If it was empty or 1-song fallback, replace immediately
-                const wasMinimal = playlistData.length <= 1;
-                const currentTitle = playlistData[curIdx]?.title;
-
-                playlistData = data;
-                // PUBLIC_PLAYLIST도 동기화하여 admin fallback 데이터 갱신
-                window.PUBLIC_PLAYLIST = data;
-                writePlaylistCache({
-                    songs: data,
-                    settings: settings || appSettings
-                });
-                failedTitles.clear();
-                render();
-                renderCopyright();
-
-                if (currentTitle && !wasMinimal) {
-                    const preservedIndex = playlistData.findIndex(song => song?.title === currentTitle);
-                    if (preservedIndex !== -1) {
-                        curIdx = preservedIndex;
-                        render();
-                        syncHearts();
-                        return;
+            if (!playlistListenerActive) {
+                playlistListenerActive = true;
+                playlistRef.on('value', async (snapshot) => {
+                    let rawData = snapshot.val();
+                    if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
+                        rawData = Object.values(rawData);
                     }
-                }
+                    if (!rawData) rawData = [];
+                    const data = normalizeSongs(rawData);
+                    
+                    const settingsSnap = await firebase.database().ref('users/appSettings').once('value');
+                    const settings = settingsSnap.val();
+                    if (settings) applyAppSettings(settings);
 
-                const firstPlayable = getNextPlayableIndex(0);
-                load(firstPlayable === -1 ? 0 : firstPlayable, !wasMinimal ? false : true);
-            } else {
-                // 데이터베이스에 곡이 하나도 없는 경우 (전부 삭제된 경우)
-                playlistData = [];
-                window.PUBLIC_PLAYLIST = [];
-                writePlaylistCache({
-                    songs: [],
-                    settings: settings || appSettings
+                    handlePlaylistUpdate(data, settings);
                 });
-                failedTitles.clear();
-                render();
-                $('#disp-title').text('곡을 추가해주세요.');
-                $('#disp-artist').text('');
-                $('#album-img, #artist-avatar').attr('src', fallbackImage);
-                $('#bg-image').css('background-image', '');
-                $('#lyrics-scroll-area').html('<div class="lyric-line no-data">등록된 곡이 없습니다.</div>');
-                curIdx = -1;
             }
         } catch (error) {
             console.error('Playlist Fetch Error:', error);
-            if (!playlistData.length) {
-                $('#disp-title').text('데이터 로드 실패');
+        }
+    }
+
+    function handlePlaylistUpdate(data, settings) {
+        if (Array.isArray(data) && data.length > 0) {
+            const wasMinimal = playlistData.length <= 1;
+            const currentTitle = playlistData[curIdx]?.title;
+
+            playlistData = data;
+            window.PUBLIC_PLAYLIST = data;
+            writePlaylistCache({ songs: data, settings: settings });
+            failedTitles.clear();
+            render();
+            renderCopyright();
+
+            if (currentTitle && !wasMinimal) {
+                const preservedIndex = playlistData.findIndex(song => song?.title === currentTitle);
+                if (preservedIndex !== -1) {
+                    curIdx = preservedIndex;
+                    render();
+                    syncHearts();
+                    return;
+                }
             }
+            const firstPlayable = getNextPlayableIndex(0);
+            load(firstPlayable === -1 ? 0 : firstPlayable, !wasMinimal ? false : true);
+        } else {
+            playlistData = [];
+            window.PUBLIC_PLAYLIST = [];
+            writePlaylistCache({ songs: [], settings: settings });
+            render();
+            $('#disp-title').text('곡을 추가해주세요.');
+            $('#disp-artist').text('');
+            $('#album-img, #artist-avatar').attr('src', fallbackImage);
+            $('#bg-image').css('background-image', '');
+            $('#lyrics-scroll-area').html('<div class="lyric-line no-data">등록된 곡이 없습니다.</div>');
+            curIdx = -1;
         }
     }
 
@@ -1023,15 +953,22 @@ $(document).ready(function () {
 
         next();
     };
-    audio.onerror = () => {
+    audio.onerror = (e) => {
         const failed = playlistData[curIdx];
+        console.error("Playback Error for:", failed?.title, audio.error);
+        
         if (failed?.title) failedTitles.add(failed.title);
-        const nextIdx = getNextPlayableIndex(curIdx + 1);
-        if (nextIdx === -1) {
+        
+        // Prevent infinite skipping
+        if (failedTitles.size >= playlistData.length) {
             $('#disp-title').text('재생 가능한 곡이 없습니다.');
             return;
         }
-        load(nextIdx, true);
+
+        const nextIdx = getNextPlayableIndex(curIdx + 1);
+        if (nextIdx !== -1) {
+            setTimeout(() => load(nextIdx, true), 500);
+        }
     };
     audio.onplay = () => $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
     audio.onpause = () => $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
@@ -1057,31 +994,28 @@ $(document).ready(function () {
     }
 
     $('#progress-bar')
-        .on('mousedown touchstart', function () {
+        .on('mousedown touchstart', function (e) {
             isScrubbing = true;
         })
         .on('input', function () {
-            if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
+            if (isNaN(audio.duration)) return;
             const percent = parseFloat($(this).val());
-            const nextTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
+            const nextTime = (percent / 100) * audio.duration;
             $('#time-now').text(formatTime(nextTime));
             if ($('#album-trigger').hasClass('show-lyrics')) {
                 updateLyricsUI(nextTime);
             }
         })
-        .on('change', function () {
+        .on('change click', function (e) {
+            // click event helps desktop users who just click the bar
+            if (isNaN(audio.duration) || audio.duration <= 0) return;
             isScrubbing = false;
-            if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
             const percent = parseFloat($(this).val());
-            seekByProgress(percent);
+            const targetTime = (percent / 100) * audio.duration;
+            audio.currentTime = targetTime;
         })
         .on('mouseup touchend', function () {
-            if (isScrubbing) {
-                isScrubbing = false;
-                if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
-                const percent = parseFloat($(this).val());
-                seekByProgress(percent);
-            }
+            isScrubbing = false;
         });
 
     $('#btn-play-pause').on('click touchstart', function (e) {

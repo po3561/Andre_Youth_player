@@ -50,7 +50,9 @@ const MusicEngine = {
 
         const id = idMatch[1];
         if (type === 'audio') {
-            return `https://drive.google.com/uc?id=${id}&export=download`;
+            // Use CORS proxy for Google Drive audio to prevent playback failures
+            const directUrl = `https://drive.google.com/uc?id=${id}&export=download`;
+            return `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(directUrl)}`;
         }
 
         // 이미지는 thumbnail API로 (빠르고 CORS 무관)
