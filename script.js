@@ -1,4 +1,4 @@
-$(document).ready(function() {
+$(document).ready(function () {
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -58,7 +58,7 @@ $(document).ready(function() {
     }
 
     function setImageWithFallback($img, url) {
-        $img.off('error').attr('src', url || fallbackImage).on('error', function() {
+        $img.off('error').attr('src', url || fallbackImage).on('error', function () {
             if (this.src !== fallbackImage) {
                 this.src = fallbackImage;
             }
@@ -160,7 +160,7 @@ $(document).ready(function() {
         const playable = getPlayableIndices();
         if (playable.length === 0) return -1;
         if (playable.length === 1) return playable[0];
-        
+
         // Exclude current index to avoid repeat in shuffle
         const others = playable.filter(idx => idx !== curIdx);
         const target = others.length > 0 ? others : playable;
@@ -178,7 +178,7 @@ $(document).ready(function() {
     async function resolveAudioSource(song, fixedAudio) {
         if (!fixedAudio) return '';
         const cacheKey = song?.audioFileId || song?.url || fixedAudio;
-        
+
         // Return from memory cache if available
         if (audioSourceCache.has(cacheKey)) {
             return audioSourceCache.get(cacheKey);
@@ -192,14 +192,14 @@ $(document).ready(function() {
     function preloadNextTrack() {
         const nextIdx = isShuffle ? getRandomPlayableIndex() : getNextPlayableIndex(curIdx + 1);
         if (nextIdx === -1 || nextIdx === curIdx) return;
-        
+
         const nextSong = playlistData[nextIdx];
         if (nextSong && nextSong.url) {
             const fixed = MusicEngine.fixUrl(nextSong.url, 'audio');
             // Background resolve (won't block UI)
             void resolveAudioSource(nextSong, fixed).then(url => {
                 console.log('Next track preloaded:', nextSong.title);
-            }).catch(() => {});
+            }).catch(() => { });
         }
     }
 
@@ -207,7 +207,7 @@ $(document).ready(function() {
         if (Number.isNaN(time)) return;
         audio.currentTime = Math.max(0, time);
         if (audio.paused) {
-            audio.play().catch(() => {});
+            audio.play().catch(() => { });
         }
         if (!$('#album-trigger').hasClass('show-lyrics')) {
             $('#album-trigger').addClass('show-lyrics');
@@ -274,7 +274,7 @@ $(document).ready(function() {
             .find('i')
             .attr('class', isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
 
-        $('#song-list-ul li').each(function(i) {
+        $('#song-list-ul li').each(function (i) {
             const item = playlistData[i];
             if (!item) return;
             const isSet = scrappedSongs.includes(item.title);
@@ -315,7 +315,7 @@ $(document).ready(function() {
                         $('#login-id, #login-pw').val('');
                     });
             }
-        } catch(e) {
+        } catch (e) {
             console.error('Session check error', e);
         }
     }
@@ -368,7 +368,7 @@ $(document).ready(function() {
 
             try {
                 await ensureUserDb();
-                
+
                 // Check if ID already exists
                 const snapshot = await userDb.orderByChild('id').equalTo(data.id).once('value');
                 if (snapshot.exists()) {
@@ -413,7 +413,7 @@ $(document).ready(function() {
             try {
                 await ensureUserDb();
                 const snapshot = await userDb.orderByChild('id').equalTo(id).once('value');
-                
+
                 if (!snapshot.exists()) {
                     alert('존재하지 않는 아이디입니다.');
                     return;
@@ -439,10 +439,10 @@ $(document).ready(function() {
                 // Success
                 alert(`${userData.name}님, 환영합니다!`);
                 localStorage.setItem('adminUser', JSON.stringify(userData));
-                
+
                 // Redirect to admin page if admin
                 window.location.href = 'admin.html';
-                
+
             } catch (error) {
                 console.error('Login Error:', error);
                 alert('로그인 중 오류가 발생했습니다.');
@@ -486,7 +486,7 @@ $(document).ready(function() {
             $area.append(`<div class="lyric-line" id="lyric-${i}" data-time="${l.time}">${escapeHtml(l.text)}</div>`);
         });
 
-        $('.lyric-line').off('click').on('click', function(e) {
+        $('.lyric-line').off('click').on('click', function (e) {
             e.stopPropagation();
             const time = parseFloat($(this).data('time'));
             if (!isNaN(time)) {
@@ -645,11 +645,11 @@ $(document).ready(function() {
 
     function load(i, play = false) {
         if (!playlistData.length) return;
-        
+
         // Find best playable index starting from i
         let targetIdx = i;
         const s = playlistData[targetIdx];
-        
+
         // If the current candidate is invalid (no URL or marked failed), find the next one
         if (!s || !getSongUrl(s) || failedTitles.has(s.title)) {
             targetIdx = getNextPlayableIndex(targetIdx + 1);
@@ -727,15 +727,6 @@ $(document).ready(function() {
                         console.error('Playback System Error:', e.name, e.message);
                         if (e.name === 'NotAllowedError') {
                             $('#disp-title').text('화면을 클릭하면 재생됩니다.');
-                        } else if (e.name === 'NotSupportedError' || e.message.includes('supported source')) {
-                            const failed = playlistData[curIdx];
-                            if (failed?.title) failedTitles.add(failed.title);
-                            const nextIdx = getNextPlayableIndex(curIdx + 1);
-                            if (nextIdx === -1 || nextIdx === i) {
-                                $('#disp-title').text('재생 가능한 곡이 없습니다.');
-                                return;
-                            }
-                            load(nextIdx, play);
                         }
                     });
                 }
@@ -757,12 +748,12 @@ $(document).ready(function() {
         if (isSingleTrackPlaylist()) {
             audio.currentTime = 0;
             if (audio.paused) {
-                audio.play().catch(() => {});
+                audio.play().catch(() => { });
             }
             return;
         }
         const n = isShuffle ? getRandomPlayableIndex() : getNextPlayableIndex(curIdx + 1);
-        
+
         if (n === -1) {
             // Only show message if we actually gave up
             return;
@@ -774,7 +765,7 @@ $(document).ready(function() {
         if (isSingleTrackPlaylist()) {
             audio.currentTime = 0;
             if (audio.paused) {
-                audio.play().catch(() => {});
+                audio.play().catch(() => { });
             }
             return;
         }
@@ -833,7 +824,7 @@ $(document).ready(function() {
                 $('#chat-input').val('');
             });
 
-            $('#chat-input').off('keypress.chat').on('keypress.chat', function(e) {
+            $('#chat-input').off('keypress.chat').on('keypress.chat', function (e) {
                 if (e.which === 13) {
                     e.preventDefault();
                     $('#btn-send-chat').click();
@@ -845,7 +836,7 @@ $(document).ready(function() {
                 const m = snap.val();
                 if (!m) return;
                 const iLike = myLikedMsgs.includes(key);
-                
+
                 // Add timestamp display if available
                 let timeStr = '';
                 if (m.timestamp) {
@@ -882,7 +873,7 @@ $(document).ready(function() {
                 }
             });
 
-            $(document).off('click.chatLike').on('click.chatLike', '.msg-like-btn', function() {
+            $(document).off('click.chatLike').on('click.chatLike', '.msg-like-btn', function () {
                 const key = $(this).data('key');
                 const isLiked = $(this).hasClass('liked');
                 chatDb.child(key).transaction(p => {
@@ -953,72 +944,7 @@ $(document).ready(function() {
 
             await ensureUserDb();
             const playlistSnap = await firebase.database().ref('users/playlist').once('value');
-            let rawData = playlistSnap.val();
-            if (!rawData || (Array.isArray(rawData) && rawData.length === 0) || (typeof rawData === 'object' && Object.keys(rawData).length === 0)) {
-                rawData = [
-                    {
-                        "id": "d9baeed0-e2b6-4f3a-9d08-07ef468889c7",
-                        "title": "그러므로",
-                        "artist": "Andre Youth",
-                        "url": "https://drive.google.com/file/d/1zn-BgGJ-pm2WdDsJXS4hUnUxLp18W-NA/view?usp=sharing",
-                        "cover": "https://drive.google.com/file/d/1S0e9I0aC25m4bbcnTLVR6OaxIWC-FmfL/view?usp=sharing",
-                        "lyrics": "[00:07.00] 오늘 내 눈에 보이지 않고\n[00:07.22] 오늘 내 손에 잡히지 않아도\n[00:14.16] 그의 눈이 날 지켜보셨고\n[00:21.76] 그의 손이 지켜주셨기에\n[00:29.84] 오늘 내 눈에 보이지 않고\n[00:37.35] 오늘 내 손에 잡히지 않아도\n[00:44.85] 그의 눈이 날 지켜보셨고\n[00:52.46] 그의 손이 지켜주셨기에\n[01:00.97] 예수 그리스도로\n[01:08.96] 말미암아 우리에게\n[01:16.30] 이김을 주시는\n[01:22.53] 하나님께 감사하노니\n[01:30.03] 그러므로 사랑하는\n[01:37.16] 형제들이 흔들리지 않기를\n[01:45.47] 오늘 하루가 주 안에서\n[01:52.53] 헛되지 않음을 기억하기를\n[02:00.43] 오늘 내 눈에 보이지 않고\n[02:08.18] 오늘 내 손에 잡히지 않아도\n[02:15.76] 그의 눈이 날 지켜보셨고\n[02:23.41] 그의 손이 지켜주셨기에\n[02:31.73] 그러므로 사랑하는\n[02:39.38] 형제들이 흔들리지 않기를\n[02:47.23] 오늘 하루가 주 안에서\n[02:54.14] 헛되지 않음을 기억하기를\n[03:02.46] 그러므로 사랑하는\n[03:09.97] 형제들이 흔들리지 않기를\n[03:17.75] 오늘 하루가 주 안에서\n[03:24.76] 헛되지 않음을 기억하기를\n[03:32.33] 헛되지 않음을 기억하기를",
-                        "syncOffset": 0,
-                        "syncMinGap": 0.22
-                    },
-                    {
-                        "id": "6b773272-179d-481a-9404-11027faf49a4",
-                        "title": "우리가 주를 더욱 사랑하고",
-                        "artist": "Andre Youth",
-                        "url": "https://drive.google.com/file/d/1XkOt0YcLUtxx83w0HNeFwt09nRxyDKuq/view?usp=sharing",
-                        "cover": "https://drive.google.com/file/d/1voANoQ1zgiAGe0WxCv2bM_JurdyOHWUB/view?usp=sharing",
-                        "lyrics": "[00:16.87] 큰 사랑 우리게 찾아왔네\n[00:24.05] 자기 몸 희생하며 확증하신 사랑\n[00:31.15] 먼저 본이 되신 이가 우리게 명하시네\n[00:37.59] 네 마음과 뜻 힘 다해 주를 사랑하라\n[00:44.85] 무엇보다 뜨겁게 서로 사랑할지니\n[00:51.97] 사랑이 모든 것을 덮어주네\n[00:59.32] 사랑 가운데 우리 온전히 살아갈 때\n[01:06.29] 우리 삶이 그의 기쁨 되네\n[01:12.48] 우리가 주를 더욱 사랑하고\n[01:16.14] 그 사랑 우리 삶에 녹아내어\n[01:19.67] 서로를 더욱 섬기고 사랑할 때\n[01:23.19] 하나님 나라 임하겠네\n[01:26.89] 우리가 주를 더욱 노래하고\n[01:30.45] 이곳에 함께 모여 찬양하니\n[01:33.97] 모든 두려움과 걱정은 떠나가네\n[01:37.54] 주 사랑만이 이곳에 가득해\n[01:52.89] 큰 사랑 우리게 찾아왔네\n[02:00.01] 자기 몸 희생하며 확증하신 사랑\n[02:07.19] 먼저 본이 되신 이가 우리게 명하시네\n[02:13.63] 네 마음과 뜻 힘 다해 주를 사랑하라\n[02:20.89] 무엇보다 뜨겁게 서로 사랑할지니\n[02:27.98] 사랑이 모든 것을 덮어주네\n[02:35.20] 사랑 가운데 우리 온전히 살아갈 때\n[02:42.27] 우리 삶이 그의 기쁨 되네\n[02:48.49] 우리가 주를 더욱 사랑하고\n[02:52.15] 그 사랑 우리 삶에 녹아내어\n[02:55.66] 서로를 더욱 섬기고 사랑할 때\n[02:59.19] 하나님 나라 임하겠네\n[03:02.89] 우리가 주를 더욱 노래하고\n[03:06.45] 이곳에 함께 모여 찬양하니\n[03:10.02] 모든 두려움과 걱정은 떠나가네\n[03:13.55] 주 사랑만이 이곳에 가득해\n[03:20.55] 가득해\n[03:31.11] 우리가 주를 더욱 사랑하고\n[03:34.70] 그 사랑 우리 삶에 녹아내어\n[03:38.23] 서로를 더욱 섬기고 사랑할 때\n[03:41.81] 하나님 나라 임하겠네\n[03:45.46] 우리가 주를 더욱 노래하고\n[03:49.02] 이곳에 함께 모여 찬양하니\n[03:52.61] 모든 두려움과 걱정은 떠나가네\n[03:56.16] 주 사랑만이 이곳에 가득해\n[04:06.78] 우리가 주를 더욱 사랑하고\n[04:10.34] 그 사랑 우리 삶에 녹아내어\n[04:13.87] 서로를 더욱 섬기고 사랑할 때\n[04:17.44] 하나님 나라 임하겠네\n[04:21.07] 우리가 주를 더욱 노래하고\n[04:24.73] 이곳에 함께 모여 찬양하니\n[04:28.26] 모든 두려움과 걱정은 떠나가네\n[04:31.79] 주 사랑만이 이곳에 가득해\n[04:38.93] 주 사랑만이 이곳에\n[04:46.06] 주 사랑만이 이곳에\n[04:53.06] 가득해\n[05:00.20] 가득해\n[05:03.05] 가득해\n[05:03.22] 가득해",
-                        "syncOffset": 0,
-                        "syncMinGap": 0.22
-                    },
-                    {
-                        "id": "ce86ea56-2db1-4294-bb9d-3ea84f4f70f5",
-                        "title": "행복",
-                        "artist": "Andre Youth",
-                        "url": "https://drive.google.com/file/d/1Zw7XFUtuvbsmjA2rByE6L_j-J64uRh3V/view?usp=sharing",
-                        "cover": "https://drive.google.com/file/d/1HjubZgjwC4jm3wQ4AFIgGgZTFgUEMc-r/view?usp=sharing",
-                        "lyrics": "[00:57.99] 화려하지 않아도\n[01:04.44] 정결하게 사는 삶\n[01:11.72] 가진 것이 적어도\n[01:17.79] 감사하며 사는 삶\n[01:25.14] 내게 주신 작은 힘\n[01:31.81] 나눠주며 사는 삶\n[01:38.17] 이것이 나의 삶의 행복이라오\n[01:55.42] 눈물 날 일 많지만\n[02:01.89] 기도할 수 있는 것\n[02:08.39] 억울한 일 많으나\n[02:14.72] 주를 위해 참는 것\n[02:22.12] 비록 짧은 작은 삶\n[02:28.26] 주 뜻대로 사는 것\n[02:35.48] 이것이 나의 삶의 행복이라오\n[02:47.55] 이것이 행복\n[02:51.55] 행복이라오\n[02:54.78] 세상은 알 수 없는 하나님 선물\n[03:00.78] 이것이 행복\n[03:04.64] 행복이라오\n[03:07.80] 하나님의 자녀로 살아가는 것\n[03:16.51] 이것이 행복이라오\n[03:35.18] 이것이 행복\n[03:38.73] 행복이라오\n[03:41.51] 세상은 알 수 없는 하나님 선물\n[03:48.11] 이것이 행복\n[03:51.70] 행복이라오\n[03:54.72] 하나님의 자녀로 살아가는 것\n[04:03.37] 이것이 행복이라오\n[04:14.16] 이것이 행복\n[04:17.75] 행복이라오\n[04:20.71] 세상은 알 수 없는 하나님 선물\n[04:27.46] 이것이 행복\n[04:30.78] 행복이라오\n[04:33.68] 하나님의 자녀로 살아가는 것\n[04:42.35] 이것이 행복이라오",
-                        "syncOffset": 0,
-                        "syncMinGap": 0.22
-                    },
-                    {
-                        "id": "15335cd3-9dba-44fa-8808-ab40bb8fd583",
-                        "title": "첫째되는 계명",
-                        "artist": "Andre Youth",
-                        "url": "https://drive.google.com/file/d/1jsuQf7mptLyu_y7xXNOxrPE1unjpsNH4/view?usp=sharing",
-                        "cover": "https://drive.google.com/file/d/1e7gSlwgcshA-d_SQAH6Ks6N14IHcdDPX/view?usp=sharing",
-                        "lyrics": "[00:37.71] 내 마음 다하고 목숨을\n[00:45.72] 내 뜻을 다하여 주 나의 하나님 사랑\n[00:55.05] 마음을 목숨을\n[01:04.20] 내 뜻을 다해 하나님 사랑 하리라\n[01:16.28] 내 마음 다하고 목숨을\n[01:24.20] 내 뜻을 다하여 주 나의 하나님 사랑\n[01:33.25] 마음을 목숨을\n[01:43.18] 내 뜻을 다해 하나님 사랑 하리라\n[01:52.65] 내 마음 다하고\n[01:59.70] 목숨을 다하고\n[02:05.78] 내 뜻 다하여 주 나의 하나님\n[02:15.19] 사랑 사랑하리라\n[02:22.69] 내 마음 다하고 목숨을\n[02:30.76] 내 뜻을 다하여 주 나의 하나님 사랑\n[02:39.73] 마음을 목숨을\n[02:49.67] 내 뜻을 다해 하나님 사랑 하리라\n[03:00.19] 내 마음 다하고\n[03:07.81] 목숨을 다하고\n[03:13.23] 내 뜻 다하여 주 나의 하나님\n[03:22.73] 사랑 사랑하리라\n[03:29.21] 마음을 다하고\n[03:36.74] 목숨을 다하고\n[03:42.68] 내 뜻 다하여 주 나의 하나님\n[03:52.24] 사랑 사랑하리라\n[03:59.69] 마음을 다하고\n[04:07.08] 목숨을 다하고\n[04:13.18] 내 뜻 다하여 주 나의 하나님\n[04:21.72] 사랑 사랑하리라",
-                        "syncOffset": 0,
-                        "syncMinGap": 0.22
-                    },
-                    {
-                        "id": "f55fae34-c702-45bd-89be-78f3d975857c",
-                        "title": "혼자 걷지 않을 거예요",
-                        "artist": "Andre Youth",
-                        "url": "https://drive.google.com/file/d/1eIJNQoqZkPP2TzjcEF44Ev3lQ45XBfGB/view?usp=sharing",
-                        "cover": "https://drive.google.com/file/d/1UxcBJ81r-LSyLWSshevUqpAVGPyS4yyR/view?usp=sharing",
-                        "lyrics": "[00:14.35] 그대 폭풍 속을 걷고 있을 때\n[00:18.05] 비바람을 마주해야 할 때\n[00:25.45] 불빛조차 보이지 않아도\n[00:32.86] 그대 혼자 걷지 않을 거예요\n[00:41.35] 두려움 앞에서 하늘을 보아요\n[00:48.85] 외로운 그대여 걱정 마요\n[00:56.44] 꿈꾸는 그 길을 또 걷고 걸어요\n[01:03.87] 그대 혼자 걷지 않을 거예요\n[01:28.37] 그대 폭풍 속을 걷고 있을 때\n[01:35.88] 비바람을 마주해야 할 때\n[01:43.37] 불빛조차 보이지 않아도\n[01:50.90] 그대 혼자 걷지 않을 거예요\n[01:59.32] 두려움 앞에서 하늘을 보아요\n[02:06.69] 외로운 그대여 걱정 마요\n[02:14.42] 꿈꾸는 그 길을 또 걷고 걸어요\n[02:21.83] 그대 혼자 걷지 않을 거예요\n[02:39.36] 그대 폭풍 속을 걷고 있을 때\n[02:46.86] 비바람을 마주해야 할 때\n[02:54.42] 불빛조차 보이지 않아도\n[03:01.88] 그대 혼자 걷지 않을 거예요\n[03:10.39] 두려움 앞에서 하늘을 보아요\n[03:17.92] 외로운 그대여 걱정 마요\n[03:25.27] 꿈꾸는 그 길을 또 걷고 걸어요\n[03:32.87] 그대 혼자 걷지 않을 거예요",
-                        "syncOffset": 0,
-                        "syncMinGap": 0.22
-                    },
-                    {
-                        "id": "2b194c3c-e109-44a2-80d1-ee3bab787085",
-                        "title": "하나님의 사랑",
-                        "artist": "Andre Youth",
-                        "url": "https://drive.google.com/file/d/1yC1nPXMEYMGLC092WwlE2nHsqo8-F2oT/view?usp=sharing",
-                        "cover": "https://drive.google.com/file/d/1xUMSClwzM8Qxzb1qP2HEio2UitfhEomA/view?usp=sharing",
-                        "lyrics": "[00:42.15] 하나님의 사랑이\n[00:46.40] 당신의 삶 가운데\n[00:51.30] 가득하기를 축복합니다\n\n[00:59.20] 하나님의 은혜가\n[01:03.55] 우리 가운데\n[01:06.80] 가득하길 기도합니다\n\n[01:14.15] 하나님의 사랑이\n[01:18.40] 당신의 삶 가운데\n[01:23.10] 가득하기를 축복합니다\n\n[01:30.20] 하나님의 은혜가\n[01:34.55] 우리 가운데\n[01:38.20] 가득하길 기도합니다\n\n[02:44.15] 하나님의 사랑이\n[02:48.40] 당신의 삶 가운데\n[02:53.30] 가득하기를 축복합니다\n\n[03:00.20] 하나님의 은혜가\n[03:04.55] 우리 가운데\n[03:07.80] 가득하길 기도합니다\n\n[03:13.50] 가득하길 기도합니다\n[03:20.10] 가득하길 기도합니다",
-                        "syncOffset": 0,
-                        "syncMinGap": 0.22
-                    }
-                ];
-                await firebase.database().ref('users/playlist').set(rawData);
-            }
+            const rawData = playlistSnap.val() || [];
             const data = normalizeSongs(rawData);
 
             const settingsSnap = await firebase.database().ref('users/appSettings').once('value');
@@ -1031,7 +957,7 @@ $(document).ready(function() {
                 // If it was empty or 1-song fallback, replace immediately
                 const wasMinimal = playlistData.length <= 1;
                 const currentTitle = playlistData[curIdx]?.title;
-                
+
                 playlistData = data;
                 // PUBLIC_PLAYLIST도 동기화하여 admin fallback 데이터 갱신
                 window.PUBLIC_PLAYLIST = data;
@@ -1085,7 +1011,7 @@ $(document).ready(function() {
     audio.onended = () => {
         if (repeatMode === 2) {
             audio.currentTime = 0;
-            audio.play().catch(() => {});
+            audio.play().catch(() => { });
             return;
         }
 
@@ -1120,10 +1046,10 @@ $(document).ready(function() {
         }
     };
 
-    $('#btn-vol-trigger').on('click touchstart', function(e) { e.stopPropagation(); openSb(); });
-    $('#btn-vol-close').on('click touchstart', function(e) { e.stopPropagation(); $('#main-header').removeClass('mode-volume'); });
-    $('#sb-volume-slider').on('input', function() { audio.volume = $(this).val() / 100; openSb(); });
-    
+    $('#btn-vol-trigger').on('click touchstart', function (e) { e.stopPropagation(); openSb(); });
+    $('#btn-vol-close').on('click touchstart', function (e) { e.stopPropagation(); $('#main-header').removeClass('mode-volume'); });
+    $('#sb-volume-slider').on('input', function () { audio.volume = $(this).val() / 100; openSb(); });
+
     function seekByProgress(percent) {
         if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
         const targetTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
@@ -1131,10 +1057,10 @@ $(document).ready(function() {
     }
 
     $('#progress-bar')
-        .on('mousedown touchstart', function() {
+        .on('mousedown touchstart', function () {
             isScrubbing = true;
         })
-        .on('input', function() {
+        .on('input', function () {
             if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
             const percent = parseFloat($(this).val());
             const nextTime = Math.max(0, Math.min(audio.duration, (percent / 100) * audio.duration));
@@ -1143,13 +1069,13 @@ $(document).ready(function() {
                 updateLyricsUI(nextTime);
             }
         })
-        .on('change', function() {
+        .on('change', function () {
             isScrubbing = false;
             if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
             const percent = parseFloat($(this).val());
             seekByProgress(percent);
         })
-        .on('mouseup touchend', function() {
+        .on('mouseup touchend', function () {
             if (isScrubbing) {
                 isScrubbing = false;
                 if (Number.isNaN(audio.duration) || audio.duration <= 0) return;
@@ -1158,7 +1084,7 @@ $(document).ready(function() {
             }
         });
 
-    $('#btn-play-pause').on('click touchstart', function(e) {
+    $('#btn-play-pause').on('click touchstart', function (e) {
         e.preventDefault();
         e.stopPropagation();
         if (audio.paused) {
@@ -1169,23 +1095,23 @@ $(document).ready(function() {
                 }
                 return;
             }
-            audio.play().catch(() => {});
+            audio.play().catch(() => { });
         } else {
             audio.pause();
         }
     });
 
-    $('#btn-next').click(function() { if (btnLock) return; btnLock = true; setTimeout(()=>btnLock=false, 400); next(); });
-    $('#btn-prev').click(function() { if (btnLock) return; btnLock = true; setTimeout(()=>btnLock=false, 400); prev(); });
-    $('#btn-shuffle').click(function() { 
-        isShuffle = !isShuffle; 
-        $(this).toggleClass('active', isShuffle); 
+    $('#btn-next').click(function () { if (btnLock) return; btnLock = true; setTimeout(() => btnLock = false, 400); next(); });
+    $('#btn-prev').click(function () { if (btnLock) return; btnLock = true; setTimeout(() => btnLock = false, 400); prev(); });
+    $('#btn-shuffle').click(function () {
+        isShuffle = !isShuffle;
+        $(this).toggleClass('active', isShuffle);
     });
-    $('#btn-repeat').click(function() { 
-        repeatMode = (repeatMode + 1) % 3; 
+    $('#btn-repeat').click(function () {
+        repeatMode = (repeatMode + 1) % 3;
         const $icon = $(this).find('i');
         $(this).removeClass('active');
-        
+
         if (repeatMode === 0) {
             $icon.attr('class', 'fa-solid fa-repeat').css('opacity', '0.5');
         } else if (repeatMode === 1) {
@@ -1221,9 +1147,9 @@ $(document).ready(function() {
     });
 
     setupInfoOverlayEvents();
-    $('.close-x').click(function() { $(this).closest('.ios-popup').removeClass('active'); });
+    $('.close-x').click(function () { $(this).closest('.ios-popup').removeClass('active'); });
 
-    $('#album-trigger').click(function() {
+    $('#album-trigger').click(function () {
         $(this).toggleClass('show-lyrics');
         if ($(this).hasClass('show-lyrics')) {
             setLyricsAutoScrollEnabled(true);
@@ -1231,7 +1157,7 @@ $(document).ready(function() {
         }
     });
 
-    $('.lyrics-container').on('scroll wheel touchstart pointerdown', function() {
+    $('.lyrics-container').on('scroll wheel touchstart pointerdown', function () {
         markLyricsManualInteraction();
     });
 
@@ -1244,11 +1170,11 @@ $(document).ready(function() {
     });
     $('#sheet-trigger').click(() => $('#sheet').toggleClass('expanded'));
 
-    $(document).on('click', '.song-select-zone', function() {
+    $(document).on('click', '.song-select-zone', function () {
         load($(this).closest('li').data('idx'), true);
         $('#sheet').removeClass('expanded');
     });
-    $(document).on('click', '.list-heart-btn', function(e) {
+    $(document).on('click', '.list-heart-btn', function (e) {
         e.stopPropagation();
         const idx = $(this).closest('li').data('idx');
         if (playlistData[idx]) toggleFav(playlistData[idx].title);
@@ -1286,7 +1212,7 @@ $(document).ready(function() {
         if (document.hidden) return;
         if (!ENABLE_REMOTE_PLAYLIST_SYNC) return;
         // Returning from background should quickly reconcile updates from other devices.
-        fetchPlaylist().catch(() => {});
+        fetchPlaylist().catch(() => { });
     });
 });
 
