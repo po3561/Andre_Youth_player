@@ -27,35 +27,28 @@ const MusicEngine = {
     init() {
         this.audio.id = 'audio-engine';
         this.audio.preload = 'metadata';
-        if (!document.getElementById('audio-engine')) document.body.appendChild(this.audio);
+        if (!document.getElementById('audio-engine')) {
+            document.body.appendChild(this.audio);
+        }
     },
 
     /**
      * Google Drive URL을 재생/표시 가능한 직접 URL로 변환합니다.
-     * - 오디오: 직접 다운로드 URL 사용 (프록시 없음 - CORS 해결)
-     * - 이미지: thumbnail API 사용
      */
     fixUrl(url, type) {
         if (!url) return type === 'image' ? this.placeholderImage : '';
-
-        // Already a thumbnail URL – leave as-is
+        if (url.startsWith('data:')) return url;
         if (url.includes('drive.google.com/thumbnail')) return url;
-
-        // Non-Drive URLs – return directly
         if (!url.includes('drive.google.com') && !url.includes('docs.google.com')) return url;
 
-        // Extract the file ID
         const idMatch = url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (!idMatch || !idMatch[1]) return url;
 
         const id = idMatch[1];
         if (type === 'audio') {
-            // Use CORS proxy for Google Drive audio to prevent playback failures
-            const directUrl = `https://drive.google.com/uc?id=${id}&export=download`;
-            return `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(directUrl)}`;
+            // No proxy needed for simple audio tag streaming
+            return `https://drive.google.com/uc?id=${id}&export=download`;
         }
-
-        // 이미지는 thumbnail API로 (빠르고 CORS 무관)
         return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
     },
 
@@ -75,7 +68,6 @@ const MusicEngine = {
                 if (text) result.push({ time, text });
             } else {
                 const text = line.trim();
-                // If it's a non-empty line without timestamp, treat as 0s to show at start
                 if (text && !line.startsWith('[')) {
                     result.push({ time: 0, text });
                 }

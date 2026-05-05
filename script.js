@@ -17,11 +17,14 @@ $(document).ready(function () {
     const chatRef = db.ref('chats');
     const inqRef = db.ref('users/inquiries');
 
+    const audio = document.getElementById('audio-engine');
+    const fallbackCover = MusicEngine.placeholderImage;
+
     // 2. State
     let playlistData = [];
     let curIdx = 0;
     let isShuffle = false;
-    let repeatMode = 0;
+    let repeatMode = 0; // 0: No Repeat, 1: Repeat All, 2: Repeat One
     let isScrubbing = false;
     let currentLyrics = [];
     let lastActiveLyricIdx = -1;
@@ -29,56 +32,40 @@ $(document).ready(function () {
     const userId = localStorage.getItem('player_uid') || ('user_' + Math.random().toString(36).substr(2, 9));
     localStorage.setItem('player_uid', userId);
 
-    const audio = document.getElementById('audio-engine');
-    const fallbackCover = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=60';
-
-    // 3. Core Logic
+    // 3. Functions
     function init() {
         bindEvents();
         fetchData();
         const vol = localStorage.getItem('player_vol') || 80;
         $('#volume-slider').val(vol);
-        audio.volume = vol / 100;
+        if (audio) audio.volume = vol / 100;
         
-        // Hide splash screen after initial load
         setTimeout(() => {
             $('#splash-screen').addClass('hidden');
+            setTimeout(() => $('#splash-screen').hide(), 800);
         }, 1800);
-
-        window.closeAllModals = () => {
-            $('#modal-container').removeClass('active');
-            $('.floating-popup').removeClass('active');
-            chatRef.off('child_added');
-        };
     }
 
-    function fetchData() {
-        playlistRef.on('value', (snapshot) => {
-            let data = snapshot.val();
-            if (data && typeof data === 'object' && !Array.isArray(data)) data = Object.values(data);
-            playlistData = data || [];
-            renderPlaylist();
-            if (playlistData.length > 0 && audio.src === "") loadSong(0, false);
-        });
-
-        settingsRef.on('value', (snapshot) => {
-            const settings = snapshot.val();
-            if (settings) {
-                if (settings.playlistSubtitle) $('#top-subtitle').text(settings.playlistSubtitle);
-                if (settings.themePrimary) document.documentElement.style.setProperty('--primary', settings.themePrimary);
+    async function fetchData() {
+        playlistRef.on('value', snap => {
+            const data = snap.val();
+            if (data) {
+                playlistData = Array.isArray(data) ? data : Object.values(data);
+                renderPlaylist();
+                if (playlistData.length > 0) loadSong(0, false);
             }
         });
     }
 
-    async function loadSong(index, shouldPlay = true) {
-        if (!playlistData.length || index < 0 || index >= playlistData.length) return;
+    async function loadSong(index, shouldPlay = false) {
+        if (!playlistData[index]) return;
         curIdx = index;
-        const song = playlistData[curIdx];
+        const song = playlistData[index];
+
+        $('#disp-title').text(song.title);
+        $('#disp-artist').text(song.artist || "Andre Youth");
         
-        $('#disp-title').text(song.title || 'Untitled');
-        $('#disp-artist').text(song.artist || 'Unknown Artist');
-        
-        const coverUrl = (song.cover || song.profile) || fallbackCover;
+        const coverUrl = MusicEngine.fixUrl(song.cover || song.profile, 'image');
         $('#artwork').attr('src', coverUrl);
         $('#app-background').css('background-image', `url(${coverUrl})`);
         
@@ -88,24 +75,30 @@ $(document).ready(function () {
         renderLyrics();
 
         const audioUrl = MusicEngine.fixUrl(song.url || song.audioUrl, 'audio');
-        audio.src = audioUrl;
-        audio.load();
+        if (audio) {
+            audio.src = audioUrl;
+            audio.load();
 
-        updateActiveInList();
-        syncFavoriteState();
+            updateActiveInList();
+            syncFavoriteState();
 
-        $('#song-loading-overlay').addClass('active');
+            $('#song-loading-overlay').addClass('active');
 
-        if (shouldPlay) {
-            try { 
-                await audio.play(); 
-                $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>'); 
+            if (shouldPlay) {
+                try { 
+                    await audio.play(); 
+                    $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>'); 
+                }
+                catch (e) { 
+                    console.warn("Playback failed:", e);
+                    $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+                    if (e.name !== 'NotAllowedError') {
+                        alert('오디오를 재생할 수 없습니다. 주소를 확인해주세요.');
+                    }
+                }
             }
-            catch (e) { 
-                $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); 
-            }
+            $('#song-loading-overlay').removeClass('active');
         }
-        $('#song-loading-overlay').removeClass('active');
     }
 
     function renderLyrics() {
@@ -130,7 +123,8 @@ $(document).ready(function () {
         if (activeIdx !== -1 && activeIdx !== lastActiveLyricIdx) {
             $('.lyric-line').removeClass('active near');
             const $active = $(`#lrc-${activeIdx}`).addClass('active');
-            $(`#lrc-${activeIdx-1}, #lrc-${activeIdx+1}`).addClass('near');
+            $(`#lrc-${activeIdx-1}`).addClass('near');
+            $(`#lrc-${activeIdx+1}`).addClass('near');
 
             lastActiveLyricIdx = activeIdx;
             const container = $('#lyrics-scroll')[0];
@@ -145,14 +139,14 @@ $(document).ready(function () {
         const $container = $('#song-list-container').empty();
         playlistData.forEach((song, i) => {
             const isCurrent = i === curIdx;
-            const cover = MusicEngine.fixUrl(song.cover || song.profile, 'image') || fallbackCover;
+            const cover = MusicEngine.fixUrl(song.cover || song.profile, 'image');
             const playingAni = isCurrent ? `<div class="playing-bars"><span></span><span></span><span></span></div>` : '';
             $container.append(`
                 <div class="song-item ${isCurrent ? 'active' : ''}" data-index="${i}">
                     <img src="${cover}" alt="cover">
                     <div class="song-item-info">
-                        <h4>${song.title || 'Untitled'}</h4>
-                        <p>${song.artist || 'Unknown'}</p>
+                        <h4>${song.title}</h4>
+                        <p>${song.artist || "Andre Youth"}</p>
                     </div>
                     ${playingAni}
                 </div>
@@ -161,32 +155,31 @@ $(document).ready(function () {
     }
 
     function updateActiveInList() {
-        renderPlaylist(); // Simplified: just re-render to update bars
+        $('.song-item').removeClass('active').find('.playing-bars').remove();
+        const $current = $(`.song-item[data-index="${curIdx}"]`).addClass('active');
+        $current.append(`<div class="playing-bars"><span></span><span></span><span></span></div>`);
     }
 
     function next() {
-        let n = curIdx + 1;
-        if (isShuffle) n = Math.floor(Math.random() * playlistData.length);
-        if (n >= playlistData.length) n = 0;
-        loadSong(n, true);
+        let nextIdx;
+        if (isShuffle) {
+            nextIdx = Math.floor(Math.random() * playlistData.length);
+        } else {
+            nextIdx = (curIdx + 1) % playlistData.length;
+        }
+        loadSong(nextIdx, true);
     }
 
     function prev() {
-        let p = curIdx - 1;
-        if (p < 0) p = playlistData.length - 1;
-        loadSong(p, true);
-    }
-
-    function formatTime(s) {
-        const m = Math.floor(s / 60);
-        const sc = Math.floor(s % 60);
-        return `${m}:${sc < 10 ? '0' + sc : sc}`;
+        let prevIdx = (curIdx - 1 + playlistData.length) % playlistData.length;
+        loadSong(prevIdx, true);
     }
 
     function syncFavoriteState() {
         const song = playlistData[curIdx];
-        const isFav = song && favorites.includes(song.title);
-        $('#btn-scrap').find('i').attr('class', isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
+        if (!song) return;
+        const isFav = favorites.some(f => f.url === (song.url || song.audioUrl));
+        $('#btn-scrap i').attr('class', isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
         $('#btn-scrap').css('color', isFav ? 'var(--primary)' : 'white');
     }
 
@@ -202,11 +195,24 @@ $(document).ready(function () {
         }
     };
 
+    window.closeAllModals = () => {
+        $('#modal-container').removeClass('active');
+        $('.floating-popup').removeClass('active');
+        chatRef.off('child_added');
+    };
+
     // 4. Events
     function bindEvents() {
         $('#btn-play-pause').on('click', () => {
-            if (audio.paused) { audio.play(); $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>'); }
-            else { audio.pause(); $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); }
+            if (audio.paused) { 
+                audio.play().then(() => {
+                    $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
+                }).catch(e => console.warn("Play failed:", e));
+            }
+            else { 
+                audio.pause(); 
+                $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); 
+            }
         });
         $('#btn-next').on('click', next);
         $('#btn-prev').on('click', prev);
@@ -214,10 +220,17 @@ $(document).ready(function () {
         $('#progress-bar-area').on('mousedown touchstart', (e) => { isScrubbing = true; handleSeek(e); });
         $(document).on('mousemove touchmove', (e) => { if (isScrubbing) handleSeek(e); });
         $(document).on('mouseup touchend', () => { isScrubbing = false; });
-        audio.ontimeupdate = () => { if (!isScrubbing) updateProgressUI(); updateLyricsSync(audio.currentTime); };
+        
+        if (audio) {
+            audio.ontimeupdate = () => { if (!isScrubbing) updateProgressUI(); updateLyricsSync(audio.currentTime); };
+            audio.onended = () => {
+                if (repeatMode === 2) loadSong(curIdx, true);
+                else next();
+            };
+        }
 
         function handleSeek(e) {
-            if (isNaN(audio.duration)) return;
+            if (!audio || isNaN(audio.duration)) return;
             const clientX = e.clientX || (e.touches && e.touches[0].clientX);
             const rect = $('#progress-bar-area')[0].getBoundingClientRect();
             let pos = (clientX - rect.left) / rect.width;
@@ -227,7 +240,7 @@ $(document).ready(function () {
         }
 
         function updateProgressUI() {
-            if (isNaN(audio.duration)) return;
+            if (!audio || isNaN(audio.duration)) return;
             const per = (audio.currentTime / audio.duration) * 100;
             $('#progress-fill').css('width', per + '%');
             $('#progress-knob').css('left', per + '%');
@@ -235,10 +248,15 @@ $(document).ready(function () {
             $('#time-total').text(formatTime(audio.duration));
         }
 
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
         $('#btn-shuffle').on('click', function() {
             isShuffle = !isShuffle;
             $(this).toggleClass('active', isShuffle).css('color', isShuffle ? 'var(--primary)' : 'white');
-            $(this).html('<i class="fa-solid fa-shuffle"></i>');
         });
 
         $('#btn-repeat').on('click', function() {
@@ -249,16 +267,20 @@ $(document).ready(function () {
             else $btn.html('<i class="fa-solid fa-repeat-1"></i>').css('color', 'var(--primary)');
         });
 
-        audio.onended = () => {
-            if (repeatMode === 2) { audio.currentTime = 0; audio.play(); }
-            else if (repeatMode === 1 || curIdx < playlistData.length - 1) next();
-        };
-
-        $('#album-trigger').on('click', () => {
-            $('#artwork').toggleClass('lyrics-mode');
-            $('#lyrics-overlay').toggleClass('active');
-            renderLyrics();
+        $('#btn-scrap').on('click', function() {
+            const song = playlistData[curIdx]; if (!song) return;
+            const songUrl = song.url || song.audioUrl;
+            const idx = favorites.findIndex(f => f.url === songUrl);
+            if (idx > -1) favorites.splice(idx, 1);
+            else favorites.push(song);
+            localStorage.setItem('andre_favs', JSON.stringify(favorites));
+            syncFavoriteState();
         });
+
+        $('#btn-open-list').on('click', () => $('#playlist-sheet').addClass('active'));
+        $('#sheet-handle').on('click', () => $('#playlist-sheet').removeClass('active'));
+
+        $('#album-trigger').on('click', () => $('#lyrics-overlay').toggleClass('active'));
 
         $('#btn-vol-pop').on('click', (e) => { e.stopPropagation(); $('.full-width-vol-container').toggleClass('active'); });
         $(document).on('click', (e) => {
@@ -267,7 +289,7 @@ $(document).ready(function () {
         
         $('#volume-slider').on('input', function() {
             const v = $(this).val();
-            audio.volume = v / 100;
+            if (audio) audio.volume = v / 100;
             localStorage.setItem('player_vol', v);
         });
 
@@ -279,7 +301,9 @@ $(document).ready(function () {
             query.on('child_added', (snap) => {
                 const m = snap.val(); if (!m) return;
                 const html = `<div class="msg-bubble ${m.sender === userId ? 'mine' : ''}">${m.text}</div>`;
-                $('#chat-messages').append(html).scrollTop($('#chat-messages')[0].scrollHeight);
+                const $msgArea = $('#chat-messages');
+                $msgArea.append(html);
+                $msgArea.scrollTop($msgArea[0].scrollHeight);
             });
         });
 
@@ -313,9 +337,9 @@ $(document).ready(function () {
             let email = $('#admin-email').val().trim(), pw = $('#admin-password').val().trim();
             if (!email || !pw) return alert('정보를 입력해주세요.');
             if (!email.includes('@')) email += '@admin.com';
-            if (typeof firebase.auth !== 'function') {
-                return alert('인증 시스템을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
-            }
+            
+            if (typeof firebase.auth !== 'function') return alert('인증 시스템을 불러오고 있습니다.');
+            
             firebase.auth().signInWithEmailAndPassword(email, pw)
                 .then((userCredential) => {
                     localStorage.setItem('adminUser', JSON.stringify({ uid: userCredential.user.uid, email: userCredential.user.email, isApproved: true, loginTime: Date.now() }));
@@ -324,29 +348,35 @@ $(document).ready(function () {
                 .catch(err => alert('인증 실패: ' + err.message));
         });
 
-        $('#btn-open-list').on('click', () => $('#playlist-sheet').addClass('active'));
-        $('#sheet-handle').on('click', () => $('#playlist-sheet').removeClass('active'));
-        $(document).on('click', '.song-item', function() { loadSong($(this).data('index'), true); $('#playlist-sheet').removeClass('active'); });
-
-        $('#btn-scrap').on('click', function() {
-            const song = playlistData[curIdx]; if (!song) return;
-            const idx = favorites.indexOf(song.title);
-            if (idx === -1) favorites.push(song.title); else favorites.splice(idx, 1);
-            localStorage.setItem('andre_favs', JSON.stringify(favorites)); syncFavoriteState();
+        $('#btn-do-signup').on('click', () => {
+            const email = $('#signup-email').val().trim(), pw = $('#signup-password').val().trim();
+            if (!email || !pw) return alert('정보를 입력해주세요.');
+            
+            if (typeof firebase.auth !== 'function') return alert('인증 시스템을 불러오고 있습니다.');
+            
+            firebase.auth().createUserWithEmailAndPassword(email, pw)
+                .then(() => { alert('회원가입 요청 완료! 관리자 승인 후 로그인 가능합니다.'); toggleAuthMode(false); })
+                .catch(err => alert('가입 실패: ' + err.message));
         });
 
+        // 5. Keyboard Shortcuts
         $(document).on('keydown', (e) => {
             if ($(e.target).is('input, textarea')) return;
             switch(e.code) {
                 case 'Space': e.preventDefault(); $('#btn-play-pause').click(); break;
-                case 'ArrowRight': audio.currentTime = Math.min(audio.duration, audio.currentTime + 10); break;
-                case 'ArrowLeft': audio.currentTime = Math.max(0, audio.currentTime - 10); break;
-                case 'ArrowUp': e.preventDefault(); let vUp = Math.min(1, audio.volume + 0.1); audio.volume = vUp; $('#volume-slider').val(vUp * 100); break;
-                case 'ArrowDown': e.preventDefault(); let vDown = Math.max(0, audio.volume - 0.1); audio.volume = vDown; $('#volume-slider').val(vDown * 100); break;
+                case 'ArrowRight': audio.currentTime += 10; break;
+                case 'ArrowLeft': audio.currentTime -= 10; break;
+                case 'ArrowUp': audio.volume = Math.min(1, audio.volume + 0.1); break;
+                case 'ArrowDown': audio.volume = Math.max(0, audio.volume - 0.1); break;
                 case 'KeyM': audio.muted = !audio.muted; break;
                 case 'KeyS': $('#btn-shuffle').click(); break;
                 case 'KeyR': $('#btn-repeat').click(); break;
             }
+        });
+
+        $(document).on('click', '.song-item', function() { 
+            loadSong($(this).data('index'), true); 
+            $('#playlist-sheet').removeClass('active'); 
         });
     }
 
