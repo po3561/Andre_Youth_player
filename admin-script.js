@@ -922,7 +922,9 @@ $(document).ready(function() {
         };
 
         try {
-            const artist = $('#song-artist').val().trim() || $('#setting-default-artist').val().trim() || 'Andre Youth';
+            const artistInput = $('#song-artist').val() || '';
+            const defaultArtistInput = $('#setting-default-artist').val() || '';
+            const artist = artistInput.trim() || defaultArtistInput.trim() || 'Andre Youth';
 
             let finalAudioUrl = audioUrlInput;
             if (!finalAudioUrl && state.audioFile) {
