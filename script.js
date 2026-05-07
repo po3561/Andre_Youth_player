@@ -510,15 +510,25 @@ $(document).ready(function () {
                     window.location.href = 'admin.html';
                 })
                 .catch(err => {
-                    let msg = '로그인 실패';
-                    switch(err.code) {
-                        case 'auth/user-not-found': msg = '등록되지 않은 이메일입니다.'; break;
-                        case 'auth/wrong-password': msg = '비밀번호가 틀렸습니다.'; break;
-                        case 'auth/invalid-email': msg = '이메일 형식이 올바르지 않습니다.'; break;
-                        case 'auth/invalid-credential': msg = '이메일 또는 비밀번호가 올바르지 않습니다.'; break;
-                        case 'auth/too-many-requests': msg = '잠시 후 다시 시도해주세요.'; break;
-                        case 'auth/user-disabled': msg = '비활성화된 계정입니다.'; break;
-                        default: msg = '로그인 실패: ' + (err.message || '알 수 없는 오류');
+                    console.log('Auth error code:', err.code, 'message:', err.message);
+                    let msg = '이메일 또는 비밀번호가 올바르지 않습니다.';
+                    const code = err.code || '';
+                    const rawMsg = (err.message || '').toUpperCase();
+                    
+                    if (code === 'auth/user-not-found' || rawMsg.includes('USER_NOT_FOUND')) {
+                        msg = '등록되지 않은 이메일입니다. 먼저 회원가입해주세요.';
+                    } else if (code === 'auth/wrong-password' || rawMsg.includes('WRONG_PASSWORD')) {
+                        msg = '비밀번호가 틀렸습니다.';
+                    } else if (code === 'auth/invalid-email' || rawMsg.includes('INVALID_EMAIL')) {
+                        msg = '이메일 형식이 올바르지 않습니다.';
+                    } else if (code === 'auth/invalid-credential' || rawMsg.includes('INVALID_LOGIN_CREDENTIALS') || rawMsg.includes('INVALID_CREDENTIAL')) {
+                        msg = '이메일 또는 비밀번호가 올바르지 않습니다.';
+                    } else if (code === 'auth/too-many-requests' || rawMsg.includes('TOO_MANY_ATTEMPTS')) {
+                        msg = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.';
+                    } else if (code === 'auth/user-disabled') {
+                        msg = '비활성화된 계정입니다.';
+                    } else if (code === 'auth/network-request-failed') {
+                        msg = '네트워크 연결을 확인해주세요.';
                     }
                     alert(msg);
                 });
