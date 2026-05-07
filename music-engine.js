@@ -36,9 +36,7 @@ const MusicEngine = {
         return [
             `https://lh3.googleusercontent.com/d/${id}?t=${ts}`, // High success rate trick
             `https://docs.google.com/uc?export=download&id=${id}&t=${ts}`,
-            `https://drive.google.com/uc?id=${id}&export=download`,
-            `https://corsproxy.io/?${encodeURIComponent('https://drive.google.com/uc?id=' + id + '&export=download')}`,
-            `https://api.allorigins.win/raw?url=${encodeURIComponent('https://drive.google.com/uc?id=' + id + '&export=download')}`
+            `https://drive.google.com/uc?id=${id}&export=download`
         ];
     },
 
