@@ -495,55 +495,75 @@ $(document).ready(function () {
                 });
         });
 
-        /* ─── Admin Auth (FIXED: proper error message) ─── */
         $('#btn-do-login').on('click', () => {
-            let e = $('#admin-email').val().trim(), p = $('#admin-password').val().trim();
-            if (!e || !p) return alert('이메일과 비밀번호를 입력하세요.');
-            if (!e.includes('@')) e += '@admin.com';
+            const id = $('#admin-id').val().trim();
+            const pw = $('#admin-password').val().trim();
             
-            firebase.auth().signInWithEmailAndPassword(e, p)
-                .then((res) => {
-                    localStorage.setItem('adminUser', JSON.stringify({ 
-                        email: res.user.email, uid: res.user.uid, isApproved: true 
-                    }));
-                    closeAllModals();
-                    window.location.href = 'admin.html';
-                })
-                .catch(err => {
-                    console.log('Auth error code:', err.code, 'message:', err.message);
-                    let msg = '이메일 또는 비밀번호가 올바르지 않습니다.';
-                    const code = err.code || '';
-                    const rawMsg = (err.message || '').toUpperCase();
-                    
-                    if (code === 'auth/user-not-found' || rawMsg.includes('USER_NOT_FOUND')) {
-                        msg = '등록되지 않은 이메일입니다. 먼저 회원가입해주세요.';
-                    } else if (code === 'auth/wrong-password' || rawMsg.includes('WRONG_PASSWORD')) {
-                        msg = '비밀번호가 틀렸습니다.';
-                    } else if (code === 'auth/invalid-email' || rawMsg.includes('INVALID_EMAIL')) {
-                        msg = '이메일 형식이 올바르지 않습니다.';
-                    } else if (code === 'auth/invalid-credential' || rawMsg.includes('INVALID_LOGIN_CREDENTIALS') || rawMsg.includes('INVALID_CREDENTIAL')) {
-                        msg = '이메일 또는 비밀번호가 올바르지 않습니다.';
-                    } else if (code === 'auth/too-many-requests' || rawMsg.includes('TOO_MANY_ATTEMPTS')) {
-                        msg = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.';
-                    } else if (code === 'auth/user-disabled') {
-                        msg = '비활성화된 계정입니다.';
-                    } else if (code === 'auth/network-request-failed') {
-                        msg = '네트워크 연결을 확인해주세요.';
+            if (!id || !pw) return alert('아이디와 비밀번호를 입력하세요.');
+            
+            db.ref('users').orderByChild('id').equalTo(id).once('value', snap => {
+                if (!snap.exists()) {
+                    alert('등록되지 않은 아이디입니다.');
+                    return;
+                }
+                
+                let foundUser = null;
+                let userKey = null;
+                snap.forEach(child => {
+                    if (child.val().pw === pw) {
+                        foundUser = child.val();
+                        userKey = child.key;
                     }
-                    alert(msg);
                 });
+                
+                if (!foundUser) {
+                    alert('비밀번호가 틀렸습니다.');
+                    return;
+                }
+                
+                if (!foundUser.isApproved) {
+                    alert('관리자의 승인이 대기 중입니다. 승인 후 이용 가능합니다.');
+                    return;
+                }
+                
+                localStorage.setItem('adminUser', JSON.stringify({ 
+                    id: foundUser.id, name: foundUser.name, uid: userKey, isApproved: true, isAdmin: foundUser.isAdmin 
+                }));
+                closeAllModals();
+                window.location.href = 'admin.html';
+            }, err => {
+                alert('로그인 에러: ' + err.message);
+            });
         });
 
         $('#btn-do-signup').on('click', () => {
-            const e = $('#signup-email').val().trim(), p = $('#signup-password').val().trim();
-            if (!e || !p) return alert('이메일과 비밀번호를 입력하세요.');
-            if (p.length < 6) return alert('비밀번호는 6자 이상이어야 합니다.');
-            firebase.auth().createUserWithEmailAndPassword(e, p)
-                .then(() => {
-                    alert('가입 성공! 이제 로그인하세요.');
-                    toggleAuthMode(false);
-                })
-                .catch(err => alert('가입 실패: ' + err.message));
+            const id = $('#signup-id').val().trim();
+            const pw = $('#signup-password').val().trim();
+            const name = $('#signup-name').val().trim();
+            const phone = $('#signup-phone').val().trim();
+            const company = $('#signup-company').val().trim();
+            const position = $('#signup-position').val().trim();
+            const unique = $('#signup-unique').val().trim();
+            
+            if (!id || !pw || !name) return alert('아이디, 비밀번호, 이름은 필수입니다.');
+            if (pw.length < 6) return alert('비밀번호는 6자 이상이어야 합니다.');
+            
+            db.ref('users').orderByChild('id').equalTo(id).once('value', snap => {
+                if (snap.exists()) {
+                    alert('이미 존재하는 아이디입니다.');
+                } else {
+                    db.ref('users').push({
+                        id, pw, name, phone, company, position, unique,
+                        isAdmin: false,
+                        isApproved: false,
+                        timestamp: Date.now()
+                    }).then(() => {
+                        alert('회원가입이 완료되었습니다. 관리자 승인 후 로그인 가능합니다.');
+                        toggleAuthMode(false);
+                        $('#admin-signup-form input').val(''); // clear form
+                    }).catch(err => alert('가입 실패: ' + err.message));
+                }
+            });
         });
 
         /* Song item click */

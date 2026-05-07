@@ -139,14 +139,19 @@
                 <button class="close-btn" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="popup-form" id="admin-auth-form">
-                <input type="email" id="admin-email" placeholder="이메일">
+                <input type="text" id="admin-id" placeholder="아이디">
                 <input type="password" id="admin-password" placeholder="비밀번호">
                 <button class="submit-btn" id="btn-do-login">로그인</button>
                 <div class="auth-toggle">계정이 없으신가요? <span onclick="toggleAuthMode(true)">회원가입</span></div>
             </div>
-            <div class="popup-form" id="admin-signup-form" style="display:none;">
-                <input type="email" id="signup-email" placeholder="사용할 이메일">
+            <div class="popup-form" id="admin-signup-form" style="display:none; max-height: 50vh; overflow-y: auto;">
+                <input type="text" id="signup-id" placeholder="사용할 아이디">
                 <input type="password" id="signup-password" placeholder="비밀번호">
+                <input type="text" id="signup-name" placeholder="이름 (예: 홍길동)">
+                <input type="text" id="signup-phone" placeholder="전화번호 (예: 01012345678)">
+                <input type="text" id="signup-company" placeholder="사명 (예: 기획과)">
+                <input type="text" id="signup-position" placeholder="직책 (예: 부과장)">
+                <input type="text" id="signup-unique" placeholder="고유번호">
                 <button class="submit-btn" id="btn-do-signup">회원가입 완료</button>
                 <div class="auth-toggle">이미 계정이 있나요? <span onclick="toggleAuthMode(false)">로그인</span></div>
             </div>

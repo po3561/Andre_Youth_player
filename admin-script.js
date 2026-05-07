@@ -85,7 +85,10 @@ $(document).ready(function() {
             userDb.on('value', (snapshot) => {
                 const users = [];
                 snapshot.forEach(child => {
-                    users.push({ key: child.key, ...child.val() });
+                    const val = child.val();
+                    if (val && val.id) { // Only objects that have an 'id' field
+                        users.push({ key: child.key, ...val });
+                    }
                 });
                 renderUsers(users);
             });
