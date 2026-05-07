@@ -5,11 +5,12 @@
 }
 
 body.admin-page {
-    background: #050507;
+    background: #090a0f;
     min-height: 100dvh;
     height: auto;
     overflow-x: hidden;
     overflow-y: auto;
+    font-family: 'Inter', sans-serif;
 }
 
 .admin-header { 
@@ -18,8 +19,8 @@ body.admin-page {
 }
 
 .nav-title { text-align: center; flex: 1; }
-.nav-title .sub-title { display: block; font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
-.nav-title .main-title { display: block; font-size: 18px; font-weight: 800; }
+.nav-title .sub-title { display: block; font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; font-family: 'Outfit', sans-serif; }
+.nav-title .main-title { display: block; font-size: 22px; font-weight: 800; font-family: 'Outfit', sans-serif; }
 
 .admin-header .nav-side { flex: 1; }
 .admin-header .nav-title { flex: 2; text-align: center; }
@@ -51,11 +52,11 @@ body.admin-page {
 
 .upload-card { 
     padding: 30px; border-radius: 30px; display: flex; flex-direction: column; gap: 25px; 
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3); 
-    background: rgba(255, 255, 255, 0.12);
-    -webkit-backdrop-filter: blur(25px);
-    backdrop-filter: blur(25px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6); 
+    background: rgba(255, 255, 255, 0.05);
+    -webkit-backdrop-filter: blur(40px);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .form-group { display: flex; flex-direction: column; gap: 10px; }
@@ -149,10 +150,11 @@ body.admin-page {
 /* --- Manage Section Style --- */
 .manage-card { 
     padding: 25px; border-radius: 30px; margin-bottom: 50px; 
-    background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.4);
 }
 .manage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: #fff; }
-.manage-header h3 { font-size: 1.1rem; margin: 0; }
+.manage-header h3 { font-size: 1.2rem; margin: 0; font-family: 'Outfit', sans-serif; }
 
 .admin-song-list { display: flex; flex-direction: column; gap: 10px; }
 .admin-song-item { 

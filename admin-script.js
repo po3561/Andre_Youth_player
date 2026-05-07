@@ -1,7 +1,8 @@
 $(document).ready(function() {
-    // Login Protection (More robust)
+    // Login Protection: check localStorage first (synchronous guard),
+    // then verify Firebase Auth state asynchronously
     function checkAuth() {
-        const adminUser = JSON.parse(localStorage.getItem('adminUser'));
+        const adminUser = JSON.parse(localStorage.getItem('adminUser') || 'null');
         if (!adminUser || !adminUser.isApproved) {
             window.location.href = 'index.html';
             return false;
@@ -14,6 +15,10 @@ $(document).ready(function() {
     $('#btn-admin-logout').on('click', function() {
         if (confirm('로그아웃 하시겠습니까?')) {
             localStorage.removeItem('adminUser');
+            // Also sign out from Firebase Auth
+            if (firebase.auth) {
+                firebase.auth().signOut().catch(() => {});
+            }
             window.location.href = 'index.html';
         }
     });
@@ -32,6 +37,9 @@ $(document).ready(function() {
     const db = firebase.database();
     let userDb = db.ref('users');
     const playlistRef = db.ref('users/playlist');
+
+    // Firebase is initialized synchronously, so ensureUserDb is just a dummy promise to prevent ReferenceError
+    const ensureUserDb = async () => {};
 
     function loadScriptOnce(src) {
         return new Promise((resolve, reject) => {
@@ -733,19 +741,9 @@ $(document).ready(function() {
             const audioData = await fileToBase64(state.audioFile);
             if (!audioData) return null;
 
-            const result = await gasBridgePost({
-                action: 'ai-sync',
-                title: $('#song-title').val().trim(),
-                artist: 'Andre Youth',
-                lyricsRaw: rawText,
-                audioName: state.audioFile.name,
-                audioMime: state.audioFile.type || 'audio/mpeg',
-                audioData
-            }, { timeoutMs: GAS_BRIDGE_TIMEOUT_MS });
-
-            if (result && result.status === 'success' && Number.isFinite(Number(result.offsetSec))) {
-                return result;
-            }
+            // gasBridgePost is no longer available since migrating away from GAS.
+            // Returning null falls back to the client-side local estimation algorithm.
+            return null;
         } catch (error) {
             console.warn('Gemini offset request failed:', error);
         }

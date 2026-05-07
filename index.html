@@ -7,13 +7,14 @@
     <title>Andre Youth Player</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="preload" as="style">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap" rel="preload" as="style">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="index.css?v=1.4">
+    <link rel="stylesheet" href="index.css?v=2.0">
 </head>
 <body>
+    <!-- Splash Screen -->
     <div id="splash-screen">
         <div class="splash-content">
             <div class="splash-logo">A</div>
@@ -22,20 +23,25 @@
         </div>
     </div>
 
+    <!-- Song Loading Overlay -->
     <div id="song-loading-overlay">
         <div class="loader-bars">
             <span></span><span></span><span></span>
         </div>
     </div>
 
+    <!-- Dynamic Background -->
     <div id="app-background"></div>
     
     <div id="app-container">
-        <!-- Header -->
+        <!-- Header: 좌측에 채팅+문의, 중앙에 타이틀, 우측에 볼륨+관리자 -->
         <header class="header">
             <div class="header-left">
                 <button class="icon-btn" id="btn-open-chat" title="채팅 열기">
                     <i class="fa-solid fa-comment"></i>
+                </button>
+                <button class="icon-btn" id="btn-inquiry" title="문의하기">
+                    <i class="fa-solid fa-envelope"></i>
                 </button>
             </div>
             <div class="header-title">
@@ -43,8 +49,8 @@
                 <h1 id="top-title">Andre Youth Player</h1>
             </div>
             <div class="header-right">
-                <button class="icon-btn" id="btn-inquiry" title="문의하기">
-                    <i class="fa-solid fa-envelope"></i>
+                <button class="icon-btn" id="btn-vol-pop" title="볼륨 조절">
+                    <i class="fa-solid fa-volume-high"></i>
                 </button>
                 <button class="icon-btn" id="btn-admin-login" title="관리자 로그인">
                     <i class="fa-solid fa-lock"></i>
@@ -103,7 +109,7 @@
                     </button>
                 </div>
 
-                <!-- Volume Popover Area (Optional or persistent) -->
+                <!-- Volume Slider Overlay -->
                 <div class="full-width-vol-container">
                     <i class="fa-solid fa-volume-low"></i>
                     <input type="range" id="volume-slider" min="0" max="100" value="80">
@@ -112,17 +118,16 @@
             </div>
         </main>
 
+        <!-- Footer: 곡 목록 열기 버튼 -->
         <footer class="footer-bar">
-            <button class="icon-btn btn-open-list-wrap" id="btn-open-list" title="재생 목록 열기">
+            <button class="footer-btn" id="btn-open-list" title="재생 목록 열기">
                 <i class="fa-solid fa-list-ul"></i>
                 <span>목록</span>
-            </button>
-            <button class="icon-btn" id="btn-vol-pop" title="볼륨 조절">
-                <i class="fa-solid fa-volume-high"></i>
             </button>
         </footer>
     </div>
 
+    <!-- Playlist Sheet (80% height, swipeable) -->
     <div id="playlist-sheet">
         <div class="sheet-handle" id="sheet-handle" title="목록 닫기"></div>
         <h3 class="sheet-title">다음 재생 목록</h3>
@@ -191,7 +196,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    <script src="music-engine.js?v=1.4"></script>
-    <script src="script.js?v=1.4"></script>
+    <script src="music-engine.js?v=2.0"></script>
+    <script src="script.js?v=2.0"></script>
 </body>
 </html>
