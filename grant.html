@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Grant Admin</title>
+</head>
+<body>
+    <h2>Admin Grant Tool</h2>
+    <button id="btn" style="padding:20px; font-size:20px;">'promise' 계정에 관리자 권한 부여하기</button>
+    <div id="log"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
+            authDomain: "busan-youth-player.firebaseapp.com",
+            databaseURL: "https://busan-youth-player-default-rtdb.firebaseio.com",
+            projectId: "busan-youth-player",
+            storageBucket: "busan-youth-player.firebasestorage.app",
+            messagingSenderId: "406016035492",
+            appId: "1:406016035492:web:e3d03145aefa945c707431"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        document.getElementById('btn').addEventListener('click', () => {
+            const log = document.getElementById('log');
+            log.innerHTML += '<br>검색 중...';
+            db.ref('users').orderByChild('id').equalTo('promise').once('value', snap => {
+                if (!snap.exists()) {
+                    log.innerHTML += '<br>promise 계정을 찾을 수 없습니다.';
+                    return;
+                }
+                snap.forEach(child => {
+                    child.ref.update({
+                        isAdmin: true,
+                        isApproved: true
+                    }).then(() => {
+                        log.innerHTML += '<br>성공! 관리자 권한이 부여되었습니다.';
+                        setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+                    }).catch(e => {
+                        log.innerHTML += '<br>실패: ' + e.message;
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
