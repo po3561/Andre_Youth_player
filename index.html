@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
     <title>Andre Youth Player</title>
+    <meta name="description" content="Andre Youth 찬양 음악 플레이어 - 믿음으로 기대하다">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap" rel="preload" as="style">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="index.css?v=2.0">
+    <link rel="stylesheet" href="index.css?v=2.1">
 </head>
 <body>
     <!-- Splash Screen -->
@@ -23,40 +22,35 @@
         </div>
     </div>
 
-    <!-- Song Loading Overlay -->
     <div id="song-loading-overlay">
-        <div class="loader-bars">
-            <span></span><span></span><span></span>
-        </div>
+        <div class="loader-bars"><span></span><span></span><span></span></div>
     </div>
 
-    <!-- Dynamic Background -->
     <div id="app-background"></div>
     
     <div id="app-container">
-        <!-- Header: 좌측에 채팅+문의, 중앙에 타이틀, 우측에 볼륨+관리자 -->
+        <!-- Header: 채팅+문의 왼쪽, 볼륨+관리자 오른쪽 -->
         <header class="header">
             <div class="header-left">
-                <button class="icon-btn" id="btn-open-chat" title="채팅 열기">
-                    <i class="fa-solid fa-comment"></i>
-                </button>
-                <button class="icon-btn" id="btn-inquiry" title="문의하기">
-                    <i class="fa-solid fa-envelope"></i>
-                </button>
+                <button class="icon-btn" id="btn-open-chat" title="채팅"><i class="fa-solid fa-comment"></i></button>
+                <button class="icon-btn" id="btn-inquiry" title="문의"><i class="fa-solid fa-envelope"></i></button>
             </div>
             <div class="header-title">
                 <h2 id="top-subtitle">음악으로 길을 잇다</h2>
                 <h1 id="top-title">Andre Youth Player</h1>
             </div>
             <div class="header-right">
-                <button class="icon-btn" id="btn-vol-pop" title="볼륨 조절">
-                    <i class="fa-solid fa-volume-high"></i>
-                </button>
-                <button class="icon-btn" id="btn-admin-login" title="관리자 로그인">
-                    <i class="fa-solid fa-lock"></i>
-                </button>
+                <button class="icon-btn" id="btn-vol-pop" title="볼륨"><i class="fa-solid fa-volume-high"></i></button>
+                <button class="icon-btn" id="btn-admin-login" title="관리자"><i class="fa-solid fa-lock"></i></button>
             </div>
         </header>
+
+        <!-- Volume Accordion (아이콘 바로 아래 아코디언) -->
+        <div class="volume-accordion">
+            <i class="fa-solid fa-volume-low"></i>
+            <input type="range" id="volume-slider" min="0" max="100" value="80">
+            <i class="fa-solid fa-volume-high"></i>
+        </div>
 
         <!-- Main Player -->
         <main class="player-content">
@@ -65,9 +59,7 @@
                     <img src="" alt="Album Artwork" id="artwork">
                 </div>
                 <div class="lyrics-overlay" id="lyrics-overlay">
-                    <div id="lyrics-scroll">
-                        <!-- Lyrics lines will be injected here -->
-                    </div>
+                    <div id="lyrics-scroll"></div>
                 </div>
             </div>
 
@@ -81,7 +73,7 @@
 
             <div class="controls-section">
                 <div class="progress-container">
-                    <div class="progress-bar-wrap" id="progress-bar-area" title="재생 위치 조절">
+                    <div class="progress-bar-wrap" id="progress-bar-area">
                         <div id="progress-fill"></div>
                         <div id="progress-knob"></div>
                     </div>
@@ -92,51 +84,30 @@
                 </div>
 
                 <div class="main-controls">
-                    <button class="control-btn" id="btn-shuffle" title="셔플 모드 켜기/끄기">
-                        <i class="fa-solid fa-shuffle"></i>
-                    </button>
-                    <button class="control-btn" id="btn-prev" title="이전 곡">
-                        <i class="fa-solid fa-backward-step"></i>
-                    </button>
-                    <button class="control-btn play-pause" id="btn-play-pause" title="재생/일시정지">
-                        <i class="fa-solid fa-play"></i>
-                    </button>
-                    <button class="control-btn" id="btn-next" title="다음 곡">
-                        <i class="fa-solid fa-forward-step"></i>
-                    </button>
-                    <button class="control-btn" id="btn-repeat" title="반복 모드 변경">
-                        <i class="fa-solid fa-repeat"></i>
-                    </button>
-                </div>
-
-                <!-- Volume Slider Overlay -->
-                <div class="full-width-vol-container">
-                    <i class="fa-solid fa-volume-low"></i>
-                    <input type="range" id="volume-slider" min="0" max="100" value="80">
-                    <i class="fa-solid fa-volume-high"></i>
+                    <button class="control-btn" id="btn-shuffle" title="셔플"><i class="fa-solid fa-shuffle"></i></button>
+                    <button class="control-btn" id="btn-prev" title="이전"><i class="fa-solid fa-backward-step"></i></button>
+                    <button class="control-btn play-pause" id="btn-play-pause" title="재생"><i class="fa-solid fa-play"></i></button>
+                    <button class="control-btn" id="btn-next" title="다음"><i class="fa-solid fa-forward-step"></i></button>
+                    <button class="control-btn" id="btn-repeat" title="반복"><i class="fa-solid fa-repeat"></i></button>
                 </div>
             </div>
         </main>
 
-        <!-- Footer: 곡 목록 열기 버튼 -->
+        <!-- Footer: 막대기(handle bar)로만 표시, 터치하면 플레이리스트 열림 -->
         <footer class="footer-bar">
-            <button class="footer-btn" id="btn-open-list" title="재생 목록 열기">
-                <i class="fa-solid fa-list-ul"></i>
-                <span>목록</span>
-            </button>
+            <div class="footer-handle" id="btn-open-list" title="재생 목록 열기"></div>
         </footer>
     </div>
 
-    <!-- Playlist Sheet (80% height, swipeable) -->
+    <!-- Playlist Sheet -->
     <div id="playlist-sheet">
-        <div class="sheet-handle" id="sheet-handle" title="목록 닫기"></div>
+        <div class="sheet-handle" id="sheet-handle"></div>
         <h3 class="sheet-title">다음 재생 목록</h3>
         <div class="song-list" id="song-list-container"></div>
     </div>
 
-    <!-- Floating Popups Container -->
+    <!-- Modal Popups -->
     <div id="modal-container" class="modal-overlay">
-        <!-- Anonymous Chat Popup -->
         <div id="chat-popup" class="floating-popup">
             <div class="popup-header">
                 <h3>실시간 익명 채팅</h3>
@@ -149,7 +120,6 @@
             </div>
         </div>
 
-        <!-- Inquiry Popup -->
         <div id="inquiry-popup" class="floating-popup">
             <div class="popup-header">
                 <h3>플레이리스트 문의</h3>
@@ -163,7 +133,6 @@
             </div>
         </div>
 
-        <!-- Admin Auth Popup (Login & Sign Up) -->
         <div id="admin-popup" class="floating-popup">
             <div class="popup-header">
                 <h3 id="admin-popup-title">관리자 인증</h3>
@@ -173,18 +142,13 @@
                 <input type="email" id="admin-email" placeholder="이메일">
                 <input type="password" id="admin-password" placeholder="비밀번호">
                 <button class="submit-btn" id="btn-do-login">로그인</button>
-                <div class="auth-toggle">
-                    계정이 없으신가요? <span onclick="toggleAuthMode(true)">회원가입</span>
-                </div>
+                <div class="auth-toggle">계정이 없으신가요? <span onclick="toggleAuthMode(true)">회원가입</span></div>
             </div>
-            <!-- Signup Form (Hidden by default) -->
             <div class="popup-form" id="admin-signup-form" style="display:none;">
                 <input type="email" id="signup-email" placeholder="사용할 이메일">
                 <input type="password" id="signup-password" placeholder="비밀번호">
                 <button class="submit-btn" id="btn-do-signup">회원가입 완료</button>
-                <div class="auth-toggle">
-                    이미 계정이 있나요? <span onclick="toggleAuthMode(false)">로그인</span>
-                </div>
+                <div class="auth-toggle">이미 계정이 있나요? <span onclick="toggleAuthMode(false)">로그인</span></div>
             </div>
         </div>
     </div>
@@ -196,7 +160,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    <script src="music-engine.js?v=2.0"></script>
-    <script src="script.js?v=2.0"></script>
+    <script src="music-engine.js?v=2.1"></script>
+    <script src="script.js?v=2.1"></script>
 </body>
 </html>

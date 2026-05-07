@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Andre Youth - 데이터 마이그레이션</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #00f2fe; --bg: #090a0f; }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+        body { background:var(--bg); color:#f8f9fa; padding:20px; min-height:100vh; }
+        h1,h2,h3 { font-family:'Outfit',sans-serif; }
+        .container { max-width:600px; margin:0 auto; }
+        h1 { text-align:center; margin-bottom:30px; font-size:24px; }
+        h1 span { color:var(--primary); }
+        .card { background:rgba(255,255,255,0.05); border-radius:20px; padding:24px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.08); }
+        .card h3 { margin-bottom:16px; font-size:18px; }
+        .song-row { display:flex; align-items:center; gap:12px; padding:12px; border-radius:14px; margin-bottom:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); }
+        .song-row img { width:44px; height:44px; border-radius:10px; object-fit:cover; }
+        .song-row .info { flex:1; min-width:0; }
+        .song-row .info h4 { font-size:14px; font-weight:700; margin-bottom:2px; }
+        .song-row .info p { font-size:11px; color:rgba(255,255,255,0.5); }
+        .song-row .status { font-size:11px; color:#888; white-space:nowrap; }
+        .song-row .status.done { color:#00ff88; }
+        .song-row .status.error { color:#ff3b30; }
+        .song-row .status.working { color:#ffcc00; }
+        .btn { padding:14px 24px; border:none; border-radius:14px; font-weight:800; font-size:14px; cursor:pointer; transition:0.3s; width:100%; }
+        .btn-primary { background:var(--primary); color:#000; }
+        .btn-primary:disabled { opacity:0.4; cursor:not-allowed; }
+        .btn-secondary { background:rgba(255,255,255,0.08); color:white; margin-top:10px; }
+        .progress-bar { width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:6px; margin:16px 0; overflow:hidden; }
+        .progress-bar .fill { height:100%; background:linear-gradient(90deg,#4facfe,var(--primary)); border-radius:6px; width:0%; transition:width 0.3s; }
+        .log { font-size:12px; color:rgba(255,255,255,0.5); margin-top:12px; max-height:200px; overflow-y:auto; font-family:monospace; line-height:1.8; }
+        .log .error { color:#ff3b30; }
+        .log .success { color:#00ff88; }
+        .note { font-size:12px; color:rgba(255,255,255,0.4); margin-top:16px; text-align:center; line-height:1.6; }
+        a { color:var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 <span>Firebase</span> 마이그레이션</h1>
+        
+        <div class="card">
+            <h3><i class="fa-solid fa-cloud-arrow-up"></i> Google Drive → Firebase Storage</h3>
+            <p style="font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:16px;">
+                현재 Google Drive에 저장된 음원과 이미지를 Firebase Storage로 이전합니다.<br>
+                이전 후에는 CORS 문제 없이 안정적으로 재생됩니다.
+            </p>
+            <div id="song-list"></div>
+            <div class="progress-bar"><div class="fill" id="total-progress"></div></div>
+            <button class="btn btn-primary" id="btn-migrate" onclick="startMigration()">
+                <i class="fa-solid fa-rocket"></i> 마이그레이션 시작
+            </button>
+            <button class="btn btn-secondary" onclick="location.href='admin.html'">
+                <i class="fa-solid fa-arrow-left"></i> 관리자 페이지로 돌아가기
+            </button>
+            <div class="log" id="log"></div>
+        </div>
+
+        <div class="note">
+            ⚠️ 이 도구는 관리자만 사용할 수 있습니다.<br>
+            마이그레이션 중 페이지를 닫지 마세요.
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
+            authDomain: "busan-youth-player.firebaseapp.com",
+            databaseURL: "https://busan-youth-player-default-rtdb.firebaseio.com",
+            projectId: "busan-youth-player",
+            storageBucket: "busan-youth-player.firebasestorage.app",
+            messagingSenderId: "406016035492",
+            appId: "1:406016035492:web:e3d03145aefa945c707431"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const storage = firebase.storage();
+
+        // Auth check
+        const adminUser = JSON.parse(localStorage.getItem('adminUser') || 'null');
+        if (!adminUser || !adminUser.isApproved) {
+            document.body.innerHTML = '<h2 style="text-align:center;padding:100px 20px;">관리자 로그인이 필요합니다.<br><a href="index.html">돌아가기</a></h2>';
+        }
+
+        let playlist = [];
+
+        function log(msg, type) {
+            const div = document.getElementById('log');
+            div.innerHTML += `<div class="${type || ''}">${new Date().toLocaleTimeString()} - ${msg}</div>`;
+            div.scrollTop = div.scrollHeight;
+        }
+
+        function extractDriveId(url) {
+            if (!url) return null;
+            const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+            return m ? m[1] : null;
+        }
+
+        function isFirebaseUrl(url) {
+            return url && (url.includes('firebasestorage.googleapis.com') || url.includes('firebasestorage.app'));
+        }
+
+        async function loadPlaylist() {
+            const snap = await db.ref('users/playlist').once('value');
+            let data = snap.val() || [];
+            if (!Array.isArray(data)) data = Object.values(data);
+            playlist = data;
+
+            const container = document.getElementById('song-list');
+            container.innerHTML = '';
+            playlist.forEach((song, i) => {
+                const audioMigrated = isFirebaseUrl(song.url);
+                const coverMigrated = isFirebaseUrl(song.cover);
+                let statusText = '';
+                let statusClass = '';
+                if (audioMigrated && coverMigrated) {
+                    statusText = '✅ 완료';
+                    statusClass = 'done';
+                } else {
+                    statusText = '대기중';
+                }
+                
+                const coverSrc = song.cover ? 
+                    (isFirebaseUrl(song.cover) ? song.cover : `https://lh3.googleusercontent.com/d/${extractDriveId(song.cover)}=w100`) 
+                    : '';
+
+                container.innerHTML += `
+                    <div class="song-row" id="song-${i}">
+                        <img src="${coverSrc}" alt="" onerror="this.style.display='none'">
+                        <div class="info">
+                            <h4>${song.title || 'Unknown'}</h4>
+                            <p>${song.artist || 'Andre Youth'}</p>
+                        </div>
+                        <div class="status ${statusClass}" id="status-${i}">${statusText}</div>
+                    </div>
+                `;
+            });
+        }
+
+        async function downloadAsBlob(driveId, type) {
+            // Try multiple proxy approaches for Google Drive
+            const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(`https://drive.google.com/uc?id=${driveId}&export=download`)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://drive.google.com/uc?id=${driveId}&export=download`)}`,
+            ];
+
+            for (const proxyUrl of proxies) {
+                try {
+                    const res = await fetch(proxyUrl);
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        if (blob.size > 1000) return blob; // Valid file
+                    }
+                } catch (e) {
+                    continue;
+                }
+            }
+            throw new Error('모든 프록시에서 다운로드 실패');
+        }
+
+        async function uploadToStorage(blob, path) {
+            const ref = storage.ref().child(path);
+            const snap = await ref.put(blob);
+            return await snap.ref.getDownloadURL();
+        }
+
+        async function migrateSong(index) {
+            const song = playlist[index];
+            const $status = document.getElementById(`status-${index}`);
+            $status.textContent = '처리중...';
+            $status.className = 'status working';
+
+            try {
+                // Migrate audio
+                const audioId = extractDriveId(song.url) || song.audioFileId;
+                if (audioId && !isFirebaseUrl(song.url)) {
+                    $status.textContent = '음원 다운로드...';
+                    log(`[${song.title}] 음원 다운로드 중 (${audioId})...`);
+                    const audioBlob = await downloadAsBlob(audioId, 'audio');
+                    
+                    $status.textContent = '음원 업로드...';
+                    log(`[${song.title}] Firebase Storage 업로드 중...`);
+                    const ext = audioBlob.type.includes('mp3') ? 'mp3' : 'mp3';
+                    song.url = await uploadToStorage(audioBlob, `audio/${song.id || index}_${song.title}.${ext}`);
+                    song.audioUrl = song.url;
+                    log(`[${song.title}] 음원 업로드 완료`, 'success');
+                }
+
+                // Migrate cover
+                const coverId = extractDriveId(song.cover) || song.imageFileId;
+                if (coverId && !isFirebaseUrl(song.cover)) {
+                    $status.textContent = '커버 다운로드...';
+                    log(`[${song.title}] 커버 이미지 다운로드 중...`);
+                    const coverBlob = await downloadAsBlob(coverId, 'image');
+                    
+                    $status.textContent = '커버 업로드...';
+                    const ext = coverBlob.type.includes('png') ? 'png' : 'jpg';
+                    song.cover = await uploadToStorage(coverBlob, `covers/${song.id || index}_${song.title}.${ext}`);
+                    song.coverUrl = song.cover;
+                    song.profile = song.cover;
+                    log(`[${song.title}] 커버 업로드 완료`, 'success');
+                }
+
+                $status.textContent = '✅ 완료';
+                $status.className = 'status done';
+                return true;
+
+            } catch (e) {
+                log(`[${song.title}] 오류: ${e.message}`, 'error');
+                $status.textContent = '❌ 실패';
+                $status.className = 'status error';
+                return false;
+            }
+        }
+
+        async function startMigration() {
+            const btn = document.getElementById('btn-migrate');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 마이그레이션 진행중...';
+
+            log('마이그레이션 시작...');
+            let done = 0;
+            const total = playlist.length;
+
+            for (let i = 0; i < total; i++) {
+                await migrateSong(i);
+                done++;
+                document.getElementById('total-progress').style.width = `${(done/total)*100}%`;
+            }
+
+            // Save updated playlist to Firebase
+            log('Firebase RTDB에 업데이트된 URL 저장 중...');
+            try {
+                await db.ref('users/playlist').set(playlist);
+                log('✅ 모든 곡의 URL이 Firebase Storage로 업데이트되었습니다!', 'success');
+            } catch (e) {
+                log('RTDB 저장 실패: ' + e.message, 'error');
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> 마이그레이션 완료';
+        }
+
+        loadPlaylist();
+    </script>
+</body>
+</html>
