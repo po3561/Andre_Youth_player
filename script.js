@@ -433,20 +433,25 @@ $(document).ready(function () {
             sheetDragging = false;
         });
 
-        /* Album art tap → lyrics */
-        $('#album-trigger').on('click', function(e) {
-            // 가사 라인을 클릭한 경우 오버레이 토글을 막습니다.
-            if ($(e.target).closest('.lyric-line').length) {
-                return;
-            }
-            $('#lyrics-overlay').toggleClass('active');
+        /* Album art tap → lyrics open */
+        $('.album-art-wrap').on('click', function() {
+            $('#lyrics-overlay').addClass('active');
+        });
+
+        /* Lyrics close button */
+        $('#btn-close-lyrics').on('click', function(e) {
+            e.stopPropagation();
+            $('#lyrics-overlay').removeClass('active');
         });
 
         /* 가사 클릭 시 점프 */
         $(document).on('click', '.lyric-line.clickable', function(e) {
             const time = $(this).data('time');
             if (time !== undefined && !isNaN(time) && audio.duration) {
-                audio.currentTime = time;
+                const targetTime = time + 0.05; // 약간 뒤로 점프하여 확실히 활성화
+                audio.currentTime = targetTime;
+                updateLyricsSync(targetTime); // 즉각적인 UI 피드백
+                
                 if (audio.paused) {
                     audio.play().then(() => {
                         $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
