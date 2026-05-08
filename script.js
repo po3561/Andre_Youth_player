@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    /* ─── Firebase Init ─── */
+    /* ─── Firebase Init (채팅/문의/로그인용) ─── */
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -23,7 +23,6 @@ $(document).ready(function () {
         }
     });
 
-    const playlistRef = db.ref('users/playlist');
     const chatRef = db.ref('chats');
     const inqRef = db.ref('users/inquiries');
     const audio = document.getElementById('audio-engine');
@@ -55,31 +54,27 @@ $(document).ready(function () {
         }
     }
 
-    /* ─── Firebase Data Fetch ─── */
+    /* ─── Local Data Fetch ─── */
     function fetchData() {
-        playlistRef.on('value', snap => {
-            const data = snap.val();
-            if (data) {
-                playlistData = Array.isArray(data) ? data : Object.values(data);
-                playlistData = playlistData.map(song => ({
-                    ...song,
-                    url: song.url || song.audioUrl || '',
-                    cover: song.cover || song.coverUrl || song.profile || '',
-                    lyrics: song.lyrics || song.lyricsData || '',
-                    lyricsData: song.lyricsData || song.lyrics || '',
-                    artist: song.artist || 'Andre Youth'
-                }));
-                renderPlaylist();
-                if (playlistData.length > 0 && !audio.src) {
-                    loadSong(curIdx, false);
-                }
-            } else {
-                console.warn("No playlist data found in Firebase.");
-                $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">등록된 곡이 없습니다.</div>');
+        const data = window.PUBLIC_PLAYLIST;
+        if (data && data.length > 0) {
+            playlistData = Array.isArray(data) ? data : Object.values(data);
+            playlistData = playlistData.map(song => ({
+                ...song,
+                url: song.url || song.audioUrl || '',
+                cover: song.cover || song.coverUrl || song.profile || '',
+                lyrics: song.lyrics || song.lyricsData || '',
+                lyricsData: song.lyricsData || song.lyrics || '',
+                artist: song.artist || 'Andre Youth'
+            }));
+            renderPlaylist();
+            if (playlistData.length > 0 && !audio.src) {
+                loadSong(curIdx, false);
             }
-        }, err => {
-            console.error("데이터 로드 실패:", err);
-        });
+        } else {
+            console.warn("No local playlist data found.");
+            $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">로컬 데이터를 불러올 수 없습니다.</div>');
+        }
     }
 
     /* ─── Load Song ─── */
@@ -111,17 +106,22 @@ $(document).ready(function () {
 
         const audioUrl = resolveUrl(originalUrl, 'audio');
         
-        // For audio, we need fallbacks since Google Drive is unreliable
-        const idMatch = originalUrl.match(/id=([a-zA-Z0-9_-]+)/) || 
-                       originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        
         let fallbacks;
-        if (isFirebaseStorageUrl(originalUrl)) {
+        if (isLocalUrl(originalUrl)) {
+            // Local file - use directly, no fallbacks needed
             fallbacks = [originalUrl];
-        } else if (idMatch) {
-            fallbacks = MusicEngine.getFallbacks(idMatch[1]);
         } else {
-            fallbacks = [audioUrl];
+            // For audio, we need fallbacks since Google Drive is unreliable
+            const idMatch = originalUrl.match(/id=([a-zA-Z0-9_-]+)/) || 
+                           originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            
+            if (isFirebaseStorageUrl(originalUrl)) {
+                fallbacks = [originalUrl];
+            } else if (idMatch) {
+                fallbacks = MusicEngine.getFallbacks(idMatch[1]);
+            } else {
+                fallbacks = [audioUrl];
+            }
         }
 
         let tryIdx = 0;
@@ -161,6 +161,10 @@ $(document).ready(function () {
     }
 
     /* ─── URL Resolution Helper ─── */
+    function isLocalUrl(url) {
+        return url && !url.startsWith('http') && !url.startsWith('blob:') && !url.startsWith('data:');
+    }
+
     function isFirebaseStorageUrl(url) {
         return url && (url.includes('firebasestorage.googleapis.com') || 
                       url.includes('firebasestorage.app') ||
@@ -169,6 +173,7 @@ $(document).ready(function () {
 
     function resolveUrl(url, type) {
         if (!url) return type === 'image' ? MusicEngine.placeholderImage : '';
+        if (isLocalUrl(url)) return url;
         if (isFirebaseStorageUrl(url)) return url;
         return MusicEngine.fixUrl(url, type);
     }
@@ -448,6 +453,7 @@ $(document).ready(function () {
 
         /* ─── Chat ─── */
         $('#btn-open-chat').on('click', () => {
+
             closeAllModals();
             $('#modal-container, #chat-popup').addClass('active');
             $('#chat-messages').empty();
@@ -474,6 +480,7 @@ $(document).ready(function () {
         $('#btn-send-chat').on('click', sendChat);
         $('#chat-input').on('keypress', (e) => { if (e.key === 'Enter') sendChat(); });
         function sendChat() {
+
             const t = $('#chat-input').val().trim(); 
             if (!t) return;
             chatRef.push({ text: t, sender: userId, timestamp: Date.now() }); 
@@ -482,6 +489,7 @@ $(document).ready(function () {
 
         /* Submit Inquiry */
         $('#btn-submit-inquiry').on('click', () => {
+
             const title = $('#inq-title').val().trim();
             const content = $('#inq-content').val().trim();
             const contact = $('#inq-contact').val().trim();
@@ -496,6 +504,7 @@ $(document).ready(function () {
         });
 
         $('#btn-do-login').on('click', () => {
+
             const id = $('#admin-id').val().trim();
             const pw = $('#admin-password').val().trim();
             
@@ -537,6 +546,7 @@ $(document).ready(function () {
         });
 
         $('#btn-do-signup').on('click', () => {
+
             const id = $('#signup-id').val().trim();
             const pw = $('#signup-password').val().trim();
             const name = $('#signup-name').val().trim();
@@ -575,7 +585,7 @@ $(document).ready(function () {
         /* Close Modals */
         function closeAllModals() { 
             $('.modal-overlay, .floating-popup').removeClass('active'); 
-            chatRef.off('child_added');
+            if (chatRef) chatRef.off('child_added');
         }
         window.closeAllModals = closeAllModals; 
 
