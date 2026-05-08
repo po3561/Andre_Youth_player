@@ -186,7 +186,7 @@ $(document).ready(function () {
             return;
         }
         currentLyrics.forEach((l, i) => {
-            $scroll.append(`<div class="lyric-line" id="lrc-${i}">${l.text}</div>`);
+            $scroll.append(`<div class="lyric-line clickable" id="lrc-${i}" data-time="${l.time}">${l.text}</div>`);
         });
         $scroll.scrollTop(0);
     }
@@ -434,7 +434,26 @@ $(document).ready(function () {
         });
 
         /* Album art tap → lyrics */
-        $('#album-trigger').on('click', () => $('#lyrics-overlay').toggleClass('active'));
+        $('#album-trigger').on('click', function(e) {
+            // 가사 라인을 클릭한 경우 오버레이 토글을 막습니다.
+            if ($(e.target).closest('.lyric-line').length) {
+                return;
+            }
+            $('#lyrics-overlay').toggleClass('active');
+        });
+
+        /* 가사 클릭 시 점프 */
+        $(document).on('click', '.lyric-line.clickable', function(e) {
+            const time = $(this).data('time');
+            if (time !== undefined && !isNaN(time) && audio.duration) {
+                audio.currentTime = time;
+                if (audio.paused) {
+                    audio.play().then(() => {
+                        $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
+                    }).catch(console.error);
+                }
+            }
+        });
 
         /* ─── Volume (accordion below button) ─── */
         $('#btn-vol-pop').on('click', function(e) { 

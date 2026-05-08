@@ -155,6 +155,8 @@ body {
     margin: 14px 0; transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1); text-align: center;
     line-height: 1.4; filter: blur(1px);
 }
+.lyric-line.clickable { cursor: pointer; }
+.lyric-line.clickable:hover { color: rgba(255,255,255,0.8); text-shadow: 0 0 10px rgba(255,255,255,0.5); filter: blur(0px); }
 .lyric-line.near { color: rgba(255,255,255,0.55); filter: blur(0px); }
 .lyric-line.active { 
     color: white; transform: scale(1.1); text-shadow: 0 0 18px var(--primary-glow); 
