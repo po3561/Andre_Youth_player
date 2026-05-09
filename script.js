@@ -22,7 +22,7 @@ $(document).ready(function () {
         }
     });
 
-    db.ref('settings/app').on('value', snap => {
+    db.ref('users/appSettings').on('value', snap => {
         const data = snap.val();
         if (data) {
             if (data.title) $('#top-title').text(data.title);
