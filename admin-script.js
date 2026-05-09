@@ -1081,23 +1081,23 @@ $(document).ready(function() {
     let cachedSettings = {};
 
     function readSettingsForm() {
-        return Object.assign({}, cachedSettings, {
-            playlistTitle: ($('#setting-playlist-title').val() || '').trim(),
-            playlistSubtitle: ($('#setting-playlist-subtitle').val() || '').trim()
-        });
+        return {
+            title: ($('#setting-playlist-title').val() || '').trim(),
+            subtitle: ($('#setting-playlist-subtitle').val() || '').trim()
+        };
     }
 
     function writeSettingsForm(settings) {
-        cachedSettings = settings || {};
-        $('#setting-playlist-title').val(cachedSettings.playlistTitle || '');
-        $('#setting-playlist-subtitle').val(cachedSettings.playlistSubtitle || '');
+        settings = settings || {};
+        $('#setting-playlist-title').val(settings.title || '');
+        $('#setting-playlist-subtitle').val(settings.subtitle || '');
     }
 
     async function loadAppSettings() {
         const $status = $('#settings-status').text('설정 불러오는 중...');
         try {
             await ensureUserDb();
-            const snap = await firebase.database().ref('users/appSettings').once('value');
+            const snap = await firebase.database().ref('settings/app').once('value');
             const settings = snap.val();
             if (settings) {
                 writeSettingsForm(settings);
@@ -1116,7 +1116,7 @@ $(document).ready(function() {
         try {
             await ensureUserDb();
             const settings = readSettingsForm();
-            await firebase.database().ref('users/appSettings').set(settings);
+            await firebase.database().ref('settings/app').set(settings);
             $status.text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
         } catch (error) {
             $status.text('설정 저장 실패: ' + error.message);
