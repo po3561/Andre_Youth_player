@@ -58,4 +58,8 @@ const MusicEngine = {
     }
 };
 
-MusicEngine.init();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => MusicEngine.init());
+} else {
+    MusicEngine.init();
+}
