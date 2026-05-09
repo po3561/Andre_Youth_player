@@ -16,10 +16,17 @@ $(document).ready(function () {
     db.ref(".info/connected").on("value", (snap) => {
         if (snap.val() === true) {
             console.log("Firebase Connected");
-            $('#top-subtitle').text('믿음으로 기대하다 (CONNECTED)');
         } else {
             console.warn("Firebase Disconnected");
             $('#top-subtitle').text('서버 연결 중...');
+        }
+    });
+
+    db.ref('settings/app').on('value', snap => {
+        const data = snap.val();
+        if (data) {
+            if (data.title) $('#top-title').text(data.title);
+            if (data.subtitle) $('#top-subtitle').text(data.subtitle);
         }
     });
 
