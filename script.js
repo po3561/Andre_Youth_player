@@ -18,7 +18,7 @@ $(document).ready(function () {
             console.log("Firebase Connected");
         } else {
             console.warn("Firebase Disconnected");
-            $('#top-subtitle').text('서버 연결 중...');
+            // $('#top-subtitle').text('서버 연결 중...'); // 비활성화
         }
     });
 

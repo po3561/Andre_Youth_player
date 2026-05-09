@@ -1,4 +1,4 @@
-$(document).ready(function() {
+$(document).ready(function () {
     // Login Protection: check localStorage first (synchronous guard),
     // then verify Firebase Auth state asynchronously
     function checkAuth() {
@@ -9,15 +9,15 @@ $(document).ready(function() {
         }
         return true;
     }
-    
+
     if (!checkAuth()) return;
 
-    $('#btn-admin-logout').on('click', function() {
+    $('#btn-admin-logout').on('click', function () {
         if (confirm('로그아웃 하시겠습니까?')) {
             localStorage.removeItem('adminUser');
             // Also sign out from Firebase Auth
             if (firebase.auth) {
-                firebase.auth().signOut().catch(() => {});
+                firebase.auth().signOut().catch(() => { });
             }
             window.location.href = 'index.html';
         }
@@ -39,7 +39,7 @@ $(document).ready(function() {
     const playlistRef = db.ref('users/playlist');
 
     // Firebase is initialized synchronously, so ensureUserDb is just a dummy promise to prevent ReferenceError
-    const ensureUserDb = async () => {};
+    const ensureUserDb = async () => { };
 
     function loadScriptOnce(src) {
         return new Promise((resolve, reject) => {
@@ -63,11 +63,11 @@ $(document).ready(function() {
         const uploadTask = fileRef.put(file);
 
         return new Promise((resolve, reject) => {
-            uploadTask.on('state_changed', 
+            uploadTask.on('state_changed',
                 (snapshot) => {
                     // Update progress if needed
-                }, 
-                (error) => reject(error), 
+                },
+                (error) => reject(error),
                 () => {
                     uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
                         resolve(downloadURL);
@@ -111,7 +111,7 @@ $(document).ready(function() {
         users.forEach(u => {
             const statusClass = u.isApproved ? 'approved' : 'pending';
             const statusText = u.isApproved ? '승인됨' : '승인 대기';
-            const actionBtns = u.isApproved ? 
+            const actionBtns = u.isApproved ?
                 `<button class="btn-reject" data-key="${u.key}">권한 회수</button>` :
                 `<button class="btn-approve" data-key="${u.key}">승인</button>`;
 
@@ -136,14 +136,14 @@ $(document).ready(function() {
         });
     }
 
-    $(document).on('click', '.btn-approve', async function() {
+    $(document).on('click', '.btn-approve', async function () {
         const key = $(this).data('key');
         if (confirm('이 사용자를 승인하시겠습니까?')) {
             await userDb.child(key).update({ isApproved: true });
         }
     });
 
-    $(document).on('click', '.btn-reject', async function() {
+    $(document).on('click', '.btn-reject', async function () {
         const key = $(this).data('key');
         const isDelete = $(this).text() === '삭제';
         if (confirm(isDelete ? '이 사용자를 삭제하시겠습니까?' : '이 사용자의 승인을 취소하시겠습니까?')) {
@@ -171,31 +171,31 @@ $(document).ready(function() {
     };
 
     fetchSongs();
-    loadAppSettings().catch(() => {});
+    loadAppSettings().catch(() => { });
 
 
-    $(document).on('dragover dragenter drop', function(e) {
+    $(document).on('dragover dragenter drop', function (e) {
         e.preventDefault();
         e.stopPropagation();
     });
 
-    $('.drop-zone').on('dragover dragenter', function() {
+    $('.drop-zone').on('dragover dragenter', function () {
         $(this).addClass('active');
-    }).on('dragleave dragend drop', function() {
+    }).on('dragleave dragend drop', function () {
         $(this).removeClass('active');
     });
 
-    $('.drop-zone').on('drop', function(e) {
+    $('.drop-zone').on('drop', function (e) {
         const type = $(this).data('type');
         const file = e.originalEvent.dataTransfer.files[0];
         handleFileSelect(type, file, $(this));
     });
 
-    $('.drop-zone').on('click', function() {
+    $('.drop-zone').on('click', function () {
         $(this).find('input[type="file"]').trigger('click');
     });
 
-    $('input[type="file"]').on('change', function() {
+    $('input[type="file"]').on('change', function () {
         const type = $(this).parent().data('type');
         const file = this.files[0];
         handleFileSelect(type, file, $(this).parent());
@@ -867,7 +867,7 @@ $(document).ready(function() {
             $btn.prop('disabled', false).html('<i class="fa-solid fa-bolt"></i> AI 자동 싱크 생성');
         } finally {
             if (audioCtx) {
-                await audioCtx.close().catch(() => {});
+                await audioCtx.close().catch(() => { });
             }
             $progressZone.show();
         }
@@ -875,26 +875,26 @@ $(document).ready(function() {
 
     $(document).on('click', '#btn-ai-auto-sync', analyzeLyrics);
 
-    $(document).on('click', '.offset-quick-btn', function() {
+    $(document).on('click', '.offset-quick-btn', function () {
         const delta = parseFloat($(this).data('delta'));
         const $input = $('#sync-offset');
         let current = parseFloat($input.val()) || 0;
         $input.val((current + delta).toFixed(2)).trigger('change');
-        
+
         // If results already exist, re-run mapping to show preview immediately
         if (state.generatedLrc && state.audioFile) {
             analyzeLyrics();
         }
     });
 
-    $('#sync-offset, #sync-min-gap').on('change', function() {
+    $('#sync-offset, #sync-min-gap').on('change', function () {
         if (state.generatedLrc && state.audioFile) {
             // Re-analyze with new manual values if preview exists
             analyzeLyrics();
         }
     });
 
-    $('#btn-upload-all').click(async function() {
+    $('#btn-upload-all').click(async function () {
         const title = $('#song-title').val().trim();
         if (!title) {
             alert('곡 제목을 입력해주세요.');
@@ -1007,7 +1007,7 @@ $(document).ready(function() {
                 $list.append('<div class="loading-spinner">등록된 곡이 없습니다.</div>');
                 return;
             }
-            
+
             data.forEach(song => {
                 const songKey = song.id ?? song.key ?? song.title ?? '';
                 const $item = $('<div>').addClass('admin-song-item').attr('data-song-key', songKey);
@@ -1018,7 +1018,7 @@ $(document).ready(function() {
                     .attr('src', coverSrc || FALLBACK_COVER)
                     .attr('alt', `${song.title || '곡'} 커버`);
 
-                $img.on('error', function() {
+                $img.on('error', function () {
                     if (this.src !== FALLBACK_COVER) {
                         this.src = FALLBACK_COVER;
                     }
@@ -1046,7 +1046,7 @@ $(document).ready(function() {
                 $list.append($item);
             });
 
-        } catch(error) {
+        } catch (error) {
             console.error("fetchSongs error:", error);
             $list.html('<div class="loading-spinner" style="color:#ff3b30;">목록 로드 실패</div>');
         }
@@ -1057,7 +1057,7 @@ $(document).ready(function() {
         if (typeof initInquiryManager === 'function') initInquiryManager();
     });
 
-    $('#btn-reset-default').click(async function() {
+    $('#btn-reset-default').click(async function () {
         if (!confirm('현재 플레이리스트를 삭제하고 초기 기본 곡 목록으로 재설정하시겠습니까?')) return;
 
         const $btn = $(this).prop('disabled', true).text('초기화 중...');
@@ -1143,7 +1143,7 @@ $(document).ready(function() {
                 .attr('src', song.cover || song.profile || FALLBACK_COVER)
                 .attr('alt', `${song.title || '곡'} 커버`);
 
-            $img.on('error', function() {
+            $img.on('error', function () {
                 if (this.src !== FALLBACK_COVER) {
                     this.src = FALLBACK_COVER;
                 }
@@ -1170,7 +1170,7 @@ $(document).ready(function() {
         });
     }
 
-    $(document).on('click', '.btn-delete-song', async function() {
+    $(document).on('click', '.btn-delete-song', async function () {
         const song = $(this).data('song') || {};
         const label = song.title || song.id || '이 곡';
         if (!confirm(`'${label}' 곡을 정말 삭제할까요?`)) return;
@@ -1216,7 +1216,7 @@ $(document).ready(function() {
         $('#edit-cover-preview')
             .off('error')
             .attr('src', editCoverSrc || FALLBACK_COVER)
-            .on('error', function() {
+            .on('error', function () {
                 if (this.src !== FALLBACK_COVER) this.src = FALLBACK_COVER;
             });
         $('#edit-overlay').addClass('active').attr('aria-hidden', 'false');
@@ -1235,18 +1235,18 @@ $(document).ready(function() {
     }
 
     $('#btn-edit-close').on('click', closeEditModal);
-    $('#edit-overlay').on('click', function(e) {
+    $('#edit-overlay').on('click', function (e) {
         if (e.target === this) closeEditModal();
     });
 
-    $(document).on('click', '.btn-edit-song', function() {
+    $(document).on('click', '.btn-edit-song', function () {
         const song = $(this).data('song') || {};
         if (song.id) {
             openEditModal(song);
         }
     });
 
-    $('#btn-edit-save').on('click', async function() {
+    $('#btn-edit-save').on('click', async function () {
         const id = state.editSongId;
         if (!id) return;
 
@@ -1319,8 +1319,8 @@ $(document).ready(function() {
     function initInquiryManager() {
         const inqRef = firebase.database().ref('users/inquiries');
         const $list = $('#inquiry-list');
-        
-        if (!$list.length) return; 
+
+        if (!$list.length) return;
 
         inqRef.on('value', snap => {
             const data = snap.val();
@@ -1329,7 +1329,7 @@ $(document).ready(function() {
                 $list.append('<div class="no-data" style="color:#aaa; text-align:center; padding:40px;">접수된 문의가 없습니다.</div>');
                 return;
             }
-            
+
             Object.keys(data).reverse().forEach(key => {
                 const inq = data[key];
                 const dateStr = new Date(inq.timestamp).toLocaleString();
@@ -1350,7 +1350,7 @@ $(document).ready(function() {
             });
         });
 
-        $(document).on('click', '.btn-delete-inq', function() {
+        $(document).on('click', '.btn-delete-inq', function () {
             const key = $(this).data('key');
             if (confirm('이 문의를 삭제하시겠습니까?')) {
                 inqRef.child(key).remove();
