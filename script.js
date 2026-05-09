@@ -22,6 +22,7 @@ $(document).ready(function () {
         }
     });
 
+    /* ─── 앱 설정 (잠시 비활성화) ───
     db.ref('users/appSettings').on('value', snap => {
         const data = snap.val();
         if (data) {
@@ -29,6 +30,7 @@ $(document).ready(function () {
             if (data.subtitle) $('#top-subtitle').text(data.subtitle);
         }
     });
+    */
 
     const chatRef = db.ref('chats');
     const inqRef = db.ref('users/inquiries');
