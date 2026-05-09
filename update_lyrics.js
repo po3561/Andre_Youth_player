@@ -1,0 +1,1 @@
+const fs = require('fs'); const lrc = fs.readFileSync('Andre_Youth_Music/그 사랑.lrc', 'utf8'); let data = fs.readFileSync('playlist-data.js', 'utf8'); const formattedLrc = lrc.replace(/\r?\n/g, '\\n'); data = data.replace(/lyricsData: "아버지 사랑 내가 노래해[^\}]+"/, 'lyricsData: "' + formattedLrc + '"'); fs.writeFileSync('playlist-data.js', data, 'utf8');

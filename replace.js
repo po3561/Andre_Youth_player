@@ -1,0 +1,1 @@
+const fs = require('fs'); let data = fs.readFileSync('playlist-data.js', 'utf8'); data = data.replace(/cover: "Andre_Youth_Music\/[^"]+\.jpg"/g, 'cover: "Andre_Youth_Music/1.jpg"'); fs.writeFileSync('playlist-data.js', data, 'utf8');
