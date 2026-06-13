@@ -22,6 +22,21 @@ $(document).ready(function () {
     function init() {
         setTimeout(() => { $('#splash-screen').fadeOut(600); }, 1200);
         try {
+            // Mobile Audio Unlock
+            const unlockAudio = () => {
+                if (audio.paused && !audio.src) {
+                    audio.src = 'data:audio/mp3;base64,//OwgAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA////////////////AAAAAAAAAAAAAAAAAAAAAAADTEFNRTMuMTAwA8QAAAAALhsAAQAEAAASRgAAAnEAAAAAAA==';
+                    audio.play().then(() => {
+                        audio.pause();
+                        audio.src = '';
+                    }).catch(() => {});
+                }
+                document.removeEventListener('touchstart', unlockAudio);
+                document.removeEventListener('click', unlockAudio);
+            };
+            document.addEventListener('touchstart', unlockAudio, { once: true });
+            document.addEventListener('click', unlockAudio, { once: true });
+
             bindEvents();
             fetchData();
             const vol = localStorage.getItem('player_vol') || 80;
@@ -71,8 +86,9 @@ $(document).ready(function () {
         const wasPlaying = audio && !audio.paused;
 
         playlistData = (Array.isArray(data) ? data : Object.values(data)).map(song => {
-            const coverUrl = resolveUrl(song.cover || song.coverUrl || song.profile || '', 'image');
-            const originalAudioUrl = song.url || song.audioUrl || '';
+            const coverUrl = resolveUrl(song.coverUrl || song.cover || song.profile || '', 'image');
+            const candidateAudio = (typeof song.audio === 'string' && song.audio.trim()) ? song.audio : '';
+            const originalAudioUrl = candidateAudio || song.audioUrl || song.url || '';
             const audioUrl = resolveUrl(originalAudioUrl, 'audio');
             const lrc = song.lyricsData || song.lyrics || '';
             const parsedLyrics = MusicEngine.parseLyrics(lrc);
