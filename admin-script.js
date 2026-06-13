@@ -1475,15 +1475,28 @@ $(document).ready(function () {
     }
 
     $('#btn-open-sync-maker').on('click', function() {
-        // 1. 오디오 소스 설정
-        const audioUrl = $('#edit-audio-url').val().trim();
+        let audioUrl = $('#edit-audio-url').val().trim();
+        
+        // URL 폴백 변환 로직 (구글 드라이브 등)
+        if (audioUrl && !audioUrl.startsWith('blob:') && !audioUrl.startsWith('data:')) {
+            const idMatch = audioUrl.match(/id=([a-zA-Z0-9_-]+)/) || audioUrl.match(/\\/d\\/([a-zA-Z0-9_-]+)/);
+            if (idMatch && typeof window.MusicEngine !== 'undefined') {
+                const fallbacks = window.MusicEngine.getFallbacks(idMatch[1]);
+                if (fallbacks && fallbacks.length > 0) {
+                    audioUrl = fallbacks[0];
+                }
+            } else if (typeof window.MusicEngine !== 'undefined' && window.MusicEngine.fixUrl) {
+                audioUrl = window.MusicEngine.fixUrl(audioUrl, 'audio');
+            }
+        }
+
         if (state.editAudioFile) {
             syncAudio.src = URL.createObjectURL(state.editAudioFile);
         } else if (audioUrl) {
             syncAudio.src = audioUrl;
         } else {
-            alert('음원을 먼저 업로드하거나 링크를 입력해주세요.');
-            return;
+            console.warn('음원 소스가 없습니다. 오디오 없이 싱크 모달을 엽니다.');
+            syncAudio.src = '';
         }
 
         // 2. 가사 텍스트 추출 (기존 [00:00.00] 태그 걷어내기)
