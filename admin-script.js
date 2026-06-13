@@ -1524,15 +1524,15 @@ $(document).ready(function () {
         currentSyncIdx = 0;
         
         renderSyncLines();
-        $('#edit-overlay').css('display', 'none');
-        $syncOverlay.addClass('active').attr('aria-hidden', 'false').css('display', 'flex');
+        $('#edit-overlay').removeClass('active'); // 부드럽게 기존 모달 숨기기
+        $syncOverlay.addClass('active').attr('aria-hidden', 'false'); // 새 모달 올리기
     });
 
     $('#btn-sync-maker-close').on('click', function() {
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         syncAudio.pause();
-        $syncOverlay.removeClass('active').attr('aria-hidden', 'true').css('display', 'none');
-        $('#edit-overlay').css('display', 'flex');
+        $syncOverlay.removeClass('active').attr('aria-hidden', 'true');
+        $('#edit-overlay').addClass('active'); // 기존 모달 복원
     });
 
     // 탭 동작
@@ -1575,8 +1575,8 @@ $(document).ready(function () {
         }).join('\n');
         
         $('#edit-lyrics').val(resultLrc);
-        $syncOverlay.removeClass('active').attr('aria-hidden', 'true').css('display', 'none');
-        $('#edit-overlay').css('display', 'flex');
+        $syncOverlay.removeClass('active').attr('aria-hidden', 'true');
+        $('#edit-overlay').addClass('active'); // 기존 모달 복원
         
         // 자동 저장 트리거
         if (confirm('가사 텍스트에 싱크가 성공적으로 적용되었습니다! 곧바로 곡 정보를 서버에 저장하시겠습니까?')) {
