@@ -305,23 +305,23 @@
     </div>
 
     <!-- Sync Maker Modal Overlay -->
-    <div id="sync-maker-overlay" class="modal-overlay" aria-hidden="true" style="z-index: 10000; align-items:center;">
-        <div class="floating-popup" style="max-width:500px; width:90%; height:80vh; display:flex; flex-direction:column; padding:20px;">
-            <button class="btn-close-popup" id="btn-sync-maker-close"><i class="fa-solid fa-xmark"></i></button>
-            <h2 style="margin-top:0;">가사 싱크 메이커 (Sync Maker)</h2>
-            <p style="font-size:13px; color:#aaa; margin-bottom:15px;">오디오를 재생하고 가사가 나올 때 <b>[스페이스바]</b>를 누르거나 <b>[싱크 찍기]</b> 버튼을 누르세요.</p>
+    <div id="sync-maker-overlay" class="modal-overlay" aria-hidden="true" style="z-index: 10000; align-items:center; justify-content:center;">
+        <div class="floating-popup" style="max-width:500px; width:90%; height:80vh; display:flex; flex-direction:column; padding:20px; background:#1e1e1e; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5); position:relative;">
+            <button id="btn-sync-maker-close" style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#fff; font-size:20px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <h2 style="margin-top:0; color:#fff; font-size:20px; margin-bottom:5px;">가사 싱크 메이커 (Sync Maker)</h2>
+            <p style="font-size:13px; color:#aaa; margin-bottom:15px; line-height:1.4;">오디오를 재생하고 가사가 나올 때 <b>[스페이스바]</b>를 누르거나 <b>[싱크 찍기]</b> 버튼을 누르세요.</p>
             
-            <audio id="sync-maker-audio" controls style="width:100%; height:40px; margin-bottom:15px;"></audio>
+            <audio id="sync-maker-audio" controls style="width:100%; height:40px; margin-bottom:15px; border-radius:8px; outline:none;"></audio>
             
-            <div id="sync-maker-lyrics-container" style="flex:1; overflow-y:auto; background:#1e1e1e; border-radius:8px; padding:10px; margin-bottom:15px; font-size:16px; line-height:1.6;">
+            <div id="sync-maker-lyrics-container" style="flex:1; overflow-y:auto; background:#121212; border-radius:8px; padding:15px; margin-bottom:15px; font-size:16px; line-height:1.6; border:1px solid #333;">
                 <!-- Lyrics Lines will be appended here -->
             </div>
             
             <div style="display:flex; gap:10px; flex-shrink:0;">
-                <button id="btn-sync-maker-tap" class="btn btn-primary" style="flex:2; font-weight:bold; font-size:16px;">⏱️ 싱크 찍기 (Space)</button>
-                <button id="btn-sync-maker-undo" class="btn btn-secondary" style="flex:1;"><i class="fa-solid fa-rotate-left"></i> 한줄 무르기</button>
+                <button id="btn-sync-maker-tap" style="flex:2; font-weight:bold; font-size:16px; padding:12px; border-radius:8px; background:#333; color:#fff; border:1px solid #555; cursor:pointer; transition:0.2s;">⏱️ 싱크 찍기 (Space)</button>
+                <button id="btn-sync-maker-undo" style="flex:1; padding:12px; border-radius:8px; background:rgba(255,255,255,0.1); color:#fff; border:none; cursor:pointer; font-size:14px;"><i class="fa-solid fa-rotate-left"></i> 한줄 무르기</button>
             </div>
-            <button id="btn-sync-maker-apply" class="btn btn-primary" style="flex-shrink:0; margin-top:10px; background:#20B2AA; border-color:#20B2AA; color:#111;">✅ 완성 및 가사에 적용</button>
+            <button id="btn-sync-maker-apply" style="flex-shrink:0; margin-top:10px; padding:15px; border-radius:8px; background:#20B2AA; color:#111; border:none; font-weight:bold; font-size:16px; cursor:pointer; box-shadow:0 4px 10px rgba(32,178,170,0.3);">✅ 완성 및 가사에 적용</button>
         </div>
     </div>
 

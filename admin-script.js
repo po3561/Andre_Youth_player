@@ -1431,7 +1431,6 @@ $(document).ready(function () {
             console.error(e);
         }
     };
-    };
     initInquiryManager();
 
     // ==========================================
