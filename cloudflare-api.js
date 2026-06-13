@@ -1,7 +1,7 @@
 const CF_CONFIG = {
     WORKER_URL: 'https://andre-youth-api.ej210651392.workers.dev',
-    R2_ACCESS_KEY: '81839cc4b3c3fc7b8c7a5d33377a4268',
-    R2_SECRET_KEY: '7b2f3e3a45d7472aaf3b1f03a9c0ae5ce265fe1d581b1e4a0e170a0ccfff4003',
+    R2_ACCESS_KEY: 'ebae683f2e3a32547e79bcb1814fde7a',
+    R2_SECRET_KEY: '1c515d389757f8fa3db279b2b6fa96da216cba45e151bca75a03bfb1184d21b5',
     R2_ENDPOINT: 'https://81f630d262df1be917412e3888adb133.r2.cloudflarestorage.com',
     R2_BUCKET_NAME: 'ply999'
 };
