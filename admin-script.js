@@ -159,7 +159,8 @@ $(document).ready(function () {
         handleFileSelect(type, file, $(this));
     });
 
-    $('.drop-zone').on('click', function () {
+    $('.drop-zone').on('click', function (e) {
+        if ($(e.target).is('input[type="file"]')) return;
         $(this).find('input[type="file"]').trigger('click');
     });
 
@@ -1023,7 +1024,7 @@ $(document).ready(function () {
                 id: songId,
                 title,
                 artist,
-                url: finalAudioUrl || '',
+                audio: finalAudioUrl || '',
                 cover: finalCoverUrl || FALLBACK_COVER,
                 lyricsData: finalLyrics,
                 syncOffset: readNumber($('#sync-offset'), 0),
