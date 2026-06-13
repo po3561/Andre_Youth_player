@@ -55,7 +55,7 @@ $(document).ready(function () {
                     reject(err);
                 } else {
                     // R2 public bucket URL 생성
-                    const publicUrl = `https://pub-your-r2-subdomain.r2.dev/${fileName}`;
+                    const publicUrl = `https://pub-6f09ba73beba48419076ff845f6d3731.r2.dev/${fileName}`;
                     resolve(publicUrl);
                 }
             });
