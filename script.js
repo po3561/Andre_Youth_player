@@ -187,6 +187,38 @@ $(document).ready(function () {
         let tryIdx = 0;
         const fallbacks = song.fallbacks;
 
+        // Media Session API 설정 (백그라운드/잠금화면 컨트롤 지원)
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: song.title || 'Unknown Title',
+                artist: song.artist || 'Andre Youth',
+                album: 'Andre Youth Playlist',
+                artwork: [
+                    { src: song.coverUrl || MusicEngine.placeholderImage, sizes: '96x96', type: 'image/jpeg' },
+                    { src: song.coverUrl || MusicEngine.placeholderImage, sizes: '128x128', type: 'image/jpeg' },
+                    { src: song.coverUrl || MusicEngine.placeholderImage, sizes: '192x192', type: 'image/jpeg' },
+                    { src: song.coverUrl || MusicEngine.placeholderImage, sizes: '256x256', type: 'image/jpeg' },
+                    { src: song.coverUrl || MusicEngine.placeholderImage, sizes: '384x384', type: 'image/jpeg' },
+                    { src: song.coverUrl || MusicEngine.placeholderImage, sizes: '512x512', type: 'image/jpeg' }
+                ]
+            });
+
+            navigator.mediaSession.setActionHandler('play', function() {
+                audio.play();
+                $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
+            });
+            navigator.mediaSession.setActionHandler('pause', function() {
+                audio.pause();
+                $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+            });
+            navigator.mediaSession.setActionHandler('previoustrack', function() {
+                $('#btn-prev').click();
+            });
+            navigator.mediaSession.setActionHandler('nexttrack', function() {
+                $('#btn-next').click();
+            });
+        }
+
         const tryPlay = async (url) => {
             if (!url || myLoadId !== currentLoadId) return; // 이전 로딩 루프 취소 (씹힘 방지)
             try {
