@@ -1480,6 +1480,11 @@ $(document).ready(function () {
         // URL 폴백 변환 로직 (구글 드라이브 등)
         if (audioUrl && !audioUrl.startsWith('blob:') && !audioUrl.startsWith('data:')) {
             const idMatch = audioUrl.match(/id=([a-zA-Z0-9_-]+)/) || audioUrl.match(/\\/d\\/([a-zA-Z0-9_-]+)/);
+            // JS 문법에러 방지를 위해 RegExp 객체로 안전하게 처리:
+            if (!idMatch) {
+                const altMatch = audioUrl.match(new RegExp('\\\\/d\\\\/([a-zA-Z0-9_-]+)'));
+                if (altMatch) idMatch = altMatch;
+            }
             if (idMatch && typeof window.MusicEngine !== 'undefined') {
                 const fallbacks = window.MusicEngine.getFallbacks(idMatch[1]);
                 if (fallbacks && fallbacks.length > 0) {
@@ -1519,12 +1524,12 @@ $(document).ready(function () {
         currentSyncIdx = 0;
         
         renderSyncLines();
-        $syncOverlay.addClass('active').attr('aria-hidden', 'false');
+        $syncOverlay.addClass('active').attr('aria-hidden', 'false').css('display', 'flex');
     });
 
     $('#btn-sync-maker-close').on('click', function() {
         syncAudio.pause();
-        $syncOverlay.removeClass('active').attr('aria-hidden', 'true');
+        $syncOverlay.removeClass('active').attr('aria-hidden', 'true').css('display', 'none');
     });
 
     // 탭 동작
@@ -1566,7 +1571,7 @@ $(document).ready(function () {
         }).join('\\n');
         
         $('#edit-lyrics').val(resultLrc);
-        $syncOverlay.removeClass('active').attr('aria-hidden', 'true');
+        $syncOverlay.removeClass('active').attr('aria-hidden', 'true').css('display', 'none');
         alert('가사 텍스트에 싱크가 적용되었습니다!');
     });
 });
