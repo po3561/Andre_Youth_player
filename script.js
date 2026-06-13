@@ -63,11 +63,9 @@ $(document).ready(function () {
         }
     }
 
-    /* ─── Firebase 실시간 플레이리스트 연동 ─── */
+    /* ─── Firebase 실시간 플레이리스트 연동 (Firebase 전용) ─── */
     function fetchData() {
-        // 1차: Firebase Realtime DB에서 실시간 구독
         const playlistDbRef = db.ref('users/playlist');
-        let firebaseLoaded = false;
 
         playlistDbRef.on('value', (snapshot) => {
             let rawData = snapshot.val();
@@ -77,41 +75,16 @@ $(document).ready(function () {
             const data = Array.isArray(rawData) ? rawData : [];
 
             if (data.length > 0) {
-                firebaseLoaded = true;
                 console.log(`✅ Firebase 플레이리스트 로드 성공: ${data.length}곡`);
                 applyPlaylist(data);
-            } else if (!firebaseLoaded) {
-                // Firebase에 데이터가 비어있으면 로컬 Fallback 사용
-                console.warn("Firebase 플레이리스트가 비어있습니다. 로컬 Fallback 사용.");
-                loadLocalFallback();
+            } else {
+                console.warn("Firebase 플레이리스트가 비어있습니다.");
+                $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">등록된 곡이 없습니다.<br>관리자 페이지에서 곡을 추가해주세요.</div>');
             }
         }, (error) => {
-            // Firebase 연결 실패 시 로컬 Fallback
             console.error("Firebase 연결 실패:", error);
-            if (!firebaseLoaded) {
-                loadLocalFallback();
-            }
+            $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">서버 연결에 실패했습니다.<br>잠시 후 다시 시도해주세요.</div>');
         });
-
-        // 5초 내 Firebase 응답 없으면 로컬 Fallback
-        setTimeout(() => {
-            if (!firebaseLoaded && playlistData.length === 0) {
-                console.warn("Firebase 응답 지연 — 로컬 Fallback 사용.");
-                loadLocalFallback();
-            }
-        }, 5000);
-    }
-
-    /* ─── 로컬 Fallback (playlist-data.js) ─── */
-    function loadLocalFallback() {
-        const data = window.PUBLIC_PLAYLIST;
-        if (data && data.length > 0) {
-            console.log(`📦 로컬 Fallback 로드: ${data.length}곡`);
-            applyPlaylist(data);
-        } else {
-            console.warn("로컬 Fallback 데이터도 없습니다.");
-            $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">플레이리스트를 불러올 수 없습니다.</div>');
-        }
     }
 
     /* ─── 공통 플레이리스트 적용 ─── */
@@ -136,11 +109,10 @@ $(document).ready(function () {
             if (foundIdx !== -1) {
                 curIdx = foundIdx;
                 updateActiveInList();
-                return; // 재생 중이면 끊지 않음
+                return;
             }
         }
 
-        // 최초 로드이거나 재생 중이 아닌 경우
         if (playlistData.length > 0 && (!audio.src || !wasPlaying)) {
             loadSong(curIdx, false);
         }
