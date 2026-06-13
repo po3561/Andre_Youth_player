@@ -63,26 +63,86 @@ $(document).ready(function () {
         }
     }
 
-    /* ─── Local Data Fetch ─── */
+    /* ─── Firebase 실시간 플레이리스트 연동 ─── */
     function fetchData() {
+        // 1차: Firebase Realtime DB에서 실시간 구독
+        const playlistDbRef = db.ref('users/playlist');
+        let firebaseLoaded = false;
+
+        playlistDbRef.on('value', (snapshot) => {
+            let rawData = snapshot.val();
+            if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
+                rawData = Object.values(rawData);
+            }
+            const data = Array.isArray(rawData) ? rawData : [];
+
+            if (data.length > 0) {
+                firebaseLoaded = true;
+                console.log(`✅ Firebase 플레이리스트 로드 성공: ${data.length}곡`);
+                applyPlaylist(data);
+            } else if (!firebaseLoaded) {
+                // Firebase에 데이터가 비어있으면 로컬 Fallback 사용
+                console.warn("Firebase 플레이리스트가 비어있습니다. 로컬 Fallback 사용.");
+                loadLocalFallback();
+            }
+        }, (error) => {
+            // Firebase 연결 실패 시 로컬 Fallback
+            console.error("Firebase 연결 실패:", error);
+            if (!firebaseLoaded) {
+                loadLocalFallback();
+            }
+        });
+
+        // 5초 내 Firebase 응답 없으면 로컬 Fallback
+        setTimeout(() => {
+            if (!firebaseLoaded && playlistData.length === 0) {
+                console.warn("Firebase 응답 지연 — 로컬 Fallback 사용.");
+                loadLocalFallback();
+            }
+        }, 5000);
+    }
+
+    /* ─── 로컬 Fallback (playlist-data.js) ─── */
+    function loadLocalFallback() {
         const data = window.PUBLIC_PLAYLIST;
         if (data && data.length > 0) {
-            playlistData = Array.isArray(data) ? data : Object.values(data);
-            playlistData = playlistData.map(song => ({
-                ...song,
-                url: song.url || song.audioUrl || '',
-                cover: song.cover || song.coverUrl || song.profile || '',
-                lyrics: song.lyrics || song.lyricsData || '',
-                lyricsData: song.lyricsData || song.lyrics || '',
-                artist: song.artist || 'Andre Youth'
-            }));
-            renderPlaylist();
-            if (playlistData.length > 0 && !audio.src) {
-                loadSong(curIdx, false);
-            }
+            console.log(`📦 로컬 Fallback 로드: ${data.length}곡`);
+            applyPlaylist(data);
         } else {
-            console.warn("No local playlist data found.");
-            $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">로컬 데이터를 불러올 수 없습니다.</div>');
+            console.warn("로컬 Fallback 데이터도 없습니다.");
+            $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">플레이리스트를 불러올 수 없습니다.</div>');
+        }
+    }
+
+    /* ─── 공통 플레이리스트 적용 ─── */
+    function applyPlaylist(data) {
+        const prevSongId = playlistData[curIdx] ? playlistData[curIdx].id : null;
+        const wasPlaying = audio && !audio.paused;
+
+        playlistData = (Array.isArray(data) ? data : Object.values(data)).map(song => ({
+            ...song,
+            url: song.url || song.audioUrl || '',
+            cover: song.cover || song.coverUrl || song.profile || '',
+            lyrics: song.lyrics || song.lyricsData || '',
+            lyricsData: song.lyricsData || song.lyrics || '',
+            artist: song.artist || 'Andre Youth'
+        }));
+
+        renderPlaylist();
+
+        // 현재 재생 중이던 곡이 여전히 목록에 있으면 인덱스 유지
+        if (prevSongId) {
+            const foundIdx = playlistData.findIndex(s => s.id === prevSongId);
+            if (foundIdx !== -1) {
+                curIdx = foundIdx;
+                updateActiveInList();
+                return; // 재생 중이면 끊지 않음
+            }
+        }
+
+        // 최초 로드이거나 재생 중이 아닌 경우
+        if (playlistData.length > 0 && (!audio.src || !wasPlaying)) {
+            loadSong(curIdx, false);
         }
     }
 
