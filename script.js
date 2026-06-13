@@ -93,6 +93,21 @@ $(document).ready(function () {
             const lrc = song.lyricsData || song.lyrics || '';
             const parsedLyrics = MusicEngine.parseLyrics(lrc);
             
+            // 디버깅 UI (URL이 없는 경우 원본 데이터 노출)
+            if (!originalAudioUrl) {
+                let debugDiv = document.getElementById('debug-overlay');
+                if (!debugDiv) {
+                    debugDiv = document.createElement('div');
+                    debugDiv.id = 'debug-overlay';
+                    debugDiv.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;background:rgba(255,0,0,0.85);color:#fff;padding:15px;z-index:9999;border-radius:10px;font-size:12px;max-height:50vh;overflow:auto;word-break:break-all;';
+                    document.body.appendChild(debugDiv);
+                }
+                const debugInfo = document.createElement('div');
+                debugInfo.style.marginBottom = '10px';
+                debugInfo.innerHTML = `<strong>[로딩 실패 곡] ${song.title || 'Unknown'}</strong><br>원본 데이터:<br>` + JSON.stringify(song);
+                debugDiv.appendChild(debugInfo);
+            }
+
             let fallbacks = [];
             if (originalAudioUrl) {
                 if (isLocalUrl(originalAudioUrl) || isFirebaseStorageUrl(originalAudioUrl)) {
