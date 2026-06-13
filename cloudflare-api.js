@@ -3,7 +3,7 @@ const CF_CONFIG = {
     R2_ACCESS_KEY: '81839cc4b3c3fc7b8c7a5d33377a4268',
     R2_SECRET_KEY: '7b2f3e3a45d7472aaf3b1f03a9c0ae5ce265fe1d581b1e4a0e170a0ccfff4003',
     R2_ENDPOINT: 'https://81f630d262df1be917412e3888adb133.r2.cloudflarestorage.com',
-    R2_BUCKET_NAME: 'andre-youth'
+    R2_BUCKET_NAME: 'ply999'
 };
 
 const D1 = {
