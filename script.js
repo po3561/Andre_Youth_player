@@ -67,6 +67,19 @@ $(document).ready(function () {
                 const subTitle = settings.subTitle || '믿음으로 기대하다';
                 $('#top-subtitle').text(mainTitle).css('color', '');
                 $('#top-title').text(subTitle);
+
+                // 팝업 광고/공지 표시 로직 (최초 1회만)
+                if (!window.isPopupChecked) {
+                    window.isPopupChecked = true;
+                    if (settings.popupEnabled && settings.popupImageUrl) {
+                        const hideUntil = localStorage.getItem('andre_youth_popup_hide');
+                        const now = Date.now();
+                        if (!hideUntil || now > parseInt(hideUntil)) {
+                            $('#startup-popup-img').attr('src', settings.popupImageUrl);
+                            $('#startup-popup-overlay').css('display', 'flex');
+                        }
+                    }
+                }
             } else {
                 console.warn("Cloudflare 플레이리스트가 비어있습니다.");
                 $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">등록된 곡이 없습니다.<br>관리자 페이지에서 곡을 추가해주세요.</div>');
@@ -600,6 +613,19 @@ $(document).ready(function () {
         $('#btn-admin-login').on('click', () => {
             closeAllModals();
             $('#modal-container, #admin-popup').addClass('active');
+        });
+
+        /* Startup Popup (광고/공지) */
+        $('#btn-popup-close').on('click', () => {
+            $('#startup-popup-overlay').fadeOut(200);
+        });
+
+        $('#btn-popup-hide-today').on('click', () => {
+            // 30시간 = 30 * 60 * 60 * 1000 밀리초
+            const thirtyHoursMs = 30 * 60 * 60 * 1000;
+            const hideUntil = Date.now() + thirtyHoursMs;
+            localStorage.setItem('andre_youth_popup_hide', hideUntil.toString());
+            $('#startup-popup-overlay').fadeOut(200);
         });
 
         /* Send Chat */

@@ -1190,7 +1190,9 @@ $(document).ready(function () {
     function readSettingsForm() {
         return {
             title: ($('#setting-playlist-title').val() || '').trim(),
-            subtitle: ($('#setting-playlist-subtitle').val() || '').trim()
+            subtitle: ($('#setting-playlist-subtitle').val() || '').trim(),
+            popupEnabled: $('#setting-popup-enabled').is(':checked'),
+            popupImageUrl: $('#setting-popup-url').val() || ''
         };
     }
 
@@ -1198,14 +1200,41 @@ $(document).ready(function () {
         settings = settings || {};
         $('#setting-playlist-title').val(settings.title || '');
         $('#setting-playlist-subtitle').val(settings.subtitle || '');
+        $('#setting-popup-enabled').prop('checked', !!settings.popupEnabled);
+        
+        if (settings.popupImageUrl) {
+            $('#setting-popup-url').val(settings.popupImageUrl);
+            $('#setting-popup-preview').attr('src', settings.popupImageUrl).show();
+        } else {
+            $('#setting-popup-url').val('');
+            $('#setting-popup-preview').attr('src', '').hide();
+        }
     }
+
+    // 팝업 이미지 미리보기 (로컬)
+    let popupImageFile = null;
+    $('#setting-popup-file').on('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        popupImageFile = file;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            $('#setting-popup-preview').attr('src', ev.target.result).show();
+        };
+        reader.readAsDataURL(file);
+    });
 
     async function loadAppSettings() {
         const $status = $('#settings-status').text('설정을 불러오는 중...');
         try {
             if (window.CloudflareAPI && window.CloudflareAPI.D1) {
                 const settings = await window.CloudflareAPI.D1.getSettings();
-                writeSettingsForm({ title: settings.mainTitle || '', subtitle: settings.subTitle || '' });
+                writeSettingsForm({ 
+                    title: settings.mainTitle || '', 
+                    subtitle: settings.subTitle || '',
+                    popupEnabled: settings.popupEnabled,
+                    popupImageUrl: settings.popupImageUrl
+                });
                 $status.text('설정을 불러왔습니다.');
             }
         } catch (e) {
@@ -1215,17 +1244,35 @@ $(document).ready(function () {
 
     async function saveAppSettings() {
         const $status = $('#settings-status').text('저장 중...');
+        const $btn = $('#btn-save-settings').prop('disabled', true);
         try {
+            let popupUrl = $('#setting-popup-url').val();
+            
+            // 새 파일이 선택되었다면 R2 업로드
+            if (popupImageFile) {
+                $status.text('팝업 이미지 R2 서버에 업로드 중...');
+                popupUrl = await uploadFileToStorage(popupImageFile, 'popups');
+                $('#setting-popup-url').val(popupUrl);
+                popupImageFile = null; // 초기화
+                $('#setting-popup-file').val('');
+            }
+
             const data = readSettingsForm();
             if (window.CloudflareAPI && window.CloudflareAPI.D1) {
-                await window.CloudflareAPI.D1.saveSettings({ mainTitle: data.title, subTitle: data.subtitle });
+                await window.CloudflareAPI.D1.saveSettings({ 
+                    mainTitle: data.title, 
+                    subTitle: data.subtitle,
+                    popupEnabled: data.popupEnabled,
+                    popupImageUrl: data.popupImageUrl
+                });
                 $status.text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
             }
         } catch (e) {
             $status.text('설정 저장 실패: ' + e.message);
+        } finally {
+            $btn.prop('disabled', false);
         }
     }
-
 
     $('#btn-load-settings').on('click', loadAppSettings);
     $('#btn-save-settings').on('click', saveAppSettings);

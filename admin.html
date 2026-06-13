@@ -165,6 +165,25 @@
                         <input type="text" id="setting-playlist-subtitle" placeholder="음악으로 길을 잇다">
                     </label>
                 </div>
+                <div class="admin-settings-grid" style="margin-top: 15px;">
+                    <label class="sync-meta-item" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 15px; background: rgba(0,255,136,0.05); border-radius: 12px; border: 1px solid rgba(0,255,136,0.2);">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <span style="font-weight: 800; color:#00ff88;">시작 팝업 (광고/공지) 활성화</span>
+                            <span style="font-size:0.8rem; color:rgba(255,255,255,0.6);">플레이어 진입 시 최상단에 팝업을 띄웁니다.</span>
+                        </div>
+                        <input type="checkbox" id="setting-popup-enabled" style="width: 24px; height: 24px; accent-color: #00ff88; cursor: pointer;">
+                    </label>
+                    
+                    <label class="sync-meta-item" id="popup-image-upload-wrapper">
+                        팝업 이미지 업로드 (JPG, PNG, GIF)
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+                            <img id="setting-popup-preview" src="" alt="팝업 미리보기" style="display: none; width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,0.1);">
+                            <input type="file" id="setting-popup-file" accept="image/*" style="flex: 1; padding: 10px; font-size: 0.9rem;">
+                            <input type="hidden" id="setting-popup-url">
+                        </div>
+                        <span style="font-size:0.75rem; color:rgba(255,255,255,0.5); margin-top:4px;">* 파일 선택 후 [앱 설정 저장] 버튼을 누르면 R2 서버에 자동 업로드됩니다.</span>
+                    </label>
+                </div>
                 <div class="sync-controls">
                     <button id="btn-save-settings" class="secondary-btn"><i class="fa-solid fa-floppy-disk"></i> 앱 설정 저장</button>
                     <p id="settings-status" class="sync-help" role="status" aria-live="polite"></p>

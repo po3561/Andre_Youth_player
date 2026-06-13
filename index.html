@@ -99,6 +99,16 @@
             <div class="footer-handle" id="btn-open-list" title="재생 목록 열기"></div>
         </footer>
     </div>
+    <!-- Startup Advertisement / Notice Popup -->
+    <div id="startup-popup-overlay" class="modal-overlay" style="display: none; z-index: 10000; justify-content: center; align-items: center; background: rgba(0,0,0,0.8);">
+        <div class="startup-popup-card" style="width: 90%; max-width: 400px; background: #fff; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;">
+            <img id="startup-popup-img" src="" alt="공지 팝업" style="width: 100%; max-height: 70vh; object-fit: contain; background: #000; display: block;">
+            <div style="display: flex; border-top: 1px solid #eee;">
+                <button id="btn-popup-hide-today" style="flex: 1; padding: 16px; background: transparent; border: none; font-size: 0.95rem; font-weight: 600; color: #666; cursor: pointer; border-right: 1px solid #eee;">오늘 하루 보지 않음</button>
+                <button id="btn-popup-close" style="flex: 1; padding: 16px; background: transparent; border: none; font-size: 0.95rem; font-weight: 700; color: #000; cursor: pointer;">닫기</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Playlist Sheet -->
     <div id="playlist-sheet">
@@ -164,7 +174,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1408.0.min.js"></script>
     <script src="cloudflare-api.js?v=2.0"></script>
-    <script src="music-engine.js?v=2.6"></script>
-    <script src="script.js?v=2.6"></script>
+    <script src="music-engine.js?v=2.7"></script>
+    <script src="script.js?v=2.7"></script>
 </body>
 </html>
