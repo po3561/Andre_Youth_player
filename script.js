@@ -88,26 +88,11 @@ $(document).ready(function () {
         playlistData = (Array.isArray(data) ? data : Object.values(data)).map(song => {
             const coverUrl = resolveUrl(song.coverUrl || song.cover || song.profile || '', 'image');
             const candidateAudio = (typeof song.audio === 'string' && song.audio.trim()) ? song.audio : '';
-            const originalAudioUrl = candidateAudio || song.audioUrl || song.url || '';
+            let originalAudioUrl = candidateAudio || song.audioUrl || song.url || '';
             const audioUrl = resolveUrl(originalAudioUrl, 'audio');
             const lrc = song.lyricsData || song.lyrics || '';
             const parsedLyrics = MusicEngine.parseLyrics(lrc);
             
-            // 디버깅 UI (URL이 없는 경우 원본 데이터 노출)
-            if (!originalAudioUrl) {
-                let debugDiv = document.getElementById('debug-overlay');
-                if (!debugDiv) {
-                    debugDiv = document.createElement('div');
-                    debugDiv.id = 'debug-overlay';
-                    debugDiv.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;background:rgba(255,0,0,0.85);color:#fff;padding:15px;z-index:9999;border-radius:10px;font-size:12px;max-height:50vh;overflow:auto;word-break:break-all;';
-                    document.body.appendChild(debugDiv);
-                }
-                const debugInfo = document.createElement('div');
-                debugInfo.style.marginBottom = '10px';
-                debugInfo.innerHTML = `<strong>[로딩 실패 곡] ${song.title || 'Unknown'}</strong><br>원본 데이터:<br>` + JSON.stringify(song);
-                debugDiv.appendChild(debugInfo);
-            }
-
             let fallbacks = [];
             if (originalAudioUrl) {
                 if (isLocalUrl(originalAudioUrl) || isFirebaseStorageUrl(originalAudioUrl)) {
@@ -121,6 +106,11 @@ $(document).ready(function () {
                         fallbacks = [audioUrl];
                     }
                 }
+            } else {
+                // 오디오 URL이 데이터베이스에 아예 없는 곡일 경우 앱 크래시 방지
+                const dummyAudio = 'data:audio/mp3;base64,//OwgAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA////////////////AAAAAAAAAAAAAAAAAAAAAAADTEFNRTMuMTAwA8QAAAAALhsAAQAEAAASRgAAAnEAAAAAAA==';
+                fallbacks = [dummyAudio];
+                originalAudioUrl = dummyAudio;
             }
 
             return {
