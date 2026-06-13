@@ -181,6 +181,27 @@ body.admin-page {
     font-weight: 700;
     letter-spacing: 0.02em;
 }
+
+.migration-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-top: 4px;
+}
+.badge-drive {
+    background: rgba(255, 149, 0, 0.15);
+    color: #ff9500;
+    border: 1px solid rgba(255, 149, 0, 0.3);
+}
+.badge-r2 {
+    background: rgba(0, 255, 136, 0.15);
+    color: #00ff88;
+    border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
 .song-cover-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: rgba(255,255,255,0.08); }
 .admin-song-item.read-only { border-style: dashed; }
 .admin-song-item.read-only .btn-delete-song { opacity: 0.45; cursor: not-allowed; transform: none; }

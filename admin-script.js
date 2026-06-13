@@ -1093,7 +1093,25 @@ $(document).ready(function () {
                     }
                 });
 
-                $info.append($img, $('<strong>').text(song.title || '제목 없음'));
+                const audioStr = (typeof song.audio === 'string' && song.audio.trim()) ? song.audio : '';
+                const currentAudioUrl = audioStr || song.audioUrl || song.url || '';
+                const isDrive = currentAudioUrl.includes('drive.google.com') || currentAudioUrl.includes('docs.google.com') || currentAudioUrl.includes('uc?id=');
+                const isR2 = currentAudioUrl.includes('pub-6f09ba73beba48419076ff845f6d3731.r2.dev') || currentAudioUrl.includes('r2.dev');
+                
+                let badgeHtml = '';
+                if (isDrive) {
+                    badgeHtml = '<span class="migration-badge badge-drive">⚠️ Drive 이주 필요</span>';
+                } else if (isR2) {
+                    badgeHtml = '<span class="migration-badge badge-r2">✅ R2 안전함</span>';
+                }
+
+                const $titleWrapper = $('<div>').css({display: 'flex', flexDirection: 'column', alignItems: 'flex-start'});
+                $titleWrapper.append($('<strong>').text(song.title || '제목 없음'));
+                if (badgeHtml) {
+                    $titleWrapper.append($(badgeHtml));
+                }
+
+                $info.append($img, $titleWrapper);
 
                 const $editButton = $('<button>')
                     .addClass('btn-edit-song')
