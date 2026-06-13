@@ -14,10 +14,13 @@ $(document).ready(function () {
     const db = firebase.database();
     
     db.ref(".info/connected").on("value", (snap) => {
+        const $subtitle = $('#top-subtitle');
         if (snap.val() === true) {
             console.log("✅ Firebase DB 서버 연결됨");
+            $subtitle.text('ANDREW YOUTH').css('color', ''); // 원래 텍스트와 색상으로 복구
         } else {
             console.warn("⚠️ Firebase DB 서버 연결 끊김 — 재연결 시도 중...");
+            $subtitle.text('서버 재연결 중...').css('color', '#ffb74d'); // 경고 색상으로 표시
         }
     });
 
@@ -264,7 +267,7 @@ $(document).ready(function () {
             const cover = resolveUrl(song.cover, 'image');
             $container.append(`
                 <div class="song-item ${isCurrent ? 'active' : ''}" data-index="${i}">
-                    <img src="${cover}" alt="cover" onerror="this.src='${MusicEngine.placeholderImage}'">
+                    <img src="${cover}" loading="lazy" alt="cover" onerror="this.src='${MusicEngine.placeholderImage}'">
                     <div class="song-item-info">
                         <h4>${song.title || 'Unknown'}</h4>
                         <p>${song.artist || 'Andre Youth'}</p>
