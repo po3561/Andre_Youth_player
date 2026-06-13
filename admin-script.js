@@ -873,7 +873,108 @@ $(document).ready(function () {
         }
     }
 
+    async function analyzeEditLyrics() {
+        const rawText = $('#edit-lyrics').val().trim();
+        if (!rawText) {
+            alert('가사를 먼저 입력해 주세요.');
+            return;
+        }
+
+        const audioUrl = $('#edit-audio-url').val().trim();
+        if (!state.editAudioFile && !audioUrl) {
+            alert('오디오 파일이 등록되어 있지 않습니다.');
+            return;
+        }
+
+        const manualOffsetSec = parseFloat($('#edit-sync-offset').val()) || 0;
+        const manualMinGapSec = clamp(parseFloat($('#edit-sync-min-gap').val()) || 0.22, 0.12, 1.0);
+        
+        const $btn = $('#edit-btn-ai-auto-sync').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> AI 재분석 중...');
+        const $progressZone = $('#edit-analysis-progress-container').fadeIn();
+        const $fill = $('#edit-analysis-fill').css('width', '0%');
+        const $percent = $('#edit-analysis-percent').text('0%');
+        const $status = $('#edit-analysis-status-text').text('오디오를 준비하는 중...');
+        let audioCtx = null;
+        const draft = parseLyricDraft(rawText);
+
+        try {
+            let arrayBuffer;
+            if (state.editAudioFile) {
+                arrayBuffer = await state.editAudioFile.arrayBuffer();
+            } else {
+                $status.text('기존 오디오 파일을 다운로드하는 중...');
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(audioUrl)}`;
+                const response = await fetch(audioUrl.includes('firebasestorage') ? audioUrl : proxyUrl);
+                if (!response.ok) throw new Error('오디오 파일을 다운로드할 수 없습니다.');
+                arrayBuffer = await response.arrayBuffer();
+            }
+
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+
+            $status.text('파형 분석 중...');
+            $percent.text('15%');
+            $fill.css('width', '15%');
+
+            const envelopeResult = await buildEnvelope(audioBuffer, progress => {
+                const percent = Math.round(15 + progress * 50);
+                $percent.text(percent + '%');
+                $fill.css('width', percent + '%');
+            });
+
+            const duration = audioBuffer.duration;
+            const activeRegion = detectActiveRegion(
+                envelopeResult.envelope,
+                envelopeResult.hopSize,
+                audioBuffer.sampleRate,
+                duration
+            );
+
+            const peaks = detectPeaks(
+                envelopeResult.envelope,
+                envelopeResult.hopSize,
+                audioBuffer.sampleRate,
+                activeRegion.startSec,
+                activeRegion.endSec
+            );
+
+            const autoOffsetSec = draft.hasSeedTimes
+                ? estimateBestOffset(draft.entries, peaks, activeRegion.startSec, activeRegion.endSec)
+                : 0;
+            
+            // 수동 값이 0이 아닐 때만 사용 (단순화)
+            const offsetSec = manualOffsetSec !== 0 ? manualOffsetSec : autoOffsetSec;
+            const minGapSec = manualMinGapSec;
+
+            const generatedLrc = assignLyricTimestamps(
+                draft.entries,
+                peaks,
+                activeRegion.startSec,
+                activeRegion.endSec,
+                offsetSec,
+                minGapSec
+            );
+
+            $('#edit-lyrics').val(generatedLrc);
+
+            $percent.text('100%');
+            $fill.css('width', '100%');
+            $status.text('AI 재분석 및 적용 완료');
+            $btn.html('<i class="fa-solid fa-check"></i> 적용 완료').removeClass('premium-sync-btn').addClass('secondary-btn').prop('disabled', false);
+        } catch (error) {
+            console.error('Edit AI Sync Error:', error);
+            alert('재분석 실패: ' + error.message);
+            $status.text('오류 발생');
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-bolt"></i> AI 자동 싱크 재분석');
+        } finally {
+            if (audioCtx) await audioCtx.close().catch(() => {});
+        }
+    }
+
     $(document).on('click', '#btn-ai-auto-sync', analyzeLyrics);
+    $(document).on('click', '#edit-btn-ai-auto-sync', analyzeEditLyrics);
 
     $(document).on('click', '.offset-quick-btn', function () {
         const delta = parseFloat($(this).data('delta'));
@@ -956,7 +1057,6 @@ $(document).ready(function () {
                 artist,
                 url: finalAudioUrl || '',
                 cover: finalCoverUrl || FALLBACK_COVER,
-                lyrics: finalLyrics,
                 lyricsData: finalLyrics,
                 syncOffset: readNumber($('#sync-offset'), 0),
                 syncMinGap: readNumber($('#sync-min-gap'), 0.22)
@@ -1207,6 +1307,7 @@ $(document).ready(function () {
         $('#edit-status').text('');
         $('#edit-song-id').text(state.editSongId || '');
         $('#edit-title').val(song && song.title ? String(song.title) : '');
+        $('#edit-artist').val(song && song.artist ? String(song.artist) : '');
         $('#edit-audio-url').val(song && song.url ? String(song.url) : '');
         $('#edit-cover-url').val(song && song.cover ? String(song.cover) : '');
         $('#edit-lyrics').val(song && (song.lyrics || song.lyricsData) ? String(song.lyrics || song.lyricsData) : '');
@@ -1255,6 +1356,7 @@ $(document).ready(function () {
             alert('곡 제목을 입력해주세요.');
             return;
         }
+        const artist = $('#edit-artist').val().trim();
 
         const $status = $('#edit-status').text('저장 중...');
         const $btn = $(this).prop('disabled', true);
@@ -1292,10 +1394,11 @@ $(document).ready(function () {
             }
 
             currentSong.title = title;
+            if (artist) currentSong.artist = artist;
             currentSong.url = finalAudioUrl || '';
             currentSong.cover = finalCoverUrl || FALLBACK_COVER;
-            currentSong.lyrics = $('#edit-lyrics').val().trim();
             currentSong.lyricsData = $('#edit-lyrics').val().trim();
+            delete currentSong.lyrics;
             currentSong.syncOffset = parseFloat($('#edit-sync-offset').val()) || 0;
             currentSong.syncMinGap = parseFloat($('#edit-sync-min-gap').val()) || 0.22;
 

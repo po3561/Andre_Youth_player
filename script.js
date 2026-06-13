@@ -233,9 +233,13 @@ $(document).ready(function () {
 
     function updateLyricsSync(time) {
         if (!currentLyrics.length) return;
+        const currentSong = playlistData[curIdx];
+        const syncOffset = (currentSong && currentSong.syncOffset) ? parseFloat(currentSong.syncOffset) : 0;
+        const adjustedTime = time + syncOffset;
+
         let activeIdx = -1;
         for (let i = 0; i < currentLyrics.length; i++) {
-            if (time >= currentLyrics[i].time) activeIdx = i;
+            if (adjustedTime >= currentLyrics[i].time) activeIdx = i;
             else break;
         }
         if (activeIdx !== -1 && activeIdx !== lastActiveLyricIdx) {

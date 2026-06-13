@@ -233,6 +233,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="edit-artist">아티스트명</label>
+                    <input type="text" id="edit-artist" placeholder="기본값: 설정에 지정된 아티스트" autocomplete="off">
+                </div>
+
+                <div class="form-group">
                     <label for="edit-audio-url">음원 URL (직접 입력 또는 아래 파일 업로드)</label>
                     <input type="text" id="edit-audio-url" placeholder="https://... 형식의 음원 링크" autocomplete="off">
                 </div>
@@ -243,9 +248,23 @@
                 </div>
 
 
-                <div class="form-group">
-                    <label for="edit-lyrics">가사(.lrc 텍스트)</label>
+                <div class="form-group lyrics-editor-zone">
+                    <label for="edit-lyrics" class="premium-label"><i class="fa-solid fa-microchip"></i> 가사(.lrc 텍스트) 및 AI 분석</label>
                     <textarea id="edit-lyrics" rows="10" placeholder="[mm:ss.xx] 형식 가사 또는 일반 텍스트를 입력하세요"></textarea>
+                    
+                    <div id="edit-analysis-progress-container" class="analysis-progress" style="display: none;">
+                        <div class="progress-info">
+                            <span id="edit-analysis-status-text">곡 분석 중...</span>
+                            <span id="edit-analysis-percent">0%</span>
+                        </div>
+                        <div class="progress-bar-small">
+                            <div id="edit-analysis-fill" class="analysis-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="sync-controls">
+                        <button id="edit-btn-ai-auto-sync" class="premium-sync-btn"><i class="fa-solid fa-bolt"></i> AI 자동 싱크 재분석</button>
+                    </div>
                 </div>
 
                 <details class="sync-advanced" open>

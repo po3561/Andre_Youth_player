@@ -5,7 +5,6 @@ const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1514525253361-bee87
 
 const MusicEngine = {
     audio: document.getElementById('audio-engine') || new Audio(),
-    lyrics: [],
     placeholderImage: PLACEHOLDER_IMAGE,
 
     init() {
