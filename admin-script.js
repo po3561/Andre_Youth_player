@@ -1431,5 +1431,130 @@ $(document).ready(function () {
             console.error(e);
         }
     };
+    };
     initInquiryManager();
+
+    // ==========================================
+    // 가사 싱크 메이커 (Sync Maker) 로직
+    // ==========================================
+    let syncLines = [];
+    let syncTimes = [];
+    let currentSyncIdx = 0;
+    const $syncOverlay = $('#sync-maker-overlay');
+    const syncAudio = document.getElementById('sync-maker-audio');
+
+    function formatLrcTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        const ms = Math.floor((seconds - Math.floor(seconds)) * 100);
+        return `[${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}.${ms < 10 ? '0' : ''}${ms}]`;
+    }
+
+    function renderSyncLines() {
+        const $container = $('#sync-maker-lyrics-container').empty();
+        syncLines.forEach((line, i) => {
+            const timeStr = syncTimes[i] ? formatLrcTime(syncTimes[i]) + ' ' : '';
+            const isActive = i === currentSyncIdx;
+            const bg = isActive ? 'rgba(32, 178, 170, 0.3)' : 'transparent';
+            const color = isActive ? '#20B2AA' : '#fff';
+            const fw = isActive ? 'bold' : 'normal';
+            
+            $container.append(`
+                <div id="sync-line-${i}" style="padding:5px; margin:2px 0; border-radius:4px; background:${bg}; color:${color}; font-weight:${fw}; display:flex;">
+                    <span style="width:80px; color:#aaa; font-weight:normal; flex-shrink:0;">${timeStr}</span>
+                    <span style="flex:1;">${line}</span>
+                </div>
+            `);
+        });
+
+        // 스크롤 이동
+        const activeLine = document.getElementById(`sync-line-${currentSyncIdx}`);
+        if (activeLine && $container[0]) {
+            $container[0].scrollTop = activeLine.offsetTop - $container[0].clientHeight / 2 + 20;
+        }
+    }
+
+    $('#btn-open-sync-maker').on('click', function() {
+        // 1. 오디오 소스 설정
+        const audioUrl = $('#edit-audio-url').val().trim();
+        if (state.editAudioFile) {
+            syncAudio.src = URL.createObjectURL(state.editAudioFile);
+        } else if (audioUrl) {
+            syncAudio.src = audioUrl;
+        } else {
+            alert('음원을 먼저 업로드하거나 링크를 입력해주세요.');
+            return;
+        }
+
+        // 2. 가사 텍스트 추출 (기존 [00:00.00] 태그 걷어내기)
+        const rawText = $('#edit-lyrics').val().trim();
+        if (!rawText) {
+            alert('가사 텍스트를 먼저 입력해주세요.');
+            return;
+        }
+        
+        syncLines = rawText.split('\\n')
+            .map(l => l.replace(/\\[\\d{2}:\\d{2}\\.\\d{2,3}\\]/g, '').trim())
+            .filter(l => l.length > 0);
+        
+        if (syncLines.length === 0) {
+            alert('유효한 가사 텍스트가 없습니다.');
+            return;
+        }
+
+        syncTimes = new Array(syncLines.length).fill(null);
+        currentSyncIdx = 0;
+        
+        renderSyncLines();
+        $syncOverlay.addClass('active').attr('aria-hidden', 'false');
+    });
+
+    $('#btn-sync-maker-close').on('click', function() {
+        syncAudio.pause();
+        $syncOverlay.removeClass('active').attr('aria-hidden', 'true');
+    });
+
+    // 탭 동작
+    function triggerSyncTap() {
+        if (currentSyncIdx >= syncLines.length) return;
+        syncTimes[currentSyncIdx] = syncAudio.currentTime;
+        currentSyncIdx++;
+        renderSyncLines();
+    }
+
+    $('#btn-sync-maker-tap').on('click', triggerSyncTap);
+
+    // 스페이스바 처리
+    $(document).on('keydown', function(e) {
+        if ($syncOverlay.hasClass('active') && e.code === 'Space') {
+            // 재생 컨트롤러 포커스가 아닐 때만 탭 동작 (기본 스페이스는 재생/정지)
+            if (e.target.tagName !== 'AUDIO' && e.target.tagName !== 'BUTTON') {
+                e.preventDefault();
+                triggerSyncTap();
+            }
+        }
+    });
+
+    // 무르기 동작
+    $('#btn-sync-maker-undo').on('click', function() {
+        if (currentSyncIdx > 0) {
+            currentSyncIdx--;
+            syncTimes[currentSyncIdx] = null;
+            renderSyncLines();
+        }
+    });
+
+    // 완성 및 적용
+    $('#btn-sync-maker-apply').on('click', function() {
+        syncAudio.pause();
+        const resultLrc = syncLines.map((line, i) => {
+            const t = syncTimes[i] ? formatLrcTime(syncTimes[i]) : '';
+            return t + line;
+        }).join('\\n');
+        
+        $('#edit-lyrics').val(resultLrc);
+        $syncOverlay.removeClass('active').attr('aria-hidden', 'true');
+        alert('가사 텍스트에 싱크가 적용되었습니다!');
+    });
 });

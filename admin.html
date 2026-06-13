@@ -261,6 +261,7 @@
                     </div>
 
                     <div class="sync-controls">
+                        <button id="btn-open-sync-maker" class="premium-sync-btn" style="background:#20B2AA; border-color:#20B2AA; color:#111;"><i class="fa-solid fa-headphones"></i> 오디오 들으며 수동 싱크 맞추기 (Sync Maker)</button>
                         <button id="edit-btn-ai-auto-sync" class="premium-sync-btn"><i class="fa-solid fa-bolt"></i> AI 자동 싱크 재분석</button>
                     </div>
                 </div>
@@ -300,6 +301,27 @@
                 </button>
                 <p id="edit-status" class="sync-help" role="status" aria-live="polite"></p>
             </div>
+        </div>
+    </div>
+
+    <!-- Sync Maker Modal Overlay -->
+    <div id="sync-maker-overlay" class="modal-overlay" aria-hidden="true" style="z-index: 10000; align-items:center;">
+        <div class="floating-popup" style="max-width:500px; width:90%; height:80vh; display:flex; flex-direction:column; padding:20px;">
+            <button class="btn-close-popup" id="btn-sync-maker-close"><i class="fa-solid fa-xmark"></i></button>
+            <h2 style="margin-top:0;">가사 싱크 메이커 (Sync Maker)</h2>
+            <p style="font-size:13px; color:#aaa; margin-bottom:15px;">오디오를 재생하고 가사가 나올 때 <b>[스페이스바]</b>를 누르거나 <b>[싱크 찍기]</b> 버튼을 누르세요.</p>
+            
+            <audio id="sync-maker-audio" controls style="width:100%; height:40px; margin-bottom:15px;"></audio>
+            
+            <div id="sync-maker-lyrics-container" style="flex:1; overflow-y:auto; background:#1e1e1e; border-radius:8px; padding:10px; margin-bottom:15px; font-size:16px; line-height:1.6;">
+                <!-- Lyrics Lines will be appended here -->
+            </div>
+            
+            <div style="display:flex; gap:10px; flex-shrink:0;">
+                <button id="btn-sync-maker-tap" class="btn btn-primary" style="flex:2; font-weight:bold; font-size:16px;">⏱️ 싱크 찍기 (Space)</button>
+                <button id="btn-sync-maker-undo" class="btn btn-secondary" style="flex:1;"><i class="fa-solid fa-rotate-left"></i> 한줄 무르기</button>
+            </div>
+            <button id="btn-sync-maker-apply" class="btn btn-primary" style="flex-shrink:0; margin-top:10px; background:#20B2AA; border-color:#20B2AA; color:#111;">✅ 완성 및 가사에 적용</button>
         </div>
     </div>
 
