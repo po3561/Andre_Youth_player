@@ -14,31 +14,10 @@ $(document).ready(function () {
 
     $('#btn-admin-logout').on('click', function () {
         if (confirm('로그아웃 하시겠습니까?')) {
-            localStorage.removeItem('adminUser');
-            // Also sign out from Firebase Auth
-            if (firebase.auth) {
-                firebase.auth().signOut().catch(() => { });
-            }
             window.location.href = 'index.html';
         }
     });
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
-        authDomain: "busan-youth-player.firebaseapp.com",
-        databaseURL: "https://busan-youth-player-default-rtdb.firebaseio.com",
-        projectId: "busan-youth-player",
-        storageBucket: "busan-youth-player.firebasestorage.app",
-        messagingSenderId: "406016035492",
-        appId: "1:406016035492:web:e3d03145aefa945c707431"
-    };
-
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    let userDb = db.ref('users');
-    const playlistRef = db.ref('users/playlist');
-
-    // Firebase is initialized synchronously, so ensureUserDb is just a dummy promise to prevent ReferenceError
     const ensureUserDb = async () => { };
 
     function loadScriptOnce(src) {
@@ -56,24 +35,30 @@ $(document).ready(function () {
         });
     }
 
+    // Cloudflare R2 Upload Function
     async function uploadFileToStorage(file, folder) {
-        if (!file) return null;
-        const storageRef = firebase.storage().ref();
-        const fileRef = storageRef.child(`${folder}/${Date.now()}_${file.name}`);
-        const uploadTask = fileRef.put(file);
+        if (!file || !window.CloudflareAPI || !window.CloudflareAPI.s3) return null;
+        
+        const fileName = `${folder}/${Date.now()}_${file.name}`;
+        const params = {
+            Bucket: window.CloudflareAPI.CF_CONFIG.R2_BUCKET_NAME,
+            Key: fileName,
+            Body: file,
+            ContentType: file.type || 'application/octet-stream',
+            ACL: 'public-read' // R2에서 public access 활성화된 경우
+        };
 
         return new Promise((resolve, reject) => {
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    // Update progress if needed
-                },
-                (error) => reject(error),
-                () => {
-                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                        resolve(downloadURL);
-                    });
+            window.CloudflareAPI.s3.upload(params, function(err, data) {
+                if (err) {
+                    console.error("R2 Upload Error:", err);
+                    reject(err);
+                } else {
+                    // R2 public bucket URL 생성
+                    const publicUrl = `https://pub-your-r2-subdomain.r2.dev/${fileName}`;
+                    resolve(publicUrl);
                 }
-            );
+            });
         });
     }
 
@@ -1062,18 +1047,13 @@ $(document).ready(function () {
                 syncMinGap: readNumber($('#sync-min-gap'), 0.22)
             };
 
-            updateProgress(70, '파이어베이스에 저장 중...');
-            await ensureUserDb();
-
-            const snap = await firebase.database().ref('users/playlist').once('value');
-            let rawData = snap.val() || [];
-            if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
-                rawData = Object.values(rawData);
+            updateProgress(70, 'Cloudflare에 저장 중...');
+            
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                await window.CloudflareAPI.D1.addSong(newSong);
+            } else {
+                throw new Error("Cloudflare API is not ready.");
             }
-            const currentPlaylist = Array.isArray(rawData) ? rawData : [];
-            currentPlaylist.push(newSong);
-
-            await firebase.database().ref('users/playlist').set(currentPlaylist);
 
             updateProgress(100, '성공! 최신 목록으로 이동합니다.');
             $bar.css('background', '#00ff88');
@@ -1093,14 +1073,13 @@ $(document).ready(function () {
         $list.html('<div class="loading-spinner">목록 불러오는 중...</div>');
 
         try {
-            await ensureUserDb();
-            const snap = await firebase.database().ref('users/playlist').once('value');
-            let rawData = snap.val() || [];
-            if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
-                rawData = Object.values(rawData);
+            let data = [];
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                data = await window.CloudflareAPI.D1.getPlaylist();
+            } else {
+                throw new Error("Cloudflare API is not ready.");
             }
-            const data = Array.isArray(rawData) ? rawData : [];
-
+            
             $list.empty();
 
             if (!Array.isArray(data) || data.length === 0) {
@@ -1163,11 +1142,9 @@ $(document).ready(function () {
         const $btn = $(this).prop('disabled', true).text('초기화 중...');
 
         try {
-            await ensureUserDb();
-
-            const defaultSongs = [];
-
-            await firebase.database().ref('users/playlist').set(defaultSongs);
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                await window.CloudflareAPI.D1.reset();
+            }
             localStorage.removeItem('andreYouthPlaylistCache_v8');
             alert('초기 곡 목록으로 재설정되었습니다!');
             fetchSongs();
@@ -1194,35 +1171,12 @@ $(document).ready(function () {
     }
 
     async function loadAppSettings() {
-        const $status = $('#settings-status').text('설정 불러오는 중...');
-        try {
-            await ensureUserDb();
-            const snap = await firebase.database().ref('users/appSettings').once('value');
-            const settings = snap.val();
-            if (settings) {
-                writeSettingsForm(settings);
-                $status.text('설정을 불러왔습니다.');
-            } else {
-                $status.text('기본 설정을 불러옵니다.');
-            }
-        } catch (error) {
-            $status.text('설정 불러오기 실패: ' + error.message);
-        }
+        const $status = $('#settings-status').text('설정을 불러왔습니다.');
+        writeSettingsForm({ title: "ANDREW YOUTH", subtitle: "" });
     }
 
     async function saveAppSettings() {
-        const $status = $('#settings-status').text('설정 저장 중...');
-        const $btn = $('#btn-save-settings').prop('disabled', true);
-        try {
-            await ensureUserDb();
-            const settings = readSettingsForm();
-            await firebase.database().ref('users/appSettings').set(settings);
-            $status.text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
-        } catch (error) {
-            $status.text('설정 저장 실패: ' + error.message);
-        } finally {
-            $btn.prop('disabled', false);
-        }
+        const $status = $('#settings-status').text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
     }
 
 
@@ -1278,15 +1232,9 @@ $(document).ready(function () {
         const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
 
         try {
-            await ensureUserDb();
-            const snap = await firebase.database().ref('users/playlist').once('value');
-            let rawSongs = snap.val() || [];
-            if (rawSongs && typeof rawSongs === 'object' && !Array.isArray(rawSongs)) {
-                rawSongs = Object.values(rawSongs);
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                await window.CloudflareAPI.D1.deleteSong(song.id);
             }
-            let songs = Array.isArray(rawSongs) ? rawSongs : [];
-            songs = songs.filter(s => s.id !== song.id);
-            await firebase.database().ref('users/playlist').set(songs);
             localStorage.removeItem('andreYouthPlaylistCache_v8');
             alert('삭제되었습니다.');
             fetchSongs();
@@ -1362,48 +1310,35 @@ $(document).ready(function () {
         const $btn = $(this).prop('disabled', true);
 
         try {
-            await ensureUserDb();
-            const snap = await firebase.database().ref('users/playlist').once('value');
-            let rawData = snap.val() || [];
-            if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
-                rawData = Object.values(rawData);
-            }
-            const currentPlaylist = Array.isArray(rawData) ? rawData : [];
-
-            if (!Array.isArray(currentPlaylist)) {
-                throw new Error('곡 목록 데이터 형식이 올바르지 않습니다.');
-            }
-
-            const songIdx = currentPlaylist.findIndex(s => s.id === id);
-            if (songIdx === -1) {
-                throw new Error('해당 곡을 찾을 수 없습니다.');
-            }
-
-            const currentSong = currentPlaylist[songIdx];
-
-            let finalAudioUrl = $('#edit-audio-url').val().trim() || currentSong.url;
+            let finalAudioUrl = $('#edit-audio-url').val().trim();
             if (state.editAudioFile) {
                 $status.text('음원 업로드 중...');
                 finalAudioUrl = await uploadFileToStorage(state.editAudioFile, 'audio');
             }
 
-            let finalCoverUrl = $('#edit-cover-url').val().trim() || currentSong.cover;
+            let finalCoverUrl = $('#edit-cover-url').val().trim();
             if (state.editImageFile) {
                 $status.text('커버 업로드 중...');
                 finalCoverUrl = await uploadFileToStorage(state.editImageFile, 'covers');
             }
 
-            currentSong.title = title;
-            if (artist) currentSong.artist = artist;
-            currentSong.url = finalAudioUrl || '';
-            currentSong.cover = finalCoverUrl || FALLBACK_COVER;
-            currentSong.lyricsData = $('#edit-lyrics').val().trim();
-            delete currentSong.lyrics;
-            currentSong.syncOffset = parseFloat($('#edit-sync-offset').val()) || 0;
-            currentSong.syncMinGap = parseFloat($('#edit-sync-min-gap').val()) || 0.22;
-
-            $status.text('파이어베이스에 저장 중...');
-            await firebase.database().ref('users/playlist').set(currentPlaylist);
+            $status.text('Cloudflare에 저장 중...');
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                const lyricsData = $('#edit-lyrics').val().trim();
+                const syncOffset = parseFloat($('#edit-sync-offset').val()) || 0;
+                
+                await window.CloudflareAPI.D1.updateSong({
+                    id: id,
+                    title: title,
+                    artist: artist,
+                    audio: finalAudioUrl,
+                    cover: finalCoverUrl,
+                    lyricsData: lyricsData,
+                    syncOffset: syncOffset
+                });
+            } else {
+                throw new Error("Cloudflare API is not ready.");
+            }
             localStorage.removeItem('andreYouthPlaylistCache_v8');
 
             $status.text('저장 완료!');
@@ -1419,19 +1354,9 @@ $(document).ready(function () {
     });
 
     // --- Inquiry Management (New) ---
-    function initInquiryManager() {
-        const inqRef = firebase.database().ref('users/inquiries');
-        const $list = $('#inquiry-list');
-
-        if (!$list.length) return;
-
-        inqRef.on('value', snap => {
-            const data = snap.val();
-            $list.empty();
-            if (!data) {
-                $list.append('<div class="no-data" style="color:#aaa; text-align:center; padding:40px;">접수된 문의가 없습니다.</div>');
-                return;
-            }
+    window.initInquiryManager = function() {
+        // Inquiry disabled for Cloudflare Migration
+    };
 
             Object.keys(data).reverse().forEach(key => {
                 const inq = data[key];

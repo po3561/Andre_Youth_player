@@ -1,41 +1,7 @@
 $(document).ready(function () {
-    /* ─── Firebase DB 서버 연결 (실시간 데이터 읽기/쓰기 전용) ─── */
-    const firebaseConfig = {
-        apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
-        authDomain: "busan-youth-player.firebaseapp.com",
-        databaseURL: "https://busan-youth-player-default-rtdb.firebaseio.com",
-        projectId: "busan-youth-player",
-        storageBucket: "busan-youth-player.firebasestorage.app",
-        messagingSenderId: "406016035492",
-        appId: "1:406016035492:web:e3d03145aefa945c707431"
-    };
-
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    
-    db.ref(".info/connected").on("value", (snap) => {
-        const $subtitle = $('#top-subtitle');
-        if (snap.val() === true) {
-            console.log("✅ Firebase DB 서버 연결됨");
-            $subtitle.text('ANDREW YOUTH').css('color', ''); // 원래 텍스트와 색상으로 복구
-        } else {
-            console.warn("⚠️ Firebase DB 서버 연결 끊김 — 재연결 시도 중...");
-            $subtitle.text('서버 재연결 중...').css('color', '#ffb74d'); // 경고 색상으로 표시
-        }
-    });
-
     /* ─── 앱 설정 (잠시 비활성화) ───
-    db.ref('users/appSettings').on('value', snap => {
-        const data = snap.val();
-        if (data) {
-            if (data.title) $('#top-title').text(data.title);
-            if (data.subtitle) $('#top-subtitle').text(data.subtitle);
-        }
-    });
+    if (window.CloudflareAPI) { ... }
     */
-
-    const chatRef = db.ref('chats');
-    const inqRef = db.ref('users/inquiries');
     const audio = document.getElementById('audio-engine');
 
     /* ─── State ─── */
@@ -65,29 +31,32 @@ $(document).ready(function () {
         }
     }
 
-    /* ─── Firebase 실시간 플레이리스트 연동 (Firebase 전용) ─── */
-    function fetchData() {
-        const playlistDbRef = db.ref('users/playlist');
-
-        playlistDbRef.on('value', (snapshot) => {
-            let rawData = snapshot.val();
-            if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
-                rawData = Object.values(rawData);
-            }
-            const data = Array.isArray(rawData) ? rawData : [];
-
-            if (data.length > 0) {
-                console.log(`✅ Firebase 플레이리스트 로드 성공: ${data.length}곡`);
+    /* ─── Cloudflare Worker 데이터 폴링 ─── */
+    async function fetchData() {
+        if (!window.CloudflareAPI) {
+            console.error("CloudflareAPI not loaded");
+            return;
+        }
+        
+        try {
+            const data = await window.CloudflareAPI.D1.getPlaylist();
+            
+            if (data && data.length > 0) {
+                console.log(`✅ Cloudflare 플레이리스트 로드 성공: ${data.length}곡`);
                 applyPlaylist(data);
+                $('#top-subtitle').text('ANDREW YOUTH').css('color', '');
             } else {
-                console.warn("Firebase 플레이리스트가 비어있습니다.");
+                console.warn("Cloudflare 플레이리스트가 비어있습니다.");
                 $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">등록된 곡이 없습니다.<br>관리자 페이지에서 곡을 추가해주세요.</div>');
             }
-        }, (error) => {
-            console.error("Firebase 연결 실패:", error);
-            $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">서버 연결에 실패했습니다.<br>잠시 후 다시 시도해주세요.</div>');
-        });
+        } catch (error) {
+            console.error("Cloudflare 연결 실패:", error);
+            $('#top-subtitle').text('서버 재연결 중...').css('color', '#ffb74d');
+        }
     }
+    
+    // 5분 단위로 폴링하여 데이터 갱신 (실시간 대체)
+    setInterval(fetchData, 300000);
 
     /* ─── 공통 플레이리스트 적용 ─── */
     function applyPlaylist(data) {

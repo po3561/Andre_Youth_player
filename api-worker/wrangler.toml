@@ -1,0 +1,8 @@
+name = "andre-youth-api"
+main = "src/index.js"
+compatibility_date = "2024-06-13"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "andre-youth-db"
+database_id = "6073f897-1c01-4d74-8e85-e4df6758a2a1"
