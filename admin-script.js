@@ -1283,10 +1283,10 @@ $(document).ready(function () {
         state.editImageFile = null;
         $('#edit-status').text('');
         $('#edit-song-id').text(state.editSongId || '');
-        $('#edit-title').val(song && song.title ? String(song.title) : '');
-        $('#edit-artist').val(song && song.artist ? String(song.artist) : '');
-        $('#edit-audio-url').val(song && song.url ? String(song.url) : '');
-        $('#edit-cover-url').val(song && song.cover ? String(song.cover) : '');
+        $('#edit-title').val(song ? String(song.title) : '');
+        $('#edit-artist').val(song ? String(song.artist) : '');
+        $('#edit-audio-url').val(song && (song.audio || song.audioUrl || song.url) ? String(song.audio || song.audioUrl || song.url) : '');
+        $('#edit-cover-url').val(song && (song.coverUrl || song.cover) ? String(song.coverUrl || song.cover) : '');
         $('#edit-lyrics').val(song && (song.lyrics || song.lyricsData) ? String(song.lyrics || song.lyricsData) : '');
         $('#edit-sync-offset').val(Number.isFinite(Number(song && song.syncOffset)) ? Number(song.syncOffset) : 0);
         $('#edit-sync-min-gap').val(Number.isFinite(Number(song && song.syncMinGap)) ? Number(song.syncMinGap) : 0.22);

@@ -101,6 +101,12 @@ $(document).ready(function () {
         curIdx = index;
         const song = playlistData[index];
 
+        // 확실한 초기화
+        if (audio) {
+            audio.pause();
+            $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+        }
+
         $('#disp-title').text(song.title || 'Unknown');
         $('#disp-artist').text(song.artist || 'Andre Youth');
         
@@ -126,34 +132,33 @@ $(document).ready(function () {
         
         let fallbacks;
         if (isLocalUrl(originalUrl)) {
-            // Local file - use directly, no fallbacks needed
             fallbacks = [originalUrl];
         } else {
-            // For audio, we need fallbacks since Google Drive is unreliable
-            const idMatch = originalUrl.match(/id=([a-zA-Z0-9_-]+)/) || 
-                           originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-            
             if (isFirebaseStorageUrl(originalUrl)) {
                 fallbacks = [originalUrl];
-            } else if (idMatch) {
-                fallbacks = MusicEngine.getFallbacks(idMatch[1]);
             } else {
-                fallbacks = [audioUrl];
+                const idMatch = originalUrl.match(/id=([a-zA-Z0-9_-]+)/) || 
+                               originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (idMatch) {
+                    fallbacks = MusicEngine.getFallbacks(idMatch[1]);
+                } else {
+                    fallbacks = [audioUrl];
+                }
             }
         }
 
         let tryIdx = 0;
 
         const tryPlay = async (url) => {
+            if (!url) return;
             try {
-                audio.pause();
                 audio.src = url;
                 audio.load();
                 
                 if (shouldPlay) {
                     $('#song-loading-overlay').css('display', 'flex');
-                    await new Promise(r => setTimeout(r, 200));
-                    await audio.play();
+                    currentPlayPromise = audio.play();
+                    await currentPlayPromise;
                     $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
                     $('#song-loading-overlay').fadeOut(300);
                 }
@@ -315,17 +320,28 @@ $(document).ready(function () {
 
             /* Song Ended */
             audio.addEventListener('ended', () => {
+                // 2 = Repeat One, 1 = Repeat All, 0 = No Repeat
                 if (repeatMode === 2) {
                     audio.currentTime = 0;
-                    audio.play().then(() => {
+                    currentPlayPromise = audio.play();
+                    currentPlayPromise.then(() => {
                         $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
                     }).catch(() => {});
-                } else if (repeatMode === 1) {
-                    let n = isShuffle ? Math.floor(Math.random() * playlistData.length) : (curIdx + 1) % playlistData.length;
-                    loadSong(n, true);
                 } else {
-                    if (curIdx < playlistData.length - 1) {
-                        loadSong(curIdx + 1, true);
+                    let nextIdx;
+                    if (isShuffle) {
+                        nextIdx = Math.floor(Math.random() * playlistData.length);
+                        if (playlistData.length > 1 && nextIdx === curIdx) {
+                            nextIdx = (nextIdx + 1) % playlistData.length;
+                        }
+                    } else {
+                        nextIdx = curIdx + 1;
+                    }
+                    
+                    if (nextIdx < playlistData.length) {
+                        loadSong(nextIdx, true);
+                    } else if (repeatMode === 1) {
+                        loadSong(0, true);
                     } else {
                         $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
                     }
@@ -468,16 +484,18 @@ $(document).ready(function () {
 
         /* 가사 클릭 시 점프 */
         $(document).on('click', '.lyric-line.clickable', function(e) {
-            const time = $(this).data('time');
-            if (time !== undefined && !isNaN(time) && audio.duration) {
-                const targetTime = time + 0.05; // 약간 뒤로 점프하여 확실히 활성화
+            e.stopPropagation();
+            const time = parseFloat($(this).data('time'));
+            if (!isNaN(time) && audio.duration) {
+                const targetTime = Math.max(0, time + 0.05); // 약간 뒤로 점프
                 audio.currentTime = targetTime;
-                updateLyricsSync(targetTime); // 즉각적인 UI 피드백
+                updateLyricsSync(targetTime); 
                 
                 if (audio.paused) {
-                    audio.play().then(() => {
+                    currentPlayPromise = audio.play();
+                    currentPlayPromise.then(() => {
                         $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
-                    }).catch(console.error);
+                    }).catch(err => console.error("Lyrics seek play failed:", err));
                 }
             }
         });
