@@ -44,8 +44,7 @@ $(document).ready(function () {
             Bucket: window.CloudflareAPI.CF_CONFIG.R2_BUCKET_NAME,
             Key: fileName,
             Body: file,
-            ContentType: file.type || 'application/octet-stream',
-            ACL: 'public-read' // R2에서 public access 활성화된 경우
+            ContentType: file.type || 'application/octet-stream'
         };
 
         return new Promise((resolve, reject) => {
@@ -62,25 +61,9 @@ $(document).ready(function () {
         });
     }
 
-    // User Management Functions
+    // User Management Functions (Disabled for Cloudflare Migration)
     async function fetchUsers() {
-        $('#admin-user-list').html('<div class="loading-spinner">사용자 불러오는 중...</div>');
-        try {
-            await ensureUserDb();
-            userDb.on('value', (snapshot) => {
-                const users = [];
-                snapshot.forEach(child => {
-                    const val = child.val();
-                    if (val && val.id) { // Only objects that have an 'id' field
-                        users.push({ key: child.key, ...val });
-                    }
-                });
-                renderUsers(users);
-            });
-        } catch (error) {
-            console.error('Fetch Users Error:', error);
-            $('#admin-user-list').html('<div class="loading-spinner">사용자 목록을 불러오지 못했습니다.</div>');
-        }
+        $('#admin-user-list').html('<div class="loading-spinner" style="color:#aaa;">Cloudflare 모드에서는 회원 관리 기능을 지원하지 않습니다.<br>단일 관리자(admin) 계정으로 고정되어 있습니다.</div>');
     }
 
     function renderUsers(users) {
