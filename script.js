@@ -10,7 +10,7 @@ $(document).ready(function () {
     let isShuffle = false;
     let repeatMode = 0; // 0=off, 1=all, 2=one
     let currentLoadId = 0; // 오디오 로딩 씹힘 방지용 ID
-    let currentLyrics = [];
+    let currentPlayingSong = null; // 캡슐화된 현재 곡 객체
     let lastActiveLyricIdx = -1;
     let isScrubbing = false;
     let pendingSeekPos = 0;
@@ -70,14 +70,39 @@ $(document).ready(function () {
         const prevSongId = playlistData[curIdx] ? playlistData[curIdx].id : null;
         const wasPlaying = audio && !audio.paused;
 
-        playlistData = (Array.isArray(data) ? data : Object.values(data)).map(song => ({
-            ...song,
-            url: song.url || song.audioUrl || '',
-            cover: song.cover || song.coverUrl || song.profile || '',
-            lyrics: song.lyrics || song.lyricsData || '',
-            lyricsData: song.lyricsData || song.lyrics || '',
-            artist: song.artist || 'Andre Youth'
-        }));
+        playlistData = (Array.isArray(data) ? data : Object.values(data)).map(song => {
+            const coverUrl = resolveUrl(song.cover || song.coverUrl || song.profile || '', 'image');
+            const originalAudioUrl = song.audio || song.url || song.audioUrl || '';
+            const audioUrl = resolveUrl(originalAudioUrl, 'audio');
+            const lrc = song.lyricsData || song.lyrics || '';
+            const parsedLyrics = MusicEngine.parseLyrics(lrc);
+            
+            let fallbacks = [];
+            if (originalAudioUrl) {
+                if (isLocalUrl(originalAudioUrl) || isFirebaseStorageUrl(originalAudioUrl)) {
+                    fallbacks = [originalAudioUrl];
+                } else {
+                    const idMatch = originalAudioUrl.match(/id=([a-zA-Z0-9_-]+)/) || 
+                                   originalAudioUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (idMatch) {
+                        fallbacks = MusicEngine.getFallbacks(idMatch[1]);
+                    } else {
+                        fallbacks = [audioUrl];
+                    }
+                }
+            }
+
+            return {
+                id: song.id,
+                title: song.title || 'Unknown',
+                artist: song.artist || 'Andre Youth',
+                coverUrl: coverUrl,
+                originalAudioUrl: originalAudioUrl,
+                fallbacks: fallbacks,
+                parsedLyrics: parsedLyrics,
+                syncOffset: song.syncOffset ? parseFloat(song.syncOffset) : 0
+            };
+        });
 
         renderPlaylist();
 
@@ -92,15 +117,14 @@ $(document).ready(function () {
         }
 
         if (playlistData.length > 0 && (!audio.src || !wasPlaying)) {
-            loadSong(curIdx, false);
+            playSongObject(playlistData[curIdx], false);
         }
     }
 
-    /* ─── Load Song ─── */
-    async function loadSong(index, shouldPlay = false) {
-        if (!playlistData[index]) return;
-        curIdx = index;
-        const song = playlistData[index];
+    /* ─── State Injection (객체 통주입 방식 재생기) ─── */
+    async function playSongObject(song, shouldPlay = false) {
+        if (!song) return;
+        currentPlayingSong = song; // 캡슐화된 상태 저장
         
         currentLoadId = Date.now();
         const myLoadId = currentLoadId;
@@ -111,47 +135,22 @@ $(document).ready(function () {
             $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
         }
 
-        $('#disp-title').text(song.title || 'Unknown');
-        $('#disp-artist').text(song.artist || 'Andre Youth');
+        // 화면 렌더링 캡슐화 (넘겨받은 객체 정보만으로 그림)
+        $('#disp-title').text(song.title);
+        $('#disp-artist').text(song.artist);
+        $('#artwork').attr('src', song.coverUrl);
+        $('#app-background').css('background-image', `url(${song.coverUrl})`);
         
-        // Cover image - use Firebase Storage URL directly or convert Drive URL
-        const coverUrl = resolveUrl(song.cover, 'image');
-        $('#artwork').attr('src', coverUrl);
-        $('#app-background').css('background-image', `url(${coverUrl})`);
-        
-        // Lyrics
-        const lrc = song.lyricsData || song.lyrics || '';
-        currentLyrics = MusicEngine.parseLyrics(lrc);
         lastActiveLyricIdx = -1;
-        renderLyrics();
+        renderLyrics(song.parsedLyrics);
 
-        // Audio URL
-        const originalUrl = song.audio || song.url || song.audioUrl || '';
-        if (!originalUrl) {
+        if (!song.originalAudioUrl) {
             console.warn('No audio URL for song:', song.title);
             return;
         }
 
-        const audioUrl = resolveUrl(originalUrl, 'audio');
-        
-        let fallbacks;
-        if (isLocalUrl(originalUrl)) {
-            fallbacks = [originalUrl];
-        } else {
-            if (isFirebaseStorageUrl(originalUrl)) {
-                fallbacks = [originalUrl];
-            } else {
-                const idMatch = originalUrl.match(/id=([a-zA-Z0-9_-]+)/) || 
-                               originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (idMatch) {
-                    fallbacks = MusicEngine.getFallbacks(idMatch[1]);
-                } else {
-                    fallbacks = [audioUrl];
-                }
-            }
-        }
-
         let tryIdx = 0;
+        const fallbacks = song.fallbacks;
 
         const tryPlay = async (url) => {
             if (!url || myLoadId !== currentLoadId) return; // 이전 로딩 루프 취소 (씹힘 방지)
@@ -206,34 +205,34 @@ $(document).ready(function () {
     }
 
     /* ─── Lyrics ─── */
-    function renderLyrics() {
+    function renderLyrics(lyricsArray) {
         const $scroll = $('#lyrics-scroll').empty();
-        if (!currentLyrics.length) {
+        if (!lyricsArray || !lyricsArray.length) {
             $scroll.append('<div class="lyric-line" style="opacity:0.4;filter:none;">가사가 등록되지 않았습니다.</div>');
             return;
         }
-        currentLyrics.forEach((l, i) => {
+        lyricsArray.forEach((l, i) => {
             $scroll.append(`<div class="lyric-line clickable" id="lrc-${i}" data-time="${l.time}">${l.text}</div>`);
         });
         $scroll.scrollTop(0);
     }
 
     function updateLyricsSync(time) {
-        if (!currentLyrics.length) return;
-        const currentSong = playlistData[curIdx];
-        const syncOffset = (currentSong && currentSong.syncOffset) ? parseFloat(currentSong.syncOffset) : 0;
+        if (!currentPlayingSong || !currentPlayingSong.parsedLyrics || !currentPlayingSong.parsedLyrics.length) return;
+        const syncOffset = currentPlayingSong.syncOffset || 0;
         const adjustedTime = time + syncOffset;
+        const lyricsArray = currentPlayingSong.parsedLyrics;
 
         let activeIdx = -1;
-        for (let i = 0; i < currentLyrics.length; i++) {
-            if (adjustedTime >= currentLyrics[i].time) activeIdx = i;
+        for (let i = 0; i < lyricsArray.length; i++) {
+            if (adjustedTime >= lyricsArray[i].time) activeIdx = i;
             else break;
         }
-        if (activeIdx !== -1 && activeIdx !== lastActiveLyricIdx) {
+            if (activeIdx !== -1 && activeIdx !== lastActiveLyricIdx) {
             $('.lyric-line').removeClass('active near');
             const $active = $(`#lrc-${activeIdx}`).addClass('active');
             if (activeIdx > 0) $(`#lrc-${activeIdx-1}`).addClass('near');
-            if (activeIdx < currentLyrics.length - 1) $(`#lrc-${activeIdx+1}`).addClass('near');
+            if (activeIdx < lyricsArray.length - 1) $(`#lrc-${activeIdx+1}`).addClass('near');
             lastActiveLyricIdx = activeIdx;
             
             const container = $('#lyrics-scroll')[0];
@@ -248,10 +247,9 @@ $(document).ready(function () {
         const $container = $('#song-list-container').empty();
         playlistData.forEach((song, i) => {
             const isCurrent = i === curIdx;
-            const cover = resolveUrl(song.cover, 'image');
             $container.append(`
                 <div class="song-item ${isCurrent ? 'active' : ''}" data-index="${i}">
-                    <img src="${cover}" loading="lazy" alt="cover" onerror="this.src='${MusicEngine.placeholderImage}'">
+                    <img src="${song.coverUrl}" loading="lazy" alt="cover" onerror="this.src='${MusicEngine.placeholderImage}'">
                     <div class="song-item-info">
                         <h4>${song.title || 'Unknown'}</h4>
                         <p>${song.artist || 'Andre Youth'}</p>
@@ -282,7 +280,7 @@ $(document).ready(function () {
             if (audio.paused) {
                 // 브라우저 정책에 의해 로딩이 지연되었거나 멈춰있는 첫곡 강제 로딩
                 if (!audio.src || audio.readyState === 0) {
-                    loadSong(curIdx, true);
+                    playSongObject(playlistData[curIdx], true);
                     return;
                 }
                 
@@ -293,7 +291,7 @@ $(document).ready(function () {
                     }).catch(e => {
                         console.error('Play error (User click):', e);
                         // 에러나면 사용자 이벤트 안에서 강제 재로딩하여 뚫기
-                        loadSong(curIdx, true);
+                        playSongObject(playlistData[curIdx], true);
                     });
                 }
             } else { 
@@ -312,14 +310,16 @@ $(document).ready(function () {
             } else {
                 n = (curIdx + 1) % playlistData.length;
             }
-            loadSong(n, true);
+            curIdx = n;
+            playSongObject(playlistData[n], true);
         });
 
         /* Prev */
         $('#btn-prev').on('click', () => {
             if (!playlistData.length) return;
             if (audio.currentTime > 3) { audio.currentTime = 0; return; }
-            loadSong((curIdx - 1 + playlistData.length) % playlistData.length, true);
+            curIdx = (curIdx - 1 + playlistData.length) % playlistData.length;
+            playSongObject(playlistData[curIdx], true);
         });
 
         /* Audio Time Update */
@@ -356,9 +356,11 @@ $(document).ready(function () {
                     }
                     
                     if (nextIdx < playlistData.length) {
-                        loadSong(nextIdx, true);
+                        curIdx = nextIdx;
+                        playSongObject(playlistData[nextIdx], true);
                     } else if (repeatMode === 1) {
-                        loadSong(0, true);
+                        curIdx = 0;
+                        playSongObject(playlistData[0], true);
                     } else {
                         $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
                     }
@@ -665,7 +667,11 @@ $(document).ready(function () {
 
         /* Song item click */
         $(document).on('click', '.song-item', function() {
-            loadSong($(this).data('index'), true); 
+            const index = $(this).data('index');
+            if (index !== undefined && playlistData[index]) {
+                curIdx = index;
+                playSongObject(playlistData[index], true);
+            }
             $('#playlist-sheet').removeClass('active');
         });
 
