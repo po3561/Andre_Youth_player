@@ -1524,6 +1524,7 @@ $(document).ready(function () {
         currentSyncIdx = 0;
         
         renderSyncLines();
+        $('#edit-overlay').css('display', 'none');
         $syncOverlay.addClass('active').attr('aria-hidden', 'false').css('display', 'flex');
     });
 
@@ -1531,6 +1532,7 @@ $(document).ready(function () {
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         syncAudio.pause();
         $syncOverlay.removeClass('active').attr('aria-hidden', 'true').css('display', 'none');
+        $('#edit-overlay').css('display', 'flex');
     });
 
     // 탭 동작
@@ -1574,6 +1576,7 @@ $(document).ready(function () {
         
         $('#edit-lyrics').val(resultLrc);
         $syncOverlay.removeClass('active').attr('aria-hidden', 'true').css('display', 'none');
+        $('#edit-overlay').css('display', 'flex');
         
         // 자동 저장 트리거
         if (confirm('가사 텍스트에 싱크가 성공적으로 적용되었습니다! 곧바로 곡 정보를 서버에 저장하시겠습니까?')) {
