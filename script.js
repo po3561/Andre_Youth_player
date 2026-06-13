@@ -9,6 +9,7 @@ $(document).ready(function () {
     let curIdx = 0;
     let isShuffle = false;
     let repeatMode = 0; // 0=off, 1=all, 2=one
+    let currentLoadId = 0; // 오디오 로딩 씹힘 방지용 ID
     let currentLyrics = [];
     let lastActiveLyricIdx = -1;
     let isScrubbing = false;
@@ -100,6 +101,9 @@ $(document).ready(function () {
         if (!playlistData[index]) return;
         curIdx = index;
         const song = playlistData[index];
+        
+        currentLoadId = Date.now();
+        const myLoadId = currentLoadId;
 
         // 확실한 초기화
         if (audio) {
@@ -150,7 +154,7 @@ $(document).ready(function () {
         let tryIdx = 0;
 
         const tryPlay = async (url) => {
-            if (!url) return;
+            if (!url || myLoadId !== currentLoadId) return; // 이전 로딩 루프 취소 (씹힘 방지)
             try {
                 audio.src = url;
                 audio.load();
@@ -165,7 +169,7 @@ $(document).ready(function () {
             } catch (e) {
                 console.error(`Play failed for ${url}:`, e.name, e.message);
                 
-                if (e.name !== 'AbortError') { 
+                if (e.name !== 'AbortError' && myLoadId === currentLoadId) { 
                     tryIdx++;
                     if (tryIdx < fallbacks.length) {
                         console.log(`Retrying with fallback ${tryIdx}...`);
@@ -274,11 +278,24 @@ $(document).ready(function () {
     function bindEvents() {
         /* Play/Pause */
         $('#btn-play-pause').on('click', () => {
-            if (!audio.src || !playlistData.length) return;
+            if (!playlistData.length) return;
             if (audio.paused) {
-                audio.play().then(() => {
-                    $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
-                }).catch(e => console.error('Play error:', e));
+                // 브라우저 정책에 의해 로딩이 지연되었거나 멈춰있는 첫곡 강제 로딩
+                if (!audio.src || audio.readyState === 0) {
+                    loadSong(curIdx, true);
+                    return;
+                }
+                
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        $('#btn-play-pause').html('<i class="fa-solid fa-pause"></i>');
+                    }).catch(e => {
+                        console.error('Play error (User click):', e);
+                        // 에러나면 사용자 이벤트 안에서 강제 재로딩하여 뚫기
+                        loadSong(curIdx, true);
+                    });
+                }
             } else { 
                 audio.pause(); 
                 $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>'); 
