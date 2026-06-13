@@ -72,7 +72,7 @@ $(document).ready(function () {
 
         playlistData = (Array.isArray(data) ? data : Object.values(data)).map(song => {
             const coverUrl = resolveUrl(song.cover || song.coverUrl || song.profile || '', 'image');
-            const originalAudioUrl = song.audio || song.url || song.audioUrl || '';
+            const originalAudioUrl = song.url || song.audioUrl || '';
             const audioUrl = resolveUrl(originalAudioUrl, 'audio');
             const lrc = song.lyricsData || song.lyrics || '';
             const parsedLyrics = MusicEngine.parseLyrics(lrc);
@@ -93,6 +93,7 @@ $(document).ready(function () {
             }
 
             return {
+                ...song, // 원본 필드 유지
                 id: song.id,
                 title: song.title || 'Unknown',
                 artist: song.artist || 'Andre Youth',
