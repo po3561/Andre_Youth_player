@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    /* ─── Firebase Init (채팅/문의/로그인용) ─── */
+    /* ─── Firebase DB 서버 연결 (실시간 데이터 읽기/쓰기 전용) ─── */
     const firebaseConfig = {
         apiKey: "AIzaSyDt1XdEfx760ojnETRw-HYqJQOP8GK5fXE",
         authDomain: "busan-youth-player.firebaseapp.com",
@@ -15,10 +15,9 @@ $(document).ready(function () {
     
     db.ref(".info/connected").on("value", (snap) => {
         if (snap.val() === true) {
-            console.log("Firebase Connected");
+            console.log("✅ Firebase DB 서버 연결됨");
         } else {
-            console.warn("Firebase Disconnected");
-            // $('#top-subtitle').text('서버 연결 중...'); // 비활성화
+            console.warn("⚠️ Firebase DB 서버 연결 끊김 — 재연결 시도 중...");
         }
     });
 

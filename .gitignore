@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Firebase (Hosting은 사용하지 않음 - DB 서버 전용)
+firebase.json
+firebase-debug.log
+
+# Dev/Temp files
+scratch/
+.playwright-cli/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
