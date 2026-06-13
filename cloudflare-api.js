@@ -46,6 +46,56 @@ const D1 = {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/init`, { method: 'POST' });
         if (!res.ok) throw new Error('Failed to init table');
         return await res.json();
+    },
+    // --- Chat ---
+    async getChat() {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/chat`);
+        if (!res.ok) throw new Error('Failed to fetch chat');
+        return await res.json();
+    },
+    async sendChat(messageObj) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(messageObj)
+        });
+        if (!res.ok) throw new Error('Failed to send chat');
+        return await res.json();
+    },
+    // --- Inquiry ---
+    async getInquiries() {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/inquiry`);
+        if (!res.ok) throw new Error('Failed to fetch inquiries');
+        return await res.json();
+    },
+    async sendInquiry(inquiryObj) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/inquiry`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(inquiryObj)
+        });
+        if (!res.ok) throw new Error('Failed to send inquiry');
+        return await res.json();
+    },
+    async deleteInquiry(id) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/inquiry/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete inquiry');
+        return await res.json();
+    },
+    // --- Settings ---
+    async getSettings() {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/settings`);
+        if (!res.ok) throw new Error('Failed to fetch settings');
+        return await res.json();
+    },
+    async saveSettings(settingsObj) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settingsObj)
+        });
+        if (!res.ok) throw new Error('Failed to save settings');
+        return await res.json();
     }
 };
 

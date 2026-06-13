@@ -44,7 +44,13 @@ $(document).ready(function () {
             if (data && data.length > 0) {
                 console.log(`✅ Cloudflare 플레이리스트 로드 성공: ${data.length}곡`);
                 applyPlaylist(data);
-                $('#top-subtitle').text('ANDREW YOUTH').css('color', '');
+                
+                // 설정 데이터 가져오기
+                const settings = await window.CloudflareAPI.D1.getSettings();
+                const mainTitle = settings.mainTitle || 'ANDREW YOUTH';
+                const subTitle = settings.subTitle || '믿음으로 기대하다';
+                $('#top-subtitle').text(mainTitle).css('color', '');
+                $('#top-title').text(subTitle);
             } else {
                 console.warn("Cloudflare 플레이리스트가 비어있습니다.");
                 $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">등록된 곡이 없습니다.<br>관리자 페이지에서 곡을 추가해주세요.</div>');
@@ -110,7 +116,7 @@ $(document).ready(function () {
         renderLyrics();
 
         // Audio URL
-        const originalUrl = song.url || song.audioUrl || '';
+        const originalUrl = song.audio || song.url || song.audioUrl || '';
         if (!originalUrl) {
             console.warn('No audio URL for song:', song.title);
             return;
@@ -492,17 +498,43 @@ $(document).ready(function () {
         });
 
         /* ─── Chat ─── */
-        $('#btn-open-chat').on('click', () => {
+        let chatInterval = null;
+        async function fetchChats() {
+            try {
+                const chats = await window.CloudflareAPI.D1.getChat();
+                const $box = $('#chat-messages').empty();
+                if (chats.length === 0) {
+                    $box.append('<div class="msg-bubble" style="background:#555;">채팅방이 생성되었습니다. 첫 메시지를 남겨보세요!</div>');
+                }
+                chats.forEach(c => {
+                    const isMine = (c.uid === userId);
+                    const timeStr = new Date(c.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    $box.append(`
+                        <div class="msg-bubble ${isMine ? 'mine' : ''}">
+                            <div class="txt">${c.content}</div>
+                            <div class="time">${timeStr}</div>
+                        </div>
+                    `);
+                });
+                $box.scrollTop($box[0].scrollHeight);
+            } catch(e) {
+                console.error("Chat load error:", e);
+            }
+        }
 
+        $('#btn-open-chat').on('click', () => {
             closeAllModals();
             $('#modal-container, #chat-popup').addClass('active');
-            $('#chat-messages').append('<div class="msg-bubble">Cloudflare 모드에서는 채팅을 지원하지 않습니다.</div>');
+            fetchChats();
+            if (chatInterval) clearInterval(chatInterval);
+            chatInterval = setInterval(fetchChats, 3000);
         });
 
         /* Inquiry */
         $('#btn-inquiry').on('click', () => {
             closeAllModals();
             $('#modal-container, #inquiry-popup').addClass('active');
+            $('#inq-title').val(''); $('#inq-content').val(''); $('#inq-contact').val('');
         });
 
         /* Admin Login */
@@ -514,13 +546,44 @@ $(document).ready(function () {
         /* Send Chat */
         $('#btn-send-chat').on('click', sendChat);
         $('#chat-input').on('keypress', (e) => { if (e.key === 'Enter') sendChat(); });
-        function sendChat() {
-            alert('Cloudflare 모드에서는 채팅을 지원하지 않습니다.');
+        async function sendChat() {
+            const txt = $('#chat-input').val().trim();
+            if (!txt) return;
+            $('#chat-input').val('');
+            try {
+                await window.CloudflareAPI.D1.sendChat({
+                    id: 'chat_' + Date.now() + Math.random().toString(36).substr(2,5),
+                    content: txt,
+                    uid: userId
+                });
+                fetchChats();
+            } catch(e) {
+                alert('메시지 전송 실패: ' + e.message);
+            }
         }
 
         /* Submit Inquiry */
-        $('#btn-submit-inquiry').on('click', () => {
-            alert('Cloudflare 모드에서는 문의 기능을 지원하지 않습니다.');
+        $('#btn-submit-inquiry').on('click', async () => {
+            const title = $('#inq-title').val().trim();
+            const content = $('#inq-content').val().trim();
+            const contact = $('#inq-contact').val().trim();
+            
+            if (!title || !content) {
+                return alert('제목과 내용을 입력해주세요.');
+            }
+            
+            try {
+                await window.CloudflareAPI.D1.sendInquiry({
+                    id: 'inq_' + Date.now(),
+                    title: title,
+                    content: content,
+                    contact: contact
+                });
+                alert('문의가 성공적으로 접수되었습니다.');
+                closeAllModals();
+            } catch(e) {
+                alert('접수 실패: ' + e.message);
+            }
         });
 
         $('#btn-do-login').on('click', () => {
@@ -555,6 +618,10 @@ $(document).ready(function () {
         function closeAllModals() { 
             $('.modal-overlay, .floating-popup').removeClass('active'); 
             if (typeof chatRef !== 'undefined' && chatRef) chatRef.off('child_added');
+            if (typeof chatInterval !== 'undefined' && chatInterval) {
+                clearInterval(chatInterval);
+                chatInterval = null;
+            }
         }
         window.closeAllModals = closeAllModals; 
 

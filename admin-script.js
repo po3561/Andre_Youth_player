@@ -1116,9 +1116,31 @@ $(document).ready(function () {
     }
 
     $('#btn-refresh-list').click(fetchSongs);
-    $('#btn-refresh-inquiries').click(() => {
-        if (typeof initInquiryManager === 'function') initInquiryManager();
-    });
+    $('#btn-refresh-inquiries').click(initInquiryManager);
+
+    async function initInquiryManager() {
+        const $list = $('#inquiry-list').empty();
+        $list.append('<div class="loading-spinner">문의 목록 가져오는 중...</div>');
+        try {
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                const inquiries = await window.CloudflareAPI.D1.getInquiries();
+                $list.empty();
+                if (!inquiries.length) return $list.append('<div>문의 내역이 없습니다.</div>');
+                inquiries.forEach(item => {
+                    const $item = $('<div>').addClass('inquiry-item');
+                    $item.append(`<strong>${item.name || '익명'}</strong> <small>${item.created_at || ''}</small><p>${item.message || ''}</p>`);
+                    const $del = $('<button>').text('삭제').click(async () => {
+                        await window.CloudflareAPI.D1.deleteInquiry(item.id);
+                        initInquiryManager();
+                    });
+                    $item.append($del);
+                    $list.append($item);
+                });
+            }
+        } catch(e) {
+            $list.html('로드 실패: ' + e.message);
+        }
+    }
 
     $('#btn-reset-default').click(async function () {
         if (!confirm('현재 플레이리스트를 삭제하고 초기 기본 곡 목록으로 재설정하시겠습니까?')) return;
@@ -1338,8 +1360,53 @@ $(document).ready(function () {
     });
 
     // --- Inquiry Management (New) ---
-    window.initInquiryManager = function() {
-        // Inquiry disabled for Cloudflare Migration
+    window.initInquiryManager = async function() {
+        const $list = $('#inquiry-list');
+        if (!$list.length) return;
+        $list.html('<p>문의 내역을 불러오는 중...</p>');
+        try {
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                const inquiries = await window.CloudflareAPI.D1.getInquiries();
+                if (inquiries.length === 0) {
+                    $list.html('<p>새로운 문의가 없습니다.</p>');
+                    return;
+                }
+                $list.empty();
+                inquiries.forEach(inq => {
+                    const dateStr = new Date(inq.timestamp).toLocaleString();
+                    const $item = $(`
+                        <div class="inquiry-item" style="border-bottom: 1px solid #333; padding: 10px 0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h4 style="margin:0 0 5px 0;">${inq.title}</h4>
+                                <small style="color:#aaa;">${dateStr}</small>
+                            </div>
+                            <p style="margin:5px 0; font-size:14px;">${inq.content}</p>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <small style="color:#20B2AA;">연락처: ${inq.contact || '없음'}</small>
+                                <button class="btn btn-icon btn-delete-inq" data-id="${inq.id}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                    $list.append($item);
+                });
+
+                $('.btn-delete-inq').on('click', async function() {
+                    if (!confirm('이 문의를 삭제하시겠습니까?')) return;
+                    const id = $(this).data('id');
+                    try {
+                        await window.CloudflareAPI.D1.deleteInquiry(id);
+                        $(this).closest('.inquiry-item').fadeOut(300, function(){ $(this).remove(); });
+                    } catch (e) {
+                        alert('삭제 실패: ' + e.message);
+                    }
+                });
+            }
+        } catch (e) {
+            $list.html('<p>문의 내역을 불러오는 데 실패했습니다.</p>');
+            console.error(e);
+        }
     };
     initInquiryManager();
 });
