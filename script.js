@@ -496,12 +496,7 @@ $(document).ready(function () {
 
             closeAllModals();
             $('#modal-container, #chat-popup').addClass('active');
-            $('#chat-messages').empty();
-            chatRef.limitToLast(50).on('child_added', snap => {
-                const m = snap.val(); if (!m) return;
-                $('#chat-messages').append(`<div class="msg-bubble ${m.sender === userId ? 'mine' : ''}">${m.text}</div>`)
-                    .scrollTop($('#chat-messages')[0].scrollHeight);
-            });
+            $('#chat-messages').append('<div class="msg-bubble">Cloudflare 모드에서는 채팅을 지원하지 않습니다.</div>');
         });
 
         /* Inquiry */
@@ -520,100 +515,34 @@ $(document).ready(function () {
         $('#btn-send-chat').on('click', sendChat);
         $('#chat-input').on('keypress', (e) => { if (e.key === 'Enter') sendChat(); });
         function sendChat() {
-
-            const t = $('#chat-input').val().trim(); 
-            if (!t) return;
-            chatRef.push({ text: t, sender: userId, timestamp: Date.now() }); 
-            $('#chat-input').val('');
+            alert('Cloudflare 모드에서는 채팅을 지원하지 않습니다.');
         }
 
         /* Submit Inquiry */
         $('#btn-submit-inquiry').on('click', () => {
-
-            const title = $('#inq-title').val().trim();
-            const content = $('#inq-content').val().trim();
-            const contact = $('#inq-contact').val().trim();
-            if (!title || !content) return alert('제목과 내용을 입력해주세요.');
-            
-            inqRef.push({ title, content, contact, timestamp: Date.now(), userId })
-                .then(() => {
-                    alert('문의가 전송되었습니다.');
-                    closeAllModals();
-                    $('#inq-title, #inq-content, #inq-contact').val('');
-                });
+            alert('Cloudflare 모드에서는 문의 기능을 지원하지 않습니다.');
         });
 
         $('#btn-do-login').on('click', () => {
-
             const id = $('#admin-id').val().trim();
             const pw = $('#admin-password').val().trim();
             
             if (!id || !pw) return alert('아이디와 비밀번호를 입력하세요.');
             
-            db.ref('users').orderByChild('id').equalTo(id).once('value', snap => {
-                if (!snap.exists()) {
-                    alert('등록되지 않은 아이디입니다.');
-                    return;
-                }
-                
-                let foundUser = null;
-                let userKey = null;
-                snap.forEach(child => {
-                    if (child.val().pw === pw) {
-                        foundUser = child.val();
-                        userKey = child.key;
-                    }
-                });
-                
-                if (!foundUser) {
-                    alert('비밀번호가 틀렸습니다.');
-                    return;
-                }
-                
-                if (!foundUser.isApproved) {
-                    alert('관리자의 승인이 대기 중입니다. 승인 후 이용 가능합니다.');
-                    return;
-                }
-                
+            // Cloudflare Migration: 단순 관리자 로그인 우회 (아이디: admin / 비밀번호: 1234)
+            if (id === 'admin' && pw === '1234') {
                 localStorage.setItem('adminUser', JSON.stringify({ 
-                    id: foundUser.id, name: foundUser.name, uid: userKey, isApproved: true, isAdmin: foundUser.isAdmin 
+                    id: 'admin', name: 'Master Admin', uid: 'admin_uid_1', isApproved: true, isAdmin: true 
                 }));
                 closeAllModals();
                 window.location.href = 'admin.html';
-            }, err => {
-                alert('로그인 에러: ' + err.message);
-            });
+            } else {
+                alert('비밀번호가 틀렸습니다. 기본 계정: admin / 1234');
+            }
         });
 
         $('#btn-do-signup').on('click', () => {
-
-            const id = $('#signup-id').val().trim();
-            const pw = $('#signup-password').val().trim();
-            const name = $('#signup-name').val().trim();
-            const phone = $('#signup-phone').val().trim();
-            const company = $('#signup-company').val().trim();
-            const position = $('#signup-position').val().trim();
-            const unique = $('#signup-unique').val().trim();
-            
-            if (!id || !pw || !name) return alert('아이디, 비밀번호, 이름은 필수입니다.');
-            if (pw.length < 6) return alert('비밀번호는 6자 이상이어야 합니다.');
-            
-            db.ref('users').orderByChild('id').equalTo(id).once('value', snap => {
-                if (snap.exists()) {
-                    alert('이미 존재하는 아이디입니다.');
-                } else {
-                    db.ref('users').push({
-                        id, pw, name, phone, company, position, unique,
-                        isAdmin: false,
-                        isApproved: false,
-                        timestamp: Date.now()
-                    }).then(() => {
-                        alert('회원가입이 완료되었습니다. 관리자 승인 후 로그인 가능합니다.');
-                        toggleAuthMode(false);
-                        $('#admin-signup-form input').val(''); // clear form
-                    }).catch(err => alert('가입 실패: ' + err.message));
-                }
-            });
+            alert('Cloudflare 모드에서는 회원가입 대신 공용 관리자 계정(admin/1234)을 사용해주세요.');
         });
 
         /* Song item click */
@@ -625,7 +554,7 @@ $(document).ready(function () {
         /* Close Modals */
         function closeAllModals() { 
             $('.modal-overlay, .floating-popup').removeClass('active'); 
-            if (chatRef) chatRef.off('child_added');
+            if (typeof chatRef !== 'undefined' && chatRef) chatRef.off('child_added');
         }
         window.closeAllModals = closeAllModals; 
 
