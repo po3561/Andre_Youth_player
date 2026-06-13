@@ -586,26 +586,46 @@ $(document).ready(function () {
             }
         });
 
-        $('#btn-do-login').on('click', () => {
+        $('#btn-do-login').on('click', async () => {
             const id = $('#admin-id').val().trim();
             const pw = $('#admin-password').val().trim();
             
             if (!id || !pw) return alert('아이디와 비밀번호를 입력하세요.');
             
-            // Cloudflare Migration: 단순 관리자 로그인 우회 (아이디: admin / 비밀번호: 1234)
-            if (id === 'admin' && pw === '1234') {
-                localStorage.setItem('adminUser', JSON.stringify({ 
-                    id: 'admin', name: 'Master Admin', uid: 'admin_uid_1', isApproved: true, isAdmin: true 
-                }));
-                closeAllModals();
-                window.location.href = 'admin.html';
-            } else {
-                alert('비밀번호가 틀렸습니다. 기본 계정: admin / 1234');
+            try {
+                const res = await window.CloudflareAPI.D1.login({ id: id, password: pw });
+                if (res.success && res.user) {
+                    localStorage.setItem('adminUser', JSON.stringify({ 
+                        id: res.user.id, name: res.user.name, isApproved: true, isAdmin: res.user.role === 'admin' 
+                    }));
+                    closeAllModals();
+                    window.location.href = 'admin.html';
+                } else {
+                    alert('로그인 실패: ' + (res.error || '알 수 없는 오류'));
+                }
+            } catch(e) {
+                alert('서버 통신 오류: ' + e.message);
             }
         });
 
-        $('#btn-do-signup').on('click', () => {
-            alert('Cloudflare 모드에서는 회원가입 대신 공용 관리자 계정(admin/1234)을 사용해주세요.');
+        $('#btn-do-signup').on('click', async () => {
+            const id = $('#signup-id').val().trim();
+            const pw = $('#signup-password').val().trim();
+            const name = $('#signup-name').val() ? $('#signup-name').val().trim() : id;
+            
+            if (!id || !pw) return alert('아이디와 비밀번호를 입력하세요.');
+            
+            try {
+                const res = await window.CloudflareAPI.D1.signup({ id: id, password: pw, name: name });
+                if (res.success) {
+                    alert('가입 신청이 완료되었습니다. 메인 관리자의 승인을 기다려주세요.');
+                    toggleAuthMode(false); // 로그인 모드로 전환
+                } else {
+                    alert('가입 실패: ' + (res.error || '알 수 없는 오류'));
+                }
+            } catch(e) {
+                alert('서버 통신 오류: ' + e.message);
+            }
         });
 
         /* Song item click */

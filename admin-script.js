@@ -61,9 +61,17 @@ $(document).ready(function () {
         });
     }
 
-    // User Management Functions (Disabled for Cloudflare Migration)
+    // User Management Functions
     async function fetchUsers() {
-        $('#admin-user-list').html('<div class="loading-spinner" style="color:#aaa;">Cloudflare 모드에서는 회원 관리 기능을 지원하지 않습니다.<br>단일 관리자(admin) 계정으로 고정되어 있습니다.</div>');
+        const $list = $('#admin-user-list').html('<div class="loading-spinner">사용자 목록을 불러오는 중...</div>');
+        try {
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                const users = await window.CloudflareAPI.D1.getUsers();
+                renderUsers(users);
+            }
+        } catch(e) {
+            $list.html('<div style="color:red;">로드 실패: ' + e.message + '</div>');
+        }
     }
 
     function renderUsers(users) {
@@ -77,11 +85,12 @@ $(document).ready(function () {
         users.sort((a, b) => (a.isApproved === b.isApproved) ? 0 : a.isApproved ? 1 : -1);
 
         users.forEach(u => {
+            if (u.id === 'admin') return; // 기본 관리자는 숨김
+            
             const statusClass = u.isApproved ? 'approved' : 'pending';
             const statusText = u.isApproved ? '승인됨' : '승인 대기';
-            const actionBtns = u.isApproved ?
-                `<button class="btn-reject" data-key="${u.key}">권한 회수</button>` :
-                `<button class="btn-approve" data-key="${u.key}">승인</button>`;
+            const actionBtns = u.isApproved ? '' :
+                `<button class="btn-approve" data-id="${u.id}">승인</button>`;
 
             $list.append(`
                 <div class="admin-user-item">
@@ -90,14 +99,10 @@ $(document).ready(function () {
                             <span class="user-name">${u.name} (${u.id})</span>
                             <span class="status-badge ${statusClass}">${statusText}</span>
                         </div>
-                        <div class="user-details">
-                            전화: ${u.phone} | 고유번호: ${u.unique}<br>
-                            사명: ${u.company} | 직책: ${u.position}
-                        </div>
                     </div>
                     <div class="user-actions">
                         ${actionBtns}
-                        <button class="btn-reject" data-key="${u.key}" style="background: rgba(255,0,0,0.1); border-color: rgba(255,0,0,0.2);">삭제</button>
+                        <button class="btn-reject" data-id="${u.id}" style="background: rgba(255,0,0,0.1); border-color: rgba(255,0,0,0.2);">삭제</button>
                     </div>
                 </div>
             `);
@@ -105,21 +110,22 @@ $(document).ready(function () {
     }
 
     $(document).on('click', '.btn-approve', async function () {
-        const key = $(this).data('key');
+        const id = $(this).data('id');
         if (confirm('이 사용자를 승인하시겠습니까?')) {
-            await userDb.child(key).update({ isApproved: true });
+            try {
+                await window.CloudflareAPI.D1.approveUser(id);
+                fetchUsers();
+            } catch(e) { alert('승인 실패: ' + e.message); }
         }
     });
 
     $(document).on('click', '.btn-reject', async function () {
-        const key = $(this).data('key');
-        const isDelete = $(this).text() === '삭제';
-        if (confirm(isDelete ? '이 사용자를 삭제하시겠습니까?' : '이 사용자의 승인을 취소하시겠습니까?')) {
-            if (isDelete) {
-                await userDb.child(key).remove();
-            } else {
-                await userDb.child(key).update({ isApproved: false });
-            }
+        const id = $(this).data('id');
+        if (confirm('사용자를 삭제하시겠습니까?')) {
+            try {
+                await window.CloudflareAPI.D1.deleteUser(id);
+                fetchUsers();
+            } catch(e) { alert('삭제 실패: ' + e.message); }
         }
     });
 
@@ -1177,12 +1183,29 @@ $(document).ready(function () {
     }
 
     async function loadAppSettings() {
-        const $status = $('#settings-status').text('설정을 불러왔습니다.');
-        writeSettingsForm({ title: "ANDREW YOUTH", subtitle: "" });
+        const $status = $('#settings-status').text('설정을 불러오는 중...');
+        try {
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                const settings = await window.CloudflareAPI.D1.getSettings();
+                writeSettingsForm({ title: settings.mainTitle || '', subtitle: settings.subTitle || '' });
+                $status.text('설정을 불러왔습니다.');
+            }
+        } catch (e) {
+            $status.text('설정 불러오기 실패: ' + e.message);
+        }
     }
 
     async function saveAppSettings() {
-        const $status = $('#settings-status').text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
+        const $status = $('#settings-status').text('저장 중...');
+        try {
+            const data = readSettingsForm();
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                await window.CloudflareAPI.D1.saveSettings({ mainTitle: data.title, subTitle: data.subtitle });
+                $status.text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
+            }
+        } catch (e) {
+            $status.text('설정 저장 실패: ' + e.message);
+        }
     }
 
 

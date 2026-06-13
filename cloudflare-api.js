@@ -96,6 +96,40 @@ const D1 = {
         });
         if (!res.ok) throw new Error('Failed to save settings');
         return await res.json();
+    },
+    // --- Users ---
+    async signup(userObj) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/users/signup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userObj)
+        });
+        return await res.json();
+    },
+    async login(userObj) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/users/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userObj)
+        });
+        return await res.json();
+    },
+    async getUsers() {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/users`);
+        if (!res.ok) throw new Error('Failed to fetch users');
+        return await res.json();
+    },
+    async approveUser(id) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'approve' })
+        });
+        return await res.json();
+    },
+    async deleteUser(id) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/users/${id}`, { method: 'DELETE' });
+        return await res.json();
     }
 };
 
