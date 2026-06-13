@@ -52,11 +52,12 @@ const D1 = {
 let s3 = null;
 if (typeof AWS !== 'undefined') {
     s3 = new AWS.S3({
-        endpoint: CF_CONFIG.R2_ENDPOINT,
+        endpoint: new AWS.Endpoint(CF_CONFIG.R2_ENDPOINT),
         accessKeyId: CF_CONFIG.R2_ACCESS_KEY,
         secretAccessKey: CF_CONFIG.R2_SECRET_KEY,
         signatureVersion: 'v4',
-        region: 'auto'
+        region: 'auto',
+        s3ForcePathStyle: true
     });
 }
 

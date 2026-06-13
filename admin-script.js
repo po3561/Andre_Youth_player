@@ -997,13 +997,13 @@ $(document).ready(function () {
 
             let finalAudioUrl = audioUrlInput;
             if (!finalAudioUrl && state.audioFile) {
-                updateProgress(30, '음원 업로드 중 (Firebase Storage)...');
+                updateProgress(30, '음원 업로드 중 (Cloudflare R2)...');
                 finalAudioUrl = await uploadFileToStorage(state.audioFile, 'audio');
             }
 
             let finalCoverUrl = coverUrlInput;
             if (!finalCoverUrl && state.image) {
-                updateProgress(50, '커버 업로드 중 (Firebase Storage)...');
+                updateProgress(50, '커버 업로드 중 (Cloudflare R2)...');
                 finalCoverUrl = await uploadFileToStorage(state.image, 'covers');
             }
 
