@@ -1306,6 +1306,7 @@ $(document).ready(function () {
     }
 
     function closeEditModal() {
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         $('#edit-overlay').removeClass('active').attr('aria-hidden', 'true');
         state.editSongId = null;
         state.editAudioFile = null;
@@ -1510,8 +1511,8 @@ $(document).ready(function () {
             return;
         }
         
-        syncLines = rawText.split('\\n')
-            .map(l => l.replace(/\\[\\d{2}:\\d{2}\\.\\d{2,3}\\]/g, '').trim())
+        syncLines = rawText.split('\n')
+            .map(l => l.replace(/\[\d{2}:\d{2}\.\d{2,3}\]/g, '').trim())
             .filter(l => l.length > 0);
         
         if (syncLines.length === 0) {
@@ -1527,6 +1528,7 @@ $(document).ready(function () {
     });
 
     $('#btn-sync-maker-close').on('click', function() {
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         syncAudio.pause();
         $syncOverlay.removeClass('active').attr('aria-hidden', 'true').css('display', 'none');
     });
@@ -1563,11 +1565,12 @@ $(document).ready(function () {
 
     // 완성 및 적용
     $('#btn-sync-maker-apply').on('click', function() {
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         syncAudio.pause();
         const resultLrc = syncLines.map((line, i) => {
             const t = syncTimes[i] ? formatLrcTime(syncTimes[i]) : '';
             return t + line;
-        }).join('\\n');
+        }).join('\n');
         
         $('#edit-lyrics').val(resultLrc);
         $syncOverlay.removeClass('active').attr('aria-hidden', 'true').css('display', 'none');
