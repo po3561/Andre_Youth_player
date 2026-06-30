@@ -103,8 +103,8 @@ export default {
         const existing = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(data.id).first();
         if (existing) return Response.json({ success: false, error: 'Already exists' }, { status: 400, headers: corsHeaders });
         
-        await env.DB.prepare('INSERT INTO users (id, password, name, isApproved, role, createdAt) VALUES (?, ?, ?, 0, ?, ?)').bind(
-            data.id, data.password, data.name || data.id, 'user', Date.now()
+        await env.DB.prepare('INSERT INTO users (id, password, name, phone, company, position, isApproved, role, createdAt) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)').bind(
+            data.id, data.password, data.name || data.id, data.phone || '', data.company || '', data.position || '', 'user', Date.now()
         ).run();
         return Response.json({ success: true, message: 'Signup success, waiting approval' }, { headers: corsHeaders });
       }
@@ -123,7 +123,7 @@ export default {
       }
 
       if (path === '/users' && request.method === 'GET') {
-        const { results } = await env.DB.prepare('SELECT id, name, isApproved, role, createdAt FROM users ORDER BY createdAt DESC').all();
+        const { results } = await env.DB.prepare('SELECT id, name, phone, company, position, isApproved, role, createdAt FROM users ORDER BY createdAt DESC').all();
         return Response.json(results || [], { headers: corsHeaders });
       }
 
@@ -147,7 +147,12 @@ export default {
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS chat (id TEXT PRIMARY KEY, content TEXT, timestamp INTEGER, uid TEXT)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS inquiry (id TEXT PRIMARY KEY, title TEXT, content TEXT, contact TEXT, timestamp INTEGER)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)").run();
-          await env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, password TEXT, name TEXT, isApproved INTEGER, role TEXT, createdAt INTEGER)").run();
+          await env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, password TEXT, name TEXT, phone TEXT, company TEXT, position TEXT, isApproved INTEGER, role TEXT, createdAt INTEGER)").run();
+          
+          // 기존 테이블 호환성을 위한 ALTER (실패 시 무시)
+          try { await env.DB.prepare("ALTER TABLE users ADD COLUMN phone TEXT").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE users ADD COLUMN company TEXT").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE users ADD COLUMN position TEXT").run(); } catch(e) {}
           
           await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('mainTitle', 'ANDREW YOUTH'), ('subTitle', '믿음으로 기대하다')").run();
 

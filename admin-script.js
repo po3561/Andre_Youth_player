@@ -99,6 +99,11 @@ $(document).ready(function () {
                             <span class="user-name">${u.name} (${u.id})</span>
                             <span class="status-badge ${statusClass}">${statusText}</span>
                         </div>
+                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 4px;">
+                            ${u.company ? `🏢 ${u.company}` : ''} 
+                            ${u.position ? `💼 ${u.position}` : ''}
+                            ${u.phone ? `📱 ${u.phone}` : ''}
+                        </div>
                     </div>
                     <div class="user-actions">
                         ${actionBtns}

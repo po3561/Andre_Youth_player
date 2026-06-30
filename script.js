@@ -729,11 +729,21 @@ $(document).ready(function () {
             const id = $('#signup-id').val().trim();
             const pw = $('#signup-password').val().trim();
             const name = $('#signup-name').val() ? $('#signup-name').val().trim() : id;
+            const phone = $('#signup-phone').val() ? $('#signup-phone').val().trim() : '';
+            const company = $('#signup-company').val() ? $('#signup-company').val().trim() : '';
+            const position = $('#signup-position').val() ? $('#signup-position').val().trim() : '';
             
             if (!id || !pw) return alert('아이디와 비밀번호를 입력하세요.');
             
             try {
-                const res = await window.CloudflareAPI.D1.signup({ id: id, password: pw, name: name });
+                const res = await window.CloudflareAPI.D1.signup({ 
+                    id: id, 
+                    password: pw, 
+                    name: name,
+                    phone: phone,
+                    company: company,
+                    position: position
+                });
                 if (res.success) {
                     alert('가입 신청이 완료되었습니다. 메인 관리자의 승인을 기다려주세요.');
                     toggleAuthMode(false); // 로그인 모드로 전환
