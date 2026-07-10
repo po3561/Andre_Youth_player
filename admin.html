@@ -261,45 +261,51 @@
 
                 <div class="manage-card glass-card">
                     <div style="font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 12px;"><i class="fa-solid fa-sliders" style="color: var(--primary);"></i> 플레이어 앱 전역 설정</div>
-                    <div class="admin-settings-grid">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                         <label class="sync-meta-item">
                             상단 타이틀
-                            <input type="text" id="setting-playlist-title" placeholder="Andre Youth Playlist">
+                            <input type="text" id="setting-playlist-title" placeholder="ANDREW YOUTH">
                         </label>
-                        <label class="sync-meta-item" style="margin-top: 10px;">
+                        <label class="sync-meta-item">
                             상단 서브타이틀
-                            <input type="text" id="setting-playlist-subtitle" placeholder="음악으로 길을 잇다">
+                            <input type="text" id="setting-playlist-subtitle" placeholder="청년회 사명자 수련회">
                         </label>
                     </div>
                     
-                    <div class="admin-settings-grid" style="margin-top: 20px;">
-                        <label class="sync-meta-item" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 15px; background: rgba(0,255,136,0.05); border-radius: 12px; border: 1px solid rgba(0,255,136,0.2);">
+                    <div style="margin-top: 20px;">
+                        <div class="setting-toggle-card green-card">
                             <div style="display:flex; flex-direction:column; gap:4px;">
                                 <span style="font-weight: 800; color:#00ff88;">시작 공지/광고 팝업 활성화</span>
                                 <span style="font-size:0.75rem; color:rgba(255,255,255,0.6);">플레이어 첫 진입 시 모달 공지를 노출합니다.</span>
                             </div>
-                            <input type="checkbox" id="setting-popup-enabled" style="width: 24px; height: 24px; accent-color: #00ff88; cursor: pointer;">
-                        </label>
+                            <label class="admin-switch">
+                                <input type="checkbox" id="setting-popup-enabled">
+                                <span class="admin-switch-slider green-switch"></span>
+                            </label>
+                        </div>
                         
                         <label class="sync-meta-item" id="popup-image-upload-wrapper" style="margin-top: 15px;">
                             팝업 노출 이미지 업로드 (JPG, PNG, GIF 지원)
                             <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
                                 <img id="setting-popup-preview" src="" alt="팝업 미리보기" style="display: none; width: 50px; height: 50px; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,0.1);">
-                                <input type="file" id="setting-popup-file" accept="image/*" style="flex: 1; padding: 5px; font-size: 0.9rem;">
+                                <input type="file" id="setting-popup-file" accept="image/*" class="styled-file-input">
                                 <input type="hidden" id="setting-popup-url">
                             </div>
                             <span style="font-size:0.7rem; color:rgba(255,255,255,0.5); margin-top:4px;">* 이미지 선택 후 아래 저장 버튼을 누르면 서버에 저장됩니다.</span>
                         </label>
                     </div>
 
-                    <div class="admin-settings-grid" style="margin-top: 20px;">
-                        <label class="sync-meta-item" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 15px; background: rgba(0,242,254,0.05); border-radius: 12px; border: 1px solid rgba(0,242,254,0.3);">
+                    <div style="margin-top: 20px;">
+                        <div class="setting-toggle-card cyan-card">
                             <div style="display:flex; flex-direction:column; gap:4px;">
                                 <span style="font-weight: 800; color:#00f2fe;">상단 디데이 & 광고 전광판 배너 노출</span>
                                 <span style="font-size:0.75rem; color:rgba(255,255,255,0.6);">플레이어 및 쇼츠 상단 공백에 프로모션 배너를 띄웁니다.</span>
                             </div>
-                            <input type="checkbox" id="setting-promo-enabled" style="width: 24px; height: 24px; accent-color: #00f2fe; cursor: pointer;">
-                        </label>
+                            <label class="admin-switch">
+                                <input type="checkbox" id="setting-promo-enabled">
+                                <span class="admin-switch-slider cyan-switch"></span>
+                            </label>
+                        </div>
                         
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:12px;">
                             <label class="sync-meta-item">
