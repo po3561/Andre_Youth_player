@@ -16,6 +16,14 @@ $(document).ready(function () {
 
     if (!checkAuth()) return;
 
+    $('#btn-refresh-token').on('click', function () {
+        if (confirm('보안 권한 세션을 새로 갱신하시겠습니까?\n세션 재인증을 위해 로그인 화면으로 이동합니다.')) {
+            localStorage.removeItem('andre_youth_admin_token');
+            localStorage.removeItem('adminUser');
+            window.location.href = 'index.html';
+        }
+    });
+
     $('#btn-admin-logout').on('click', function () {
         if (confirm('로그아웃 하시겠습니까?')) {
             localStorage.removeItem('andre_youth_admin_token');
@@ -1786,9 +1794,15 @@ $(document).ready(function () {
             }, 1000);
 
         } catch (err) {
-            alert('업로드 실패: ' + err.message);
-            $progressContainer.hide();
+            $progressFill.css({ 'width': '100%', 'background': '#ff3b30' });
+            $progressStatus.text('업로드 실패: ' + err.message).css('color', '#ff3b30');
             $btn.prop('disabled', false);
+            alert('쇼츠 업로드 실패: ' + err.message);
+            setTimeout(() => {
+                $progressContainer.hide();
+                $progressFill.css({ 'width': '0%', 'background': '' });
+                $progressStatus.css('color', '');
+            }, 3500);
         }
     });
 

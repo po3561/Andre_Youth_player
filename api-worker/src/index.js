@@ -9,8 +9,13 @@ async function hashPassword(password) {
 const DEFAULT_SECRET = "ANDRE_YOUTH_SUPER_SECRET_KEY_2026_!@#";
 
 async function signToken(payload, env) {
+  const enhancedPayload = {
+      ...payload,
+      iat: Date.now(),
+      exp: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30일 유지
+  };
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const body = btoa(JSON.stringify(payload));
+  const body = btoa(JSON.stringify(enhancedPayload));
   const dataToSign = `${header}.${body}`;
   const secret = env.JWT_SECRET || DEFAULT_SECRET;
   const key = await crypto.subtle.importKey(
@@ -36,7 +41,10 @@ async function verifyToken(token, env) {
     );
     const sigBuffer = new Uint8Array(atob(sigBase64).split('').map(c => c.charCodeAt(0)));
     const isValid = await crypto.subtle.verify("HMAC", key, sigBuffer, new TextEncoder().encode(dataToVerify));
-    return isValid ? JSON.parse(atob(body)) : false;
+    if (!isValid) return false;
+    const decoded = JSON.parse(atob(body));
+    if (decoded.exp && Date.now() > decoded.exp) return false;
+    return decoded;
   } catch(e) {
     return false;
   }

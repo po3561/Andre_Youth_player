@@ -12,6 +12,27 @@ function getAuthHeaders(extraHeaders = {}) {
     };
 }
 
+async function checkResponse(res, defaultErrMsg) {
+    if (res.status === 401) {
+        localStorage.removeItem('andre_youth_admin_token');
+        localStorage.removeItem('adminUser');
+        alert('보안 인증 세션이 만료되었습니다. 다시 로그인해 주세요.');
+        if (window.location.pathname.includes('admin.html')) {
+            window.location.href = 'index.html';
+        }
+        throw new Error('401 Unauthorized: 세션이 만료되었습니다.');
+    }
+    if (!res.ok) {
+        let errMsg = defaultErrMsg;
+        try {
+            const errJson = await res.json();
+            if (errJson && errJson.error) errMsg += ` (${errJson.error})`;
+        } catch(e) {}
+        throw new Error(errMsg);
+    }
+    return await res.json();
+}
+
 const D1 = {
     async getPlaylist() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/playlist`, { headers: getAuthHeaders() });
@@ -157,14 +178,12 @@ const D1 = {
             headers: getAuthHeaders(),
             body: fileBlob
         });
-        if (!res.ok) throw new Error('Upload failed');
-        return await res.json();
+        return await checkResponse(res, '파일 업로드에 실패했습니다.');
     },
     // --- Shorts ---
     async getShorts() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts`, { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to fetch shorts');
-        return await res.json();
+        return await checkResponse(res, '쇼츠 목록을 불러오지 못했습니다.');
     },
     async addShorts(data) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts`, {
