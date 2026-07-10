@@ -428,6 +428,53 @@ body {
     }
 }
 
+/* === Header Left Menu Alignment === */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* === Shorts Top Back Header === */
+.shorts-top-header {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1000;
+    pointer-events: none;
+}
+.shorts-back-btn {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.shorts-back-btn:hover {
+    background: rgba(0, 242, 254, 0.25);
+    border-color: #00f2fe;
+}
+.shorts-top-title {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
 /* === Shorts Toggle Switch === */
 .shorts-toggle {
     position: relative;
@@ -439,7 +486,7 @@ body {
     border: 1px solid var(--border-glass);
     border-radius: 20px;
     cursor: pointer;
-    margin-left: 10px;
+    margin-left: 4px;
     vertical-align: middle;
     overflow: hidden;
 }

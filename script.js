@@ -837,6 +837,36 @@ $(document).ready(function () {
             }
         });
 
+        /* === Shorts Exit to Playlist === */
+        $('#btn-exit-shorts-mode').on('click', function() {
+            $('#shorts-mode-toggle').prop('checked', false).trigger('change');
+        });
+
+        /* === Shorts Mute Toggle === */
+        let isShortsMuted = false;
+        $('#shorts-mute-btn').on('click', function(e) {
+            e.stopPropagation();
+            isShortsMuted = !isShortsMuted;
+            const video = $('.shorts-slide').find('.shorts-video')[0];
+            if (video) {
+                video.muted = isShortsMuted;
+                if (!isShortsMuted) video.volume = 1.0;
+            }
+            updateShortsMuteUI();
+        });
+
+        function updateShortsMuteUI() {
+            const $icon = $('#shorts-mute-icon');
+            const $label = $('#shorts-mute-label');
+            if (isShortsMuted) {
+                $icon.removeClass('fa-volume-high').addClass('fa-volume-xmark');
+                $label.text('음소거');
+            } else {
+                $icon.removeClass('fa-volume-xmark').addClass('fa-volume-high');
+                $label.text('소리켬');
+            }
+        }
+
         /* === Shorts Swipe & Control Events === */
         const $shortsContainer = $('#shorts-container');
         
@@ -1017,9 +1047,15 @@ $(document).ready(function () {
         const isLiked = likedShorts.includes(shorts.id);
         updateShortsLikeUI(isLiked);
 
-        // 비디오 재생
+        // 비디오 소리 기본 켜짐 설정 및 재생
+        video.muted = isShortsMuted;
+        video.volume = 1.0;
+        updateShortsMuteUI();
+
         video.play().catch(e => {
-            console.log("Auto-play blocked, wait for user interaction.", e);
+            console.log("Unmuted auto-play blocked by browser policy, fallback to muted auto-play first.", e);
+            video.muted = true;
+            video.play().catch(() => {});
         });
 
         // 댓글 갯수 가져오기

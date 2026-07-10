@@ -175,9 +175,15 @@
 
     <!-- Shorts Mode Fullscreen Container -->
     <div id="shorts-container" class="shorts-hidden">
+        <div class="shorts-top-header">
+            <button class="shorts-back-btn" id="btn-exit-shorts-mode" title="플레이리스트로 돌아가기">
+                <i class="fa-solid fa-chevron-left"></i> 플레이리스트
+            </button>
+            <span class="shorts-top-title">ANDREW YOUTH SHORTS</span>
+        </div>
         <div class="shorts-viewport">
             <div class="shorts-slide shorts-active">
-                <video class="shorts-video" playsinline webkit-playsinline loop muted></video>
+                <video class="shorts-video" playsinline webkit-playsinline loop></video>
                 <div class="shorts-overlay">
                     <div class="shorts-actions">
                         <button class="shorts-action-btn" id="shorts-like-btn">
@@ -190,6 +196,11 @@
                         </button>
                         <button class="shorts-action-btn" id="shorts-share-btn">
                             <i class="fa-solid fa-share"></i>
+                            <span class="shorts-action-count">공유</span>
+                        </button>
+                        <button class="shorts-action-btn" id="shorts-mute-btn" title="소리 켜기/끄기">
+                            <i class="fa-solid fa-volume-high" id="shorts-mute-icon"></i>
+                            <span class="shorts-action-count" id="shorts-mute-label">소리켬</span>
                         </button>
                     </div>
                     <div class="shorts-info">
