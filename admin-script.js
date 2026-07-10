@@ -1221,7 +1221,9 @@ $(document).ready(function () {
         settings = settings || {};
         $('#setting-playlist-title').val(settings.title || '');
         $('#setting-playlist-subtitle').val(settings.subtitle || '');
-        $('#setting-popup-enabled').prop('checked', !!settings.popupEnabled);
+
+        const isPopup = (settings.popupEnabled === true || settings.popupEnabled === 'true' || settings.popupEnabled === 1 || settings.popupEnabled === '1');
+        $('#setting-popup-enabled').prop('checked', isPopup);
         
         if (settings.popupImageUrl) {
             $('#setting-popup-url').val(settings.popupImageUrl);
@@ -1231,7 +1233,8 @@ $(document).ready(function () {
             $('#setting-popup-preview').attr('src', '').hide();
         }
 
-        $('#setting-promo-enabled').prop('checked', !!settings.promoActive);
+        const isPromo = (settings.promoActive === true || settings.promoActive === 'true' || settings.promoActive === 1 || settings.promoActive === '1');
+        $('#setting-promo-enabled').prop('checked', isPromo);
         $('#setting-promo-date').val(settings.promoDate || '');
         $('#setting-promo-title').val(settings.promoTitle || '');
         $('#setting-promo-text').val(settings.promoText || '');

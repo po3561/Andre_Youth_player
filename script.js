@@ -84,13 +84,16 @@ $(document).ready(function () {
                 // 팝업 광고/공지 표시 로직 (최초 1회만)
                 if (!window.isPopupChecked) {
                     window.isPopupChecked = true;
-                    if (settings.popupEnabled && settings.popupImageUrl) {
+                    const isPopupActive = settings && (settings.popupEnabled === true || settings.popupEnabled === 'true' || settings.popupEnabled === 1 || settings.popupEnabled === '1');
+                    if (isPopupActive && settings.popupImageUrl) {
                         const hideUntil = localStorage.getItem('andre_youth_popup_hide');
                         const now = Date.now();
                         if (!hideUntil || now > parseInt(hideUntil)) {
                             $('#startup-popup-img').attr('src', settings.popupImageUrl);
                             $('#startup-popup-overlay').css('display', 'flex');
                         }
+                    } else {
+                        $('#startup-popup-overlay').hide();
                     }
                 }
                 initPromoBanner();
@@ -1186,8 +1189,9 @@ $(document).ready(function () {
             if (window.CloudflareAPI && window.CloudflareAPI.D1) {
                 config = await window.CloudflareAPI.D1.getSettings().catch(() => null);
             }
-            if (!config || !config.promoActive) {
-                $('#promo-banner-card, #shorts-promo-banner').addClass('hidden');
+            const isPromoActive = config && (config.promoActive === true || config.promoActive === 'true' || config.promoActive === 1 || config.promoActive === '1');
+            if (!isPromoActive) {
+                $('#promo-banner-card, #shorts-promo-banner').addClass('hidden').hide();
                 return;
             }
 
@@ -1210,7 +1214,7 @@ $(document).ready(function () {
             $('#promo-dday-badge, #shorts-promo-dday-badge').text(badgeText);
             $('#promo-main-title, #shorts-promo-main-title').text(config.promoTitle || '');
             $('#promo-sub-text, #shorts-promo-sub-text').text(config.promoText || '');
-            $('#promo-banner-card, #shorts-promo-banner').removeClass('hidden');
+            $('#promo-banner-card, #shorts-promo-banner').removeClass('hidden').css('display', 'flex');
         } catch (e) {
             console.log('Promo banner load info:', e.message);
         }
