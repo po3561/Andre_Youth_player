@@ -487,19 +487,21 @@ body {
 }
 
 /* === Shorts Toggle Switch === */
+/* ═══════════ Shorts Mode Toggle Switch (Perfect Grid Width = 82px) ═══════════ */
 .shorts-toggle {
     position: relative;
     display: inline-flex;
     align-items: center;
-    width: 58px;
-    height: 30px;
+    width: 82px;
+    height: 38px;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid var(--border-glass);
     border-radius: 20px;
     cursor: pointer;
-    margin-left: 4px;
+    margin: 0;
     vertical-align: middle;
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 .shorts-toggle input {
     opacity: 0;
@@ -510,22 +512,22 @@ body {
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     background: var(--text-dim);
     border-radius: 50%;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 1;
 }
 .shorts-toggle input:checked + .shorts-toggle-slider {
-    transform: translateX(28px);
+    transform: translateX(44px);
     background: var(--primary);
-    box-shadow: 0 0 8px var(--primary-glow);
+    box-shadow: 0 0 12px var(--primary-glow);
 }
 .shorts-toggle-icon {
     position: absolute;
-    right: 7px;
-    font-size: 13px;
+    right: 12px;
+    font-size: 15px;
     color: var(--text-dim);
     z-index: 0;
     transition: color 0.3s;
@@ -815,19 +817,21 @@ body {
 .slide-down-out { animation: slideDownOut 0.35s cubic-bezier(0.1, 0.76, 0.55, 0.94) forwards; }
 
 /* === Promo / D-Day Banner Panel (Top LED Display) === */
-/* === Dynamic Island D-Day Promo Banner === */
+/* === Dynamic Island D-Day Promo Banner (Aligned with Header Left/Right Icons) === */
 .dynamic-island-banner {
-    margin: 8px auto 12px auto;
-    max-width: 94%;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid rgba(0, 242, 254, 0.45);
-    border-radius: 36px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(0, 242, 254, 0.25);
+    width: 100%;
+    margin: 10px 0 14px 0;
+    padding: 10px 18px;
+    background: rgba(18, 24, 34, 0.62);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 242, 254, 0.42);
+    border-radius: 28px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 18px rgba(0, 242, 254, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
     transition: all 0.35s cubic-bezier(0.19, 1, 0.22, 1);
 }
 .dynamic-island-banner.hidden {
