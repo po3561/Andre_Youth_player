@@ -22,8 +22,8 @@
     <div class="admin-container">
         <header class="admin-header">
             <div class="nav-side nav-side-left">
-                <a href="index.html" class="icon-btn header-text-btn" aria-label="플레이어로 돌아가기">
-                    <i class="fa-solid fa-chevron-left"></i> 플레이리스트
+                <a href="index.html" class="icon-btn header-text-btn" aria-label="플레이어로 돌아가기" title="플레이어로 돌아가기">
+                    <i class="fa-solid fa-chevron-left"></i> <span class="header-btn-text">플레이리스트</span>
                 </a>
             </div>
             <div class="nav-title">
@@ -32,10 +32,10 @@
             </div>
             <div class="nav-side nav-side-right" style="gap: 8px;">
                 <button id="btn-refresh-token" class="icon-btn header-text-btn" style="background: rgba(0, 242, 254, 0.15); color: #00f2fe; border-color: rgba(0, 242, 254, 0.3);" title="권한 갱신 및 재로그인">
-                    <i class="fa-solid fa-key"></i> 권한 갱신
+                    <i class="fa-solid fa-key"></i> <span class="header-btn-text">권한 갱신</span>
                 </button>
-                <button id="btn-admin-logout" class="icon-btn header-text-btn btn-logout" aria-label="로그아웃">
-                    <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
+                <button id="btn-admin-logout" class="icon-btn header-text-btn btn-logout" aria-label="로그아웃" title="로그아웃">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span class="header-btn-text">로그아웃</span>
                 </button>
             </div>
         </header>
@@ -63,10 +63,18 @@
         <main class="admin-main">
             <!-- 1. Music Upload Tab -->
             <div id="tab-music" class="tab-content active">
-                <div class="popup-trigger-card" id="btn-open-songs-popup">
-                    <i class="fa-solid fa-folder-open"></i>
-                    <span>현재 등록된 곡 목록 관리</span>
-                    <p>기존 곡들의 정보 수정 및 삭제, 순서 편집을 지원합니다.</p>
+                <div class="popup-trigger-card interactive-trigger-card" id="btn-open-songs-popup">
+                    <div class="trigger-left">
+                        <div class="trigger-icon-box"><i class="fa-solid fa-compact-disc"></i></div>
+                        <div class="trigger-text-box">
+                            <span>현재 등록된 곡 목록 관리</span>
+                            <p>기존 곡들의 정보 수정 및 삭제, 순서 편집을 지원합니다.</p>
+                        </div>
+                    </div>
+                    <div class="trigger-action-pill">
+                        <span>목록 열기</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
                 </div>
 
                 <div class="upload-card glass-card">
@@ -167,10 +175,18 @@
 
             <!-- 2. Shorts Upload Tab -->
             <div id="tab-shorts" class="tab-content">
-                <div class="popup-trigger-card" id="btn-open-shorts-popup">
-                    <i class="fa-solid fa-video"></i>
-                    <span>현재 등록된 쇼츠 목록 관리</span>
-                    <p>기존 업로드된 쇼츠 영상 목록을 조회하고 삭제할 수 있습니다.</p>
+                <div class="popup-trigger-card interactive-trigger-card" id="btn-open-shorts-popup">
+                    <div class="trigger-left">
+                        <div class="trigger-icon-box"><i class="fa-solid fa-clapperboard"></i></div>
+                        <div class="trigger-text-box">
+                            <span>현재 등록된 쇼츠 목록 관리</span>
+                            <p>기존 업로드된 쇼츠 영상 목록을 조회하고 관리할 수 있습니다.</p>
+                        </div>
+                    </div>
+                    <div class="trigger-action-pill">
+                        <span>목록 열기</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
                 </div>
 
                 <div class="upload-card glass-card">
@@ -212,19 +228,35 @@
 
             <!-- 3. User Authorization Tab -->
             <div id="tab-users" class="tab-content">
-                <div class="popup-trigger-card" id="btn-open-users-popup" style="border-style: solid; background: rgba(0, 242, 254, 0.02);">
-                    <i class="fa-solid fa-user-check"></i>
-                    <span>가입 신청 및 사용자 승인 대기자 목록</span>
-                    <p>신청한 서브 관리자들의 정보를 확인하고 승인하거나 영구 삭제합니다.</p>
+                <div class="popup-trigger-card interactive-trigger-card" id="btn-open-users-popup">
+                    <div class="trigger-left">
+                        <div class="trigger-icon-box"><i class="fa-solid fa-user-shield"></i></div>
+                        <div class="trigger-text-box">
+                            <span>가입 신청 및 승인 대기자 목록 관리</span>
+                            <p>신청한 서브 관리자들의 정보를 확인하고 승인하거나 삭제합니다.</p>
+                        </div>
+                    </div>
+                    <div class="trigger-action-pill">
+                        <span>승인 대기자 열기</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
                 </div>
             </div>
 
             <!-- 4. Settings & Inquiry Tab -->
             <div id="tab-settings" class="tab-content">
-                <div class="popup-trigger-card" id="btn-open-inquiries-popup">
-                    <i class="fa-solid fa-envelope-open-text"></i>
-                    <span>1:1 문의 접수 내역 확인</span>
-                    <p>사용자들이 남긴 1:1 고객 문의 목록 및 연락처를 조회합니다.</p>
+                <div class="popup-trigger-card interactive-trigger-card" id="btn-open-inquiries-popup">
+                    <div class="trigger-left">
+                        <div class="trigger-icon-box"><i class="fa-solid fa-envelope-open-text"></i></div>
+                        <div class="trigger-text-box">
+                            <span>1:1 문의 접수 내역 관리</span>
+                            <p>사용자들이 남긴 1:1 고객 문의 목록 및 연락처를 조회합니다.</p>
+                        </div>
+                    </div>
+                    <div class="trigger-action-pill">
+                        <span>문의함 열기</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
                 </div>
 
                 <div class="manage-card glass-card">

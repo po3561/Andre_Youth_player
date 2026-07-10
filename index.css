@@ -73,13 +73,24 @@ body {
 @keyframes bars { from { height: 12px; opacity: 0.4; } to { height: 30px; opacity: 1; } }
 
 /* ═══════════ Header ═══════════ */
+/* ═══════════ Header ═══════════ */
 .header { 
     display: flex; justify-content: space-between; align-items: center; 
-    padding: 12px 0; height: 60px; flex-shrink: 0;
+    padding: 10px 0; min-height: 64px; flex-shrink: 0; position: relative;
 }
-.header-left, .header-right { display: flex; align-items: center; gap: 6px; }
-.header-title { text-align: center; flex: 1; min-width: 0; }
-.header-title h2 { font-size: 9px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-left {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 6px; z-index: 10;
+}
+.header-left-top { display: flex; align-items: center; gap: 6px; }
+.header-left-bottom { display: flex; align-items: center; }
+.header-right { display: flex; align-items: center; gap: 6px; z-index: 10; }
+
+/* 절대 정중앙 고정 타이틀 */
+.center-absolute-title {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    text-align: center; z-index: 5; pointer-events: none;
+}
+.header-title h2 { font-size: 9px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
 .header-title h1 { font-size: 16px; font-weight: 800; margin-top: 1px; letter-spacing: -0.5px; }
 
 .icon-btn {
@@ -804,34 +815,59 @@ body {
 .slide-down-out { animation: slideDownOut 0.35s cubic-bezier(0.1, 0.76, 0.55, 0.94) forwards; }
 
 /* === Promo / D-Day Banner Panel (Top LED Display) === */
-.promo-banner-card {
-    margin: 8px 16px 12px 16px;
-    padding: 14px 18px;
-    background: linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(79, 172, 254, 0.08) 100%);
-    border: 1px solid rgba(0, 242, 254, 0.35);
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 242, 254, 0.15);
+/* === Dynamic Island D-Day Promo Banner === */
+.dynamic-island-banner {
+    margin: 8px auto 12px auto;
+    max-width: 94%;
+    padding: 8px 16px;
+    background: #000000;
+    border: 1px solid rgba(0, 242, 254, 0.45);
+    border-radius: 36px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(0, 242, 254, 0.25);
     display: flex;
     align-items: center;
-    gap: 14px;
-    transition: all 0.3s ease;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.35s cubic-bezier(0.19, 1, 0.22, 1);
 }
-.promo-banner-card.hidden {
+.dynamic-island-banner.hidden {
     display: none !important;
 }
-.promo-dday-badge {
+.island-dday-pill {
     background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
     color: #0d1117;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 900;
-    padding: 6px 12px;
-    border-radius: 10px;
-    letter-spacing: -0.3px;
-    box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
-    white-space: nowrap;
+    padding: 3px 9px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
 }
-.promo-content {
-    flex: 1;
+.island-content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+}
+.island-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.island-sep {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 12px;
+}
+.island-sub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
     overflow: hidden;
 }
 .promo-main-title {

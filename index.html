@@ -30,17 +30,22 @@
     
     <div id="app-container">
         <!-- Header: 채팅+문의 왼쪽, 볼륨+관리자 오른쪽 -->
+        <!-- Header: 채팅+문의 및 모드 스위치 왼쪽, 절대 정중앙 타이틀, 볼륨+관리자 오른쪽 -->
         <header class="header">
             <div class="header-left">
-                <button class="icon-btn" id="btn-open-chat" title="채팅"><i class="fa-solid fa-comment"></i></button>
-                <button class="icon-btn" id="btn-inquiry" title="문의"><i class="fa-solid fa-envelope"></i></button>
-                <label class="shorts-toggle" title="쇼츠 모드">
-                    <input type="checkbox" id="shorts-mode-toggle">
-                    <span class="shorts-toggle-slider"></span>
-                    <i class="fa-solid fa-clapperboard shorts-toggle-icon"></i>
-                </label>
+                <div class="header-left-top">
+                    <button class="icon-btn" id="btn-open-chat" title="채팅"><i class="fa-solid fa-comment"></i></button>
+                    <button class="icon-btn" id="btn-inquiry" title="문의"><i class="fa-solid fa-envelope"></i></button>
+                </div>
+                <div class="header-left-bottom">
+                    <label class="shorts-toggle" title="쇼츠 모드 전환">
+                        <input type="checkbox" id="shorts-mode-toggle">
+                        <span class="shorts-toggle-slider"></span>
+                        <i class="fa-solid fa-clapperboard shorts-toggle-icon"></i>
+                    </label>
+                </div>
             </div>
-            <div class="header-title">
+            <div class="header-title center-absolute-title">
                 <h2 id="top-subtitle">ANDREW YOUTH</h2>
                 <h1 id="top-title">믿음으로 기대하다</h1>
             </div>
@@ -57,12 +62,13 @@
             <i class="fa-solid fa-volume-high"></i>
         </div>
 
-        <!-- Promo / D-Day Banner Card -->
-        <div id="promo-banner-card" class="promo-banner-card hidden">
-            <div class="promo-dday-badge" id="promo-dday-badge">D-DAY</div>
-            <div class="promo-content">
-                <h3 id="promo-main-title" class="promo-main-title">2026 북부기도회</h3>
-                <p id="promo-sub-text" class="promo-sub-text">믿음으로 기대하며 함께 찬양합시다!</p>
+        <!-- Dynamic Island D-Day Promo Banner -->
+        <div id="promo-banner-card" class="dynamic-island-banner hidden">
+            <div class="island-dday-pill" id="promo-dday-badge">D-DAY</div>
+            <div class="island-content">
+                <span id="promo-main-title" class="island-title"></span>
+                <span class="island-sep">·</span>
+                <span id="promo-sub-text" class="island-sub"></span>
             </div>
         </div>
 
