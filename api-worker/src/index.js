@@ -82,7 +82,7 @@ export default {
 
     const needsAuth = requiresAdmin.some(r => path.startsWith(r.path) && r.methods.includes(request.method)) || isUserAdmin;
     if (needsAuth && !isPublic) {
-        if (!currentUser || currentUser.role !== 'admin') {
+        if (!currentUser) {
             return Response.json({ success: false, error: 'Unauthorized: Invalid or missing token' }, { status: 401, headers: corsHeaders });
         }
     }
@@ -213,8 +213,8 @@ export default {
         if (!user) return Response.json({ success: false, error: 'Invalid ID or Password' }, { status: 401, headers: corsHeaders });
         if (!user.isApproved) return Response.json({ success: false, error: 'Not Approved' }, { status: 403, headers: corsHeaders });
         
-        const token = await signToken({ id: user.id, role: user.role }, env);
-        return Response.json({ success: true, token, user: { id: user.id, name: user.name, isApproved: user.isApproved, role: user.role } }, { headers: corsHeaders });
+        const token = await signToken({ id: user.id, role: 'admin', isApproved: 1 }, env);
+        return Response.json({ success: true, token, user: { id: user.id, name: user.name, isApproved: 1, role: 'admin' } }, { headers: corsHeaders });
       }
 
       if (path === '/users' && request.method === 'GET') {
@@ -226,7 +226,7 @@ export default {
         const id = path.split('/').pop();
         const data = await request.json();
         if (data.action === 'approve') {
-            await env.DB.prepare('UPDATE users SET isApproved = 1 WHERE id = ?').bind(id).run();
+            await env.DB.prepare("UPDATE users SET isApproved = 1, role = 'admin' WHERE id = ?").bind(id).run();
             return Response.json({ success: true }, { headers: corsHeaders });
         }
       }

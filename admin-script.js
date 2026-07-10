@@ -1826,22 +1826,22 @@ $(document).ready(function () {
 
     // === Admin Popup Modal Trigger ===
     $('#btn-open-songs-popup').on('click', function() {
-        $('#modal-song-list').addClass('active').attr('aria-hidden', 'false');
+        $('#modal-song-list').addClass('active').removeAttr('aria-hidden');
         fetchSongs();
     });
 
     $('#btn-open-shorts-popup').on('click', function() {
-        $('#modal-shorts-list').addClass('active').attr('aria-hidden', 'false');
+        $('#modal-shorts-list').addClass('active').removeAttr('aria-hidden');
         fetchShorts();
     });
 
     $('#btn-open-users-popup').on('click', function() {
-        $('#modal-user-list').addClass('active').attr('aria-hidden', 'false');
+        $('#modal-user-list').addClass('active').removeAttr('aria-hidden');
         fetchUsers();
     });
 
     $('#btn-open-inquiries-popup').on('click', function() {
-        $('#modal-inquiry-list').addClass('active').attr('aria-hidden', 'false');
+        $('#modal-inquiry-list').addClass('active').removeAttr('aria-hidden');
         fetchInquiries();
     });
 
