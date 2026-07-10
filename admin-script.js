@@ -37,28 +37,20 @@ $(document).ready(function () {
 
     // Cloudflare R2 Upload Function
     async function uploadFileToStorage(file, folder) {
-        if (!file || !window.CloudflareAPI || !window.CloudflareAPI.s3) return null;
+        if (!file || !window.CloudflareAPI || !window.CloudflareAPI.D1) return null;
         
         const fileName = `${folder}/${Date.now()}_${file.name}`;
-        const params = {
-            Bucket: window.CloudflareAPI.CF_CONFIG.R2_BUCKET_NAME,
-            Key: fileName,
-            Body: file,
-            ContentType: file.type || 'application/octet-stream'
-        };
-
-        return new Promise((resolve, reject) => {
-            window.CloudflareAPI.s3.upload(params, function(err, data) {
-                if (err) {
-                    console.error("R2 Upload Error:", err);
-                    reject(err);
-                } else {
-                    // R2 public bucket URL 생성
-                    const publicUrl = `https://pub-6f09ba73beba48419076ff845f6d3731.r2.dev/${fileName}`;
-                    resolve(publicUrl);
-                }
-            });
-        });
+        
+        try {
+            const result = await window.CloudflareAPI.D1.uploadFile(fileName, file);
+            if (result.success && result.url) {
+                return result.url;
+            }
+            throw new Error(result.error || 'Upload failed');
+        } catch(err) {
+            console.error("R2 Upload Error:", err);
+            throw err;
+        }
     }
 
     // User Management Functions

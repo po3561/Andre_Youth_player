@@ -1,3 +1,41 @@
+// --- Security Utils ---
+async function hashPassword(password) {
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+const JWT_SECRET = "ANDRE_YOUTH_SUPER_SECRET_KEY_2026_!@#";
+
+async function signToken(payload) {
+  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = btoa(JSON.stringify(payload));
+  const dataToSign = `${header}.${body}`;
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(JWT_SECRET),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(dataToSign));
+  const sigBase64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
+  return `${dataToSign}.${sigBase64}`;
+}
+
+async function verifyToken(token) {
+  if (!token) return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  const [header, body, sigBase64] = parts;
+  const dataToVerify = `${header}.${body}`;
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(JWT_SECRET),
+    { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
+  );
+  const sigBuffer = new Uint8Array(atob(sigBase64).split('').map(c => c.charCodeAt(0)));
+  const isValid = await crypto.subtle.verify("HMAC", key, sigBuffer, new TextEncoder().encode(dataToVerify));
+  return isValid ? JSON.parse(atob(body)) : false;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const corsHeaders = {
@@ -13,7 +51,39 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // 미들웨어: 인증 확인 (Authorization Header 파싱)
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader ? authHeader.replace('Bearer ', '') : null;
+    const currentUser = await verifyToken(token);
+
+    // 권한이 필요한 라우트 목록 (예: 생성/수정/삭제 등)
+    const requiresAdmin = [
+        { path: '/playlist', methods: ['POST', 'PUT', 'DELETE'] },
+        { path: '/settings', methods: ['POST'] },
+        { path: '/users', methods: ['PUT', 'DELETE'] },
+        { path: '/upload', methods: ['PUT'] },
+        { path: '/reset', methods: ['DELETE'] },
+        { path: '/init', methods: ['POST'] }
+    ];
+
+    const needsAuth = requiresAdmin.some(r => path.startsWith(r.path) && r.methods.includes(request.method));
+    if (needsAuth) {
+        if (!currentUser || currentUser.role !== 'admin') {
+            return Response.json({ success: false, error: 'Unauthorized: Invalid or missing token' }, { status: 401, headers: corsHeaders });
+        }
+    }
+
     try {
+      // R2 Upload
+      if (path === '/upload' && request.method === 'PUT') {
+        const filename = url.searchParams.get('filename');
+        if (!filename) return Response.json({ success: false, error: 'filename query missing' }, { status: 400, headers: corsHeaders });
+        
+        await env.BUCKET.put(filename, request.body);
+        const publicUrl = `https://pub-6f09ba73beba48419076ff845f6d3731.r2.dev/${filename}`;
+        return Response.json({ success: true, url: publicUrl }, { headers: corsHeaders });
+      }
+
       // Playlist
       if (path === '/playlist' && request.method === 'GET') {
         const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY createdAt ASC').all();
@@ -103,8 +173,9 @@ export default {
         const existing = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(data.id).first();
         if (existing) return Response.json({ success: false, error: 'Already exists' }, { status: 400, headers: corsHeaders });
         
+        const hashedPw = await hashPassword(data.password);
         await env.DB.prepare('INSERT INTO users (id, password, name, phone, company, position, isApproved, role, createdAt) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)').bind(
-            data.id, data.password, data.name || data.id, data.phone || '', data.company || '', data.position || '', 'user', Date.now()
+            data.id, hashedPw, data.name || data.id, data.phone || '', data.company || '', data.position || '', 'user', Date.now()
         ).run();
         return Response.json({ success: true, message: 'Signup success, waiting approval' }, { headers: corsHeaders });
       }
@@ -113,13 +184,28 @@ export default {
         const data = await request.json();
         // Master Admin Hardcoding Backup
         if (data.id === 'admin' && data.password === '1234') {
-            return Response.json({ success: true, user: { id: 'admin', name: 'Master Admin', isApproved: 1, role: 'admin' } }, { headers: corsHeaders });
+            const token = await signToken({ id: 'admin', role: 'admin' });
+            return Response.json({ success: true, token, user: { id: 'admin', name: 'Master Admin', isApproved: 1, role: 'admin' } }, { headers: corsHeaders });
         }
-        const user = await env.DB.prepare('SELECT * FROM users WHERE id = ? AND password = ?').bind(data.id, data.password).first();
+        
+        const hashedPw = await hashPassword(data.password);
+        let user = await env.DB.prepare('SELECT * FROM users WHERE id = ? AND password = ?').bind(data.id, hashedPw).first();
+        
+        // 점진적 해시 마이그레이션: 해시 매칭 실패 시 기존 평문 비밀번호로 재검증
+        if (!user) {
+            const legacyUser = await env.DB.prepare('SELECT * FROM users WHERE id = ? AND password = ?').bind(data.id, data.password).first();
+            if (legacyUser) {
+                // 레거시 계정 발견 → 비밀번호를 해시로 자동 업그레이드
+                await env.DB.prepare('UPDATE users SET password = ? WHERE id = ?').bind(hashedPw, legacyUser.id).run();
+                user = legacyUser;
+            }
+        }
+        
         if (!user) return Response.json({ success: false, error: 'Invalid ID or Password' }, { status: 401, headers: corsHeaders });
         if (!user.isApproved) return Response.json({ success: false, error: 'Not Approved' }, { status: 403, headers: corsHeaders });
         
-        return Response.json({ success: true, user: { id: user.id, name: user.name, isApproved: user.isApproved, role: user.role } }, { headers: corsHeaders });
+        const token = await signToken({ id: user.id, role: user.role });
+        return Response.json({ success: true, token, user: { id: user.id, name: user.name, isApproved: user.isApproved, role: user.role } }, { headers: corsHeaders });
       }
 
       if (path === '/users' && request.method === 'GET') {

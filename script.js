@@ -712,6 +712,10 @@ $(document).ready(function () {
             try {
                 const res = await window.CloudflareAPI.D1.login({ id: id, password: pw });
                 if (res.success && res.user) {
+                    // JWT 보안 토큰 저장
+                    if (res.token) {
+                        localStorage.setItem('andre_youth_admin_token', res.token);
+                    }
                     localStorage.setItem('adminUser', JSON.stringify({ 
                         id: res.user.id, name: res.user.name, isApproved: true, isAdmin: res.user.role === 'admin' 
                     }));
