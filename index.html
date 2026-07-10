@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="index.css?v=2.1">
+    <link rel="stylesheet" href="index.css?v=3.1">
 </head>
 <body>
     <!-- Splash Screen -->
@@ -34,6 +34,11 @@
             <div class="header-left">
                 <button class="icon-btn" id="btn-open-chat" title="채팅"><i class="fa-solid fa-comment"></i></button>
                 <button class="icon-btn" id="btn-inquiry" title="문의"><i class="fa-solid fa-envelope"></i></button>
+                <label class="shorts-toggle" title="쇼츠 모드">
+                    <input type="checkbox" id="shorts-mode-toggle">
+                    <span class="shorts-toggle-slider"></span>
+                    <i class="fa-solid fa-clapperboard shorts-toggle-icon"></i>
+                </label>
             </div>
             <div class="header-title">
                 <h2 id="top-subtitle">ANDREW YOUTH</h2>
@@ -168,11 +173,61 @@
         </div>
     </div>
 
+    <!-- Shorts Mode Fullscreen Container -->
+    <div id="shorts-container" class="shorts-hidden">
+        <div class="shorts-viewport">
+            <div class="shorts-slide shorts-active">
+                <video class="shorts-video" playsinline webkit-playsinline loop muted></video>
+                <div class="shorts-overlay">
+                    <div class="shorts-actions">
+                        <button class="shorts-action-btn" id="shorts-like-btn">
+                            <i class="fa-regular fa-heart"></i>
+                            <span class="shorts-action-count" id="shorts-like-count">0</span>
+                        </button>
+                        <button class="shorts-action-btn" id="shorts-comment-btn">
+                            <i class="fa-regular fa-comment"></i>
+                            <span class="shorts-action-count" id="shorts-comment-count">0</span>
+                        </button>
+                        <button class="shorts-action-btn" id="shorts-share-btn">
+                            <i class="fa-solid fa-share"></i>
+                        </button>
+                    </div>
+                    <div class="shorts-info">
+                        <h3 class="shorts-title"></h3>
+                        <p class="shorts-desc"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="shorts-empty-state" style="display:none;">
+            <i class="fa-solid fa-film"></i>
+            <p>업로드된 쇼츠가 없습니다</p>
+        </div>
+    </div>
+
+    <!-- Shorts Comments Bottom Sheet -->
+    <div id="shorts-comments-sheet" class="bottom-sheet">
+        <div class="bottom-sheet-backdrop"></div>
+        <div class="bottom-sheet-content">
+            <div class="bottom-sheet-handle"></div>
+            <div class="bottom-sheet-header">
+                <h3>댓글</h3>
+                <button class="bottom-sheet-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="bottom-sheet-body" id="shorts-comments-list"></div>
+            <div class="bottom-sheet-input">
+                <input type="text" id="shorts-comment-nickname" placeholder="닉네임" maxlength="20">
+                <input type="text" id="shorts-comment-input" placeholder="댓글을 입력하세요..." maxlength="200">
+                <button id="shorts-comment-send"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
     <audio id="audio-engine" preload="metadata" playsinline></audio>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="cloudflare-api.js?v=3.0"></script>
-    <script src="music-engine.js?v=3.0"></script>
-    <script src="script.js?v=3.0"></script>
+    <script src="cloudflare-api.js?v=3.1"></script>
+    <script src="music-engine.js?v=3.1"></script>
+    <script src="script.js?v=3.1"></script>
 </body>
 </html>

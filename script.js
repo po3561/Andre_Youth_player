@@ -18,6 +18,18 @@ $(document).ready(function () {
     const userId = localStorage.getItem('player_uid') || ('user_' + Math.random().toString(36).substr(2, 9));
     localStorage.setItem('player_uid', userId);
 
+    /* ─── Shorts State ─── */
+    let isShortsMode = false;
+    let shortsList = [];
+    let shortsOrder = []; // 셔플된 재생 순서 인덱스 배열
+    let curShortsOrderIdx = 0; // 현재 셔플 순서 상의 인덱스
+    let likedShorts = JSON.parse(localStorage.getItem('andre_liked_shorts') || '[]');
+    let isShortsTransitioning = false;
+    
+    // 터치 스와이프용 변수
+    let touchStartY = 0;
+    let touchEndY = 0;
+
     /* ─── Init ─── */
     function init() {
         setTimeout(() => { $('#splash-screen').fadeOut(600); }, 1200);
@@ -804,6 +816,123 @@ $(document).ready(function () {
             localStorage.setItem('andre_favs', JSON.stringify(favorites));
             syncFavoriteState();
         });
+
+        /* === Shorts Mode Toggle === */
+        $('#shorts-mode-toggle').on('change', function() {
+            isShortsMode = $(this).is(':checked');
+            if (isShortsMode) {
+                // 기존 음악 일시정지
+                if (audio && !audio.paused) {
+                    audio.pause();
+                    $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
+                }
+                $('#app-container').hide();
+                $('#shorts-container').removeClass('shorts-hidden');
+                initShortsMode();
+            } else {
+                // 쇼츠 비디오 일시정지 및 숨김
+                stopAllShortsVideos();
+                $('#shorts-container').addClass('shorts-hidden');
+                $('#app-container').show();
+            }
+        });
+
+        /* === Shorts Swipe & Control Events === */
+        const $shortsContainer = $('#shorts-container');
+        
+        $shortsContainer.on('touchstart', function(e) {
+            touchStartY = e.originalEvent.touches[0].clientY;
+        });
+
+        $shortsContainer.on('touchend', function(e) {
+            touchEndY = e.originalEvent.changedTouches[0].clientY;
+            handleShortsSwipe();
+        });
+
+        // 비디오 터치 시 재생/일시정지 토글
+        $(document).on('click', '.shorts-video', function() {
+            const video = this;
+            if (video.paused) {
+                video.play().catch(() => {});
+            } else {
+                video.pause();
+            }
+        });
+
+        // 쇼츠 좋아요 버튼
+        $('#shorts-like-btn').on('click', async function(e) {
+            e.stopPropagation();
+            if (!shortsList.length || isShortsTransitioning) return;
+            const curShorts = shortsList[shortsOrder[curShortsOrderIdx]];
+            if (!curShorts) return;
+
+            const id = curShorts.id;
+            const isLiked = likedShorts.includes(id);
+            
+            try {
+                // D1 API 호출하여 좋아요 수 올림
+                const res = await window.CloudflareAPI.D1.likeShorts(id);
+                if (res.success) {
+                    if (!isLiked) {
+                        likedShorts.push(id);
+                        localStorage.setItem('andre_liked_shorts', JSON.stringify(likedShorts));
+                    }
+                    $('#shorts-like-count').text(res.likes);
+                    updateShortsLikeUI(true);
+                }
+            } catch(err) {
+                console.error("Like error:", err);
+            }
+        });
+
+        // 쇼츠 댓글 버튼 (바텀 시트 열기)
+        $('#shorts-comment-btn').on('click', function(e) {
+            e.stopPropagation();
+            if (!shortsList.length) return;
+            const curShorts = shortsList[shortsOrder[curShortsOrderIdx]];
+            if (!curShorts) return;
+
+            $('#shorts-comments-sheet').addClass('active');
+            fetchShortsComments(curShorts.id);
+        });
+
+        // 바텀 시트 닫기
+        $('.bottom-sheet-close, .bottom-sheet-backdrop').on('click', function() {
+            $('#shorts-comments-sheet').removeClass('active');
+        });
+
+        // 댓글 전송
+        $('#shorts-comment-send').on('click', function() {
+            sendShortsComment();
+        });
+
+        $('#shorts-comment-input').on('keypress', function(e) {
+            if (e.which === 13) sendShortsComment();
+        });
+
+        // 쇼츠 공유 버튼
+        $('#shorts-share-btn').on('click', function(e) {
+            e.stopPropagation();
+            if (!shortsList.length) return;
+            const curShorts = shortsList[shortsOrder[curShortsOrderIdx]];
+            if (!curShorts) return;
+
+            const shareUrl = `${window.location.origin}${window.location.pathname}#shorts/${curShorts.id}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: curShorts.title,
+                    text: curShorts.description || 'ANDREW YOUTH Shorts',
+                    url: shareUrl
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert('공유 링크가 클립보드에 복사되었습니다!');
+                }).catch(() => {
+                    alert('링크 복사에 실패했습니다. 수동으로 복사해 주세요: ' + shareUrl);
+                });
+            }
+        });
     }
 
     function syncFavoriteState() {
@@ -812,6 +941,237 @@ $(document).ready(function () {
         const isFav = favorites.includes(song.id || song.title);
         $('#btn-scrap i').attr('class', isFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart');
         $('#btn-scrap').toggleClass('active', isFav);
+    }
+
+    }
+
+    /* ─── Shorts Mode Logic ─── */
+    async function initShortsMode() {
+        if (!window.CloudflareAPI || !window.CloudflareAPI.D1) return;
+
+        try {
+            const data = await window.CloudflareAPI.D1.getShorts();
+            shortsList = data || [];
+            
+            if (shortsList.length === 0) {
+                $('.shorts-viewport').hide();
+                $('.shorts-empty-state').show();
+                return;
+            }
+
+            $('.shorts-empty-state').hide();
+            $('.shorts-viewport').show();
+
+            // 셔플 알고리즘 적용
+            shuffleShortsList();
+
+            // URL 해시(#shorts/아이디) 탐색 시 해당 쇼츠를 가장 먼저 재생하도록 순서 조정
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#shorts/')) {
+                const targetId = hash.replace('#shorts/', '');
+                const foundIdx = shortsList.findIndex(s => s.id === targetId);
+                if (foundIdx !== -1) {
+                    // targetId를 가진 인덱스를 셔플 순서의 맨 앞으로 보냄
+                    const orderIdx = shortsOrder.indexOf(foundIdx);
+                    if (orderIdx !== -1) {
+                        shortsOrder.splice(orderIdx, 1);
+                        shortsOrder.unshift(foundIdx);
+                    }
+                }
+            }
+
+            curShortsOrderIdx = 0;
+            playShortsVideo(shortsOrder[curShortsOrderIdx]);
+
+        } catch (err) {
+            console.error("Fetch shorts error:", err);
+            $('.shorts-viewport').hide();
+            $('.shorts-empty-state').show().find('p').text('영상 목록을 가져오지 못했습니다.');
+        }
+    }
+
+    // Fisher-Yates 셔플 알고리즘
+    function shuffleShortsList() {
+        shortsOrder = Array.from({ length: shortsList.length }, (_, i) => i);
+        for (let i = shortsOrder.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shortsOrder[i], shortsOrder[j]] = [shortsOrder[j], shortsOrder[i]];
+        }
+    }
+
+    function playShortsVideo(idx) {
+        if (idx === undefined || !shortsList[idx]) return;
+        const shorts = shortsList[idx];
+
+        const $slide = $('.shorts-slide');
+        const video = $slide.find('.shorts-video')[0];
+
+        // 비디오 소스 주입
+        video.src = shorts.videoUrl;
+        video.load();
+
+        // 메타데이터 정보 렌더링
+        $slide.find('.shorts-title').text(shorts.title || '제목 없음');
+        $slide.find('.shorts-desc').text(shorts.description || '');
+        $('#shorts-like-count').text(shorts.likes || 0);
+
+        // 좋아요 상태 UI 반영
+        const isLiked = likedShorts.includes(shorts.id);
+        updateShortsLikeUI(isLiked);
+
+        // 비디오 재생
+        video.play().catch(e => {
+            console.log("Auto-play blocked, wait for user interaction.", e);
+        });
+
+        // 댓글 갯수 가져오기
+        fetchShortsCommentsCount(shorts.id);
+
+        // 해시 업데이트 (현재 재생영상 ID 기록)
+        window.location.hash = `shorts/${shorts.id}`;
+
+        // 다음 영상 미리 로드 (프리로딩)
+        preloadNextVideo();
+    }
+
+    function preloadNextVideo() {
+        const nextOrderIdx = (curShortsOrderIdx + 1) % shortsList.length;
+        const nextShorts = shortsList[shortsOrder[nextOrderIdx]];
+        if (nextShorts && nextShorts.videoUrl) {
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'video';
+            link.href = nextShorts.videoUrl;
+            // 이전 프리로드 링크가 있다면 삭제하여 무리 방지
+            $('head link[rel="preload"][as="video"]').remove();
+            document.head.appendChild(link);
+        }
+    }
+
+    function stopAllShortsVideos() {
+        const video = $('.shorts-slide').find('.shorts-video')[0];
+        if (video) {
+            video.pause();
+            video.src = '';
+        }
+    }
+
+    function handleShortsSwipe() {
+        if (!shortsList.length || isShortsTransitioning) return;
+        const diff = touchStartY - touchEndY;
+
+        if (diff > 50) {
+            // 위로 스와이프: 다음 영상 (인스타/유튜브와 동일하게 전체합에서 무한 순환)
+            isShortsTransitioning = true;
+            curShortsOrderIdx++;
+            
+            if (curShortsOrderIdx >= shortsList.length) {
+                // 마지막 영상 통과 시 다시 셔플하여 무한 연결
+                shuffleShortsList();
+                curShortsOrderIdx = 0;
+            }
+
+            animateShortsSlide('up', () => {
+                playShortsVideo(shortsOrder[curShortsOrderIdx]);
+                isShortsTransitioning = false;
+            });
+
+        } else if (diff < -50) {
+            // 아래로 스와이프: 이전 영상
+            if (curShortsOrderIdx > 0) {
+                isShortsTransitioning = true;
+                curShortsOrderIdx--;
+                animateShortsSlide('down', () => {
+                    playShortsVideo(shortsOrder[curShortsOrderIdx]);
+                    isShortsTransitioning = false;
+                });
+            }
+        }
+    }
+
+    function animateShortsSlide(direction, callback) {
+        const $slide = $('.shorts-slide');
+        const animationClassIn = direction === 'up' ? 'slide-up-in' : 'slide-down-in';
+        
+        $slide.addClass(animationClassIn);
+        setTimeout(() => {
+            $slide.removeClass('slide-up-in slide-down-in');
+            if (callback) callback();
+        }, 350);
+    }
+
+    function updateShortsLikeUI(isLiked) {
+        const $icon = $('#shorts-like-btn i');
+        if (isLiked) {
+            $icon.attr('class', 'fa-solid fa-heart');
+        } else {
+            $icon.attr('class', 'fa-regular fa-heart');
+        }
+    }
+
+    async function fetchShortsCommentsCount(shortsId) {
+        try {
+            const comments = await window.CloudflareAPI.D1.getShortsComments(shortsId);
+            $('#shorts-comment-count').text(comments.length || 0);
+        } catch (e) {
+            $('#shorts-comment-count').text(0);
+        }
+    }
+
+    async function fetchShortsComments(shortsId) {
+        const $list = $('#shorts-comments-list').empty().append('<div class="loading-spinner">댓글 불러오는 중...</div>');
+        try {
+            const comments = await window.CloudflareAPI.D1.getShortsComments(shortsId);
+            $list.empty();
+            if (comments.length === 0) {
+                $list.append('<div class="loading-spinner" style="font-size: 13px;">첫 댓글을 작성해 보세요!</div>');
+                return;
+            }
+
+            comments.forEach(c => {
+                const date = new Date(c.timestamp);
+                const timeStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                $list.append(`
+                    <div class="comment-item">
+                        <div class="comment-meta">
+                            <span class="comment-author">${c.nickname}</span>
+                            <span class="comment-time">${timeStr}</span>
+                        </div>
+                        <div class="comment-content">${c.content}</div>
+                    </div>
+                `);
+            });
+            $list.scrollTop($list[0].scrollHeight);
+        } catch(e) {
+            $list.html('<div style="color:red; font-size:13px; text-align:center;">불러오기 실패</div>');
+        }
+    }
+
+    async function sendShortsComment() {
+        if (!shortsList.length) return;
+        const curShorts = shortsList[shortsOrder[curShortsOrderIdx]];
+        if (!curShorts) return;
+
+        const nickname = $('#shorts-comment-nickname').val().trim() || '익명';
+        const content = $('#shorts-comment-input').val().trim();
+        if (!content) return;
+
+        $('#shorts-comment-input').val('');
+        const commentId = 'comment_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+        try {
+            const res = await window.CloudflareAPI.D1.addShortsComment(curShorts.id, {
+                id: commentId,
+                content: content,
+                nickname: nickname
+            });
+            if (res.success) {
+                fetchShortsComments(curShorts.id);
+                fetchShortsCommentsCount(curShorts.id);
+            }
+        } catch(e) {
+            alert('댓글 전송 실패: ' + e.message);
+        }
     }
 
     init();

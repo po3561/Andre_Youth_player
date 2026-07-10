@@ -149,6 +149,47 @@
                 </div>
             </div>
 
+            <!-- Shorts Upload Card -->
+            <div class="upload-card glass-card" style="margin-top: 20px;">
+                <div class="nav-title" style="margin-bottom: 20px;">
+                    <span class="sub-title">관리자 전용</span>
+                    <span class="main-title">새 쇼츠 비디오 업로드</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="shorts-title-input">쇼츠 제목 (필수)</label>
+                    <input type="text" id="shorts-title-input" placeholder="쇼츠 제목을 입력하세요" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="shorts-desc-input">쇼츠 설명</label>
+                    <textarea id="shorts-desc-input" rows="3" placeholder="영상에 대한 설명을 입력하세요 (선택)"></textarea>
+                </div>
+
+                <div class="drop-zone-container">
+                    <div class="drop-zone" id="drop-shorts-video" data-type="video" style="width: 100%;">
+                        <input type="file" id="file-shorts-video" accept="video/mp4,video/quicktime,video/webm" hidden>
+                        <i class="fa-solid fa-file-video" style="font-size: 32px; color: var(--primary);"></i>
+                        <p>쇼츠 영상 파일 (.mp4, .mov, .webm)</p>
+                        <span class="file-info">드래그 또는 클릭</span>
+                    </div>
+                </div>
+
+                <button id="btn-upload-shorts" class="primary-btn upload-all-btn" style="margin-top: 15px;">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> 새 쇼츠 저장 및 업로드 시작
+                </button>
+
+                <div id="shorts-upload-progress" class="progress-container" style="display: none; margin-top: 15px;">
+                    <div class="progress-info">
+                        <span id="shorts-upload-status">파일 처리 중...</span>
+                        <span id="shorts-progress-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="shorts-progress-fill" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="manage-card glass-card">
                 <div class="manage-header">
                     <h3>플레이어 앱 설정</h3>
@@ -198,6 +239,17 @@
                     </div>
                 </div>
                 <div id="admin-song-list" class="admin-song-list">
+                    <div class="loading-spinner">목록 불러오는 중...</div>
+                </div>
+            </div>
+
+            <!-- Shorts List Management Card -->
+            <div class="manage-card glass-card">
+                <div class="manage-header">
+                    <h3>현재 등록된 쇼츠 목록</h3>
+                    <button id="btn-refresh-shorts" class="icon-btn" aria-label="쇼츠 목록 갱신"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+                <div id="admin-shorts-list" class="admin-song-list">
                     <div class="loading-spinner">목록 불러오는 중...</div>
                 </div>
             </div>

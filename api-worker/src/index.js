@@ -65,6 +65,7 @@ export default {
         { path: '/playlist', methods: ['POST', 'PUT', 'DELETE'] },
         { path: '/settings', methods: ['POST'] },
         { path: '/upload', methods: ['PUT'] },
+        { path: '/shorts', methods: ['POST', 'DELETE'] },
         { path: '/reset', methods: ['DELETE'] },
         { path: '/init', methods: ['POST'] }
     ];
@@ -238,12 +239,57 @@ export default {
         return Response.json({ success: true }, { headers: corsHeaders });
       }
 
+      // Shorts
+      if (path === '/shorts' && request.method === 'GET') {
+        const { results } = await env.DB.prepare('SELECT * FROM shorts ORDER BY createdAt DESC').all();
+        return Response.json(results || [], { headers: corsHeaders });
+      }
+
+      if (path === '/shorts' && request.method === 'POST') {
+        const data = await request.json();
+        await env.DB.prepare('INSERT INTO shorts (id, title, description, videoUrl, likes, createdAt) VALUES (?, ?, ?, ?, 0, ?)').bind(
+          data.id, data.title, data.description || '', data.videoUrl, Date.now()
+        ).run();
+        return Response.json({ success: true }, { headers: corsHeaders });
+      }
+
+      if (path.startsWith('/shorts/') && path.endsWith('/like') && request.method === 'PUT') {
+        const id = path.split('/')[2];
+        await env.DB.prepare('UPDATE shorts SET likes = likes + 1 WHERE id = ?').bind(id).run();
+        const updated = await env.DB.prepare('SELECT likes FROM shorts WHERE id = ?').bind(id).first();
+        return Response.json({ success: true, likes: updated?.likes || 0 }, { headers: corsHeaders });
+      }
+
+      if (path.startsWith('/shorts/') && path.endsWith('/comments') && request.method === 'GET') {
+        const id = path.split('/')[2];
+        const { results } = await env.DB.prepare('SELECT * FROM shorts_comments WHERE shortsId = ? ORDER BY timestamp ASC').bind(id).all();
+        return Response.json(results || [], { headers: corsHeaders });
+      }
+
+      if (path.startsWith('/shorts/') && path.endsWith('/comments') && request.method === 'POST') {
+        const id = path.split('/')[2];
+        const data = await request.json();
+        await env.DB.prepare('INSERT INTO shorts_comments (id, shortsId, content, nickname, timestamp) VALUES (?, ?, ?, ?, ?)').bind(
+          data.id, id, data.content, data.nickname || '익명', Date.now()
+        ).run();
+        return Response.json({ success: true }, { headers: corsHeaders });
+      }
+
+      if (path.startsWith('/shorts/') && !path.includes('/like') && !path.includes('/comments') && request.method === 'DELETE') {
+        const id = path.split('/').pop();
+        await env.DB.prepare('DELETE FROM shorts WHERE id = ?').bind(id).run();
+        await env.DB.prepare('DELETE FROM shorts_comments WHERE shortsId = ?').bind(id).run();
+        return Response.json({ success: true }, { headers: corsHeaders });
+      }
+
       if (path === '/init' && request.method === 'POST') {
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS playlist (id TEXT PRIMARY KEY, title TEXT, artist TEXT, audio TEXT, cover TEXT, lyricsData TEXT, createdAt INTEGER, syncOffset REAL)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS chat (id TEXT PRIMARY KEY, content TEXT, timestamp INTEGER, uid TEXT)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS inquiry (id TEXT PRIMARY KEY, title TEXT, content TEXT, contact TEXT, timestamp INTEGER)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, password TEXT, name TEXT, phone TEXT, company TEXT, position TEXT, isApproved INTEGER, role TEXT, createdAt INTEGER)").run();
+          await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts (id TEXT PRIMARY KEY, title TEXT, description TEXT, videoUrl TEXT, likes INTEGER DEFAULT 0, createdAt INTEGER)").run();
+          await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_comments (id TEXT PRIMARY KEY, shortsId TEXT, content TEXT, nickname TEXT, timestamp INTEGER)").run();
           
           // 기존 테이블 호환성을 위한 ALTER (실패 시 무시)
           try { await env.DB.prepare("ALTER TABLE users ADD COLUMN phone TEXT").run(); } catch(e) {}

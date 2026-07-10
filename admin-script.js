@@ -140,7 +140,8 @@ $(document).ready(function () {
         audioPreviewUrl: null,
         editSongId: null,
         editAudioFile: null,
-        editImageFile: null
+        editImageFile: null,
+        shortsFile: null
     };
 
     fetchSongs();
@@ -292,12 +293,17 @@ $(document).ready(function () {
             alert('이미지 파일만 선택 가능합니다.');
             return;
         }
-
+        if (type === 'video' && !file.type.startsWith('video/')) {
+            alert('영상 파일만 선택 가능합니다.');
+            return;
+        }
 
         if (type === 'audio') {
             state.audioFile = file;
-        } else {
+        } else if (type === 'image') {
             state.image = file;
+        } else if (type === 'video') {
+            state.shortsFile = file;
         }
         $zone.find('.file-info').text(toTitleLabel(file)).css('opacity', '1');
         $zone.find('p').text('파일 선택됨').css('color', '#00ff88');
@@ -1647,4 +1653,160 @@ $(document).ready(function () {
             $('#btn-edit-save').click();
         }
     });
+
+    /* === Shorts Management Logic === */
+    async function fetchShorts() {
+        const $list = $('#admin-shorts-list').html('<div class="loading-spinner">쇼츠 목록을 불러오는 중...</div>');
+        try {
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                const shorts = await window.CloudflareAPI.D1.getShorts();
+                renderShorts(shorts);
+            }
+        } catch (e) {
+            $list.html('<div style="color:red;">로드 실패: ' + e.message + '</div>');
+        }
+    }
+
+    function renderShorts(shorts) {
+        const $list = $('#admin-shorts-list').empty();
+        if (!shorts || shorts.length === 0) {
+            $list.append('<div class="loading-spinner">등록된 쇼츠가 없습니다.</div>');
+            return;
+        }
+
+        shorts.forEach(s => {
+            const $item = $('<div>').addClass('admin-song-item');
+            const $info = $('<div>').addClass('admin-song-info');
+            
+            // 쇼츠 비디오 요소 (작은 썸네일 미리보기)
+            const $video = $('<video>')
+                .attr('src', s.videoUrl)
+                .attr('muted', true)
+                .attr('playsinline', true)
+                .css({ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px', background: '#000' });
+            
+            // 호버 시 마우스 호버로 재생되도록
+            $video.on('mouseenter', function() { this.play().catch(() => {}); })
+                  .on('mouseleave', function() { this.pause(); });
+
+            const $titleWrapper = $('<div>').css({ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginLeft: '10px' });
+            $titleWrapper.append($('<strong>').text(s.title || '제목 없음'));
+            if (s.description) {
+                $titleWrapper.append($('<small>').text(s.description).css({ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginTop: '2px' }));
+            }
+
+            $info.append($video, $titleWrapper);
+
+            const $deleteButton = $('<button>')
+                .addClass('btn-delete-song')
+                .attr('type', 'button')
+                .attr('aria-label', '삭제')
+                .data('id', s.id)
+                .html('<i class="fa-solid fa-trash-can"></i>');
+
+            const $actions = $('<div>').addClass('admin-song-actions');
+            $actions.append($deleteButton);
+            $item.append($info, $actions);
+            $list.append($item);
+        });
+    }
+
+    // 쇼츠 업로드 버튼 핸들러
+    $('#btn-upload-shorts').on('click', async function() {
+        const title = $('#shorts-title-input').val().trim();
+        const desc = $('#shorts-desc-input').val().trim();
+        const file = state.shortsFile;
+
+        if (!title) {
+            alert('쇼츠 제목을 입력해주세요.');
+            return;
+        }
+        if (!file) {
+            alert('쇼츠 영상 파일을 선택해주세요.');
+            return;
+        }
+
+        const $btn = $(this);
+        const $progressContainer = $('#shorts-upload-progress');
+        const $progressStatus = $('#shorts-upload-status');
+        const $progressFill = $('#shorts-progress-fill');
+        const $progressPercent = $('#shorts-progress-percent');
+
+        $btn.prop('disabled', true);
+        $progressContainer.show();
+        $progressStatus.text('R2 서버에 영상 업로드 중...');
+        $progressFill.css('width', '10%');
+        $progressPercent.text('10%');
+
+        try {
+            // 1. R2 업로드 (D1.uploadFile 프록시 API 사용)
+            const uploadRes = await window.CloudflareAPI.D1.uploadFile(`shorts/${Date.now()}_${file.name}`, file);
+            if (!uploadRes.success || !uploadRes.url) {
+                throw new Error(uploadRes.error || 'Video upload failed');
+            }
+
+            $progressFill.css('width', '70%');
+            $progressPercent.text('70%');
+            $progressStatus.text('DB에 정보 저장 중...');
+
+            // 2. D1 DB 저장
+            const id = 'shorts_' + Date.now();
+            const dbRes = await window.CloudflareAPI.D1.addShorts({
+                id: id,
+                title: title,
+                description: desc,
+                videoUrl: uploadRes.url
+            });
+
+            if (!dbRes.success) {
+                throw new Error(dbRes.error || 'DB save failed');
+            }
+
+            $progressFill.css('width', '100%');
+            $progressPercent.text('100%');
+            $progressStatus.text('업로드 완료!');
+
+            setTimeout(() => {
+                // 폼 초기화
+                $('#shorts-title-input').val('');
+                $('#shorts-desc-input').val('');
+                state.shortsFile = null;
+                const $zone = $('#drop-shorts-video');
+                $zone.find('.file-info').text('드래그 또는 클릭').css('opacity', '0.5');
+                $zone.find('p').text('쇼츠 영상 파일 (.mp4, .mov, .webm)').css('color', '');
+                
+                $progressContainer.hide();
+                $btn.prop('disabled', false);
+                fetchShorts();
+                alert('쇼츠가 성공적으로 등록되었습니다!');
+            }, 1000);
+
+        } catch (err) {
+            alert('업로드 실패: ' + err.message);
+            $progressContainer.hide();
+            $btn.prop('disabled', false);
+        }
+    });
+
+    // 쇼츠 삭제 처리
+    $(document).on('click', '#admin-shorts-list .btn-delete-song', async function() {
+        const id = $(this).data('id');
+        if (confirm('이 쇼츠 영상을 정말로 삭제하시겠습니까? 관련 댓글도 모두 함께 삭제됩니다.')) {
+            try {
+                const res = await window.CloudflareAPI.D1.deleteShorts(id);
+                if (res.success) {
+                    fetchShorts();
+                    alert('삭제되었습니다.');
+                }
+            } catch(e) {
+                alert('삭제 실패: ' + e.message);
+            }
+        }
+    });
+
+    // 쇼츠 새로고침 버튼
+    $('#btn-refresh-shorts').on('click', fetchShorts);
+
+    // 최초 로드 시 쇼츠 목록 로드
+    fetchShorts();
 });

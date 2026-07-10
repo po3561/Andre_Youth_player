@@ -159,6 +159,50 @@ const D1 = {
         });
         if (!res.ok) throw new Error('Upload failed');
         return await res.json();
+    },
+    // --- Shorts ---
+    async getShorts() {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts`, { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to fetch shorts');
+        return await res.json();
+    },
+    async addShorts(data) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts`, {
+            method: 'POST',
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to add shorts');
+        return await res.json();
+    },
+    async deleteShorts(id) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        if (!res.ok) throw new Error('Failed to delete shorts');
+        return await res.json();
+    },
+    async likeShorts(id) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${id}/like`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        });
+        return await res.json();
+    },
+    async getShortsComments(shortsId) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${shortsId}/comments`, { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to fetch comments');
+        return await res.json();
+    },
+    async addShortsComment(shortsId, data) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${shortsId}/comments`, {
+            method: 'POST',
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Failed to add comment');
+        return await res.json();
     }
 };
 
