@@ -6,14 +6,15 @@ async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-const JWT_SECRET = "ANDRE_YOUTH_SUPER_SECRET_KEY_2026_!@#";
+const DEFAULT_SECRET = "ANDRE_YOUTH_SUPER_SECRET_KEY_2026_!@#";
 
-async function signToken(payload) {
+async function signToken(payload, env) {
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const body = btoa(JSON.stringify(payload));
   const dataToSign = `${header}.${body}`;
+  const secret = env.JWT_SECRET || DEFAULT_SECRET;
   const key = await crypto.subtle.importKey(
-    "raw", new TextEncoder().encode(JWT_SECRET),
+    "raw", new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(dataToSign));
@@ -21,15 +22,16 @@ async function signToken(payload) {
   return `${dataToSign}.${sigBase64}`;
 }
 
-async function verifyToken(token) {
+async function verifyToken(token, env) {
   try {
     if (!token) return false;
     const parts = token.split('.');
     if (parts.length !== 3) return false;
     const [header, body, sigBase64] = parts;
     const dataToVerify = `${header}.${body}`;
+    const secret = env.JWT_SECRET || DEFAULT_SECRET;
     const key = await crypto.subtle.importKey(
-      "raw", new TextEncoder().encode(JWT_SECRET),
+      "raw", new TextEncoder().encode(secret),
       { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
     );
     const sigBuffer = new Uint8Array(atob(sigBase64).split('').map(c => c.charCodeAt(0)));
@@ -58,7 +60,7 @@ export default {
     // 미들웨어: 인증 확인 (Authorization Header 파싱)
     const authHeader = request.headers.get('Authorization');
     const token = authHeader ? authHeader.replace('Bearer ', '') : null;
-    const currentUser = await verifyToken(token);
+    const currentUser = await verifyToken(token, env);
 
     // 권한이 필요한 라우트 목록 (예: 생성/수정/삭제 등)
     const requiresAdmin = [
@@ -66,6 +68,7 @@ export default {
         { path: '/settings', methods: ['POST'] },
         { path: '/upload', methods: ['PUT'] },
         { path: '/shorts', methods: ['POST', 'DELETE'] },
+        { path: '/users', methods: ['GET', 'PUT', 'DELETE'] },
         { path: '/reset', methods: ['DELETE'] },
         { path: '/init', methods: ['POST'] }
     ];
@@ -193,11 +196,6 @@ export default {
 
       if (path === '/users/login' && request.method === 'POST') {
         const data = await request.json();
-        // Master Admin Hardcoding Backup
-        if (data.id === 'admin' && data.password === '1234') {
-            const token = await signToken({ id: 'admin', role: 'admin' });
-            return Response.json({ success: true, token, user: { id: 'admin', name: 'Master Admin', isApproved: 1, role: 'admin' } }, { headers: corsHeaders });
-        }
         
         const hashedPw = await hashPassword(data.password);
         let user = await env.DB.prepare('SELECT * FROM users WHERE id = ? AND password = ?').bind(data.id, hashedPw).first();
@@ -215,7 +213,7 @@ export default {
         if (!user) return Response.json({ success: false, error: 'Invalid ID or Password' }, { status: 401, headers: corsHeaders });
         if (!user.isApproved) return Response.json({ success: false, error: 'Not Approved' }, { status: 403, headers: corsHeaders });
         
-        const token = await signToken({ id: user.id, role: user.role });
+        const token = await signToken({ id: user.id, role: user.role }, env);
         return Response.json({ success: true, token, user: { id: user.id, name: user.name, isApproved: user.isApproved, role: user.role } }, { headers: corsHeaders });
       }
 
@@ -295,6 +293,9 @@ export default {
           try { await env.DB.prepare("ALTER TABLE users ADD COLUMN phone TEXT").run(); } catch(e) {}
           try { await env.DB.prepare("ALTER TABLE users ADD COLUMN company TEXT").run(); } catch(e) {}
           try { await env.DB.prepare("ALTER TABLE users ADD COLUMN position TEXT").run(); } catch(e) {}
+          
+          // 마스터 어드민(admin) 계정이 없으면 암호화된 비밀번호(1234의 해시)로 자동 주입
+          await env.DB.prepare("INSERT OR IGNORE INTO users (id, password, name, phone, company, position, isApproved, role, createdAt) VALUES ('admin', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Master Admin', '', '', '', 1, 'admin', ?)").bind(Date.now()).run();
           
           await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('mainTitle', 'ANDREW YOUTH'), ('subTitle', '믿음으로 기대하다')").run();
 
