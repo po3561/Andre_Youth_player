@@ -855,18 +855,6 @@ $(document).ready(function () {
             updateShortsMuteUI();
         });
 
-        function updateShortsMuteUI() {
-            const $icon = $('#shorts-mute-icon');
-            const $label = $('#shorts-mute-label');
-            if (isShortsMuted) {
-                $icon.removeClass('fa-volume-high').addClass('fa-volume-xmark');
-                $label.text('음소거');
-            } else {
-                $icon.removeClass('fa-volume-xmark').addClass('fa-volume-high');
-                $label.text('소리켬');
-            }
-        }
-
         /* === Shorts Swipe & Control Events === */
         const $shortsContainer = $('#shorts-container');
         
@@ -1140,6 +1128,18 @@ $(document).ready(function () {
             $icon.attr('class', 'fa-solid fa-heart');
         } else {
             $icon.attr('class', 'fa-regular fa-heart');
+        }
+    }
+
+    function updateShortsMuteUI() {
+        const $icon = $('#shorts-mute-icon');
+        const $label = $('#shorts-mute-label');
+        if (isShortsMuted) {
+            $icon.removeClass('fa-volume-high').addClass('fa-volume-xmark');
+            $label.text('음소거');
+        } else {
+            $icon.removeClass('fa-volume-xmark').addClass('fa-volume-high');
+            $label.text('소리켬');
         }
     }
 
