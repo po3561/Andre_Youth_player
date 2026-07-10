@@ -1187,7 +1187,7 @@ $(document).ready(function () {
                 config = await window.CloudflareAPI.D1.getSettings().catch(() => null);
             }
             if (!config || !config.promoActive) {
-                $('#promo-banner-card').addClass('hidden');
+                $('#promo-banner-card, #shorts-promo-banner').addClass('hidden');
                 return;
             }
 
@@ -1207,10 +1207,10 @@ $(document).ready(function () {
                 }
             }
 
-            $('#promo-dday-badge').text(badgeText);
-            $('#promo-main-title').text(config.promoTitle || '');
-            $('#promo-sub-text').text(config.promoText || '');
-            $('#promo-banner-card').removeClass('hidden');
+            $('#promo-dday-badge, #shorts-promo-dday-badge').text(badgeText);
+            $('#promo-main-title, #shorts-promo-main-title').text(config.promoTitle || '');
+            $('#promo-sub-text, #shorts-promo-sub-text').text(config.promoText || '');
+            $('#promo-banner-card, #shorts-promo-banner').removeClass('hidden');
         } catch (e) {
             console.log('Promo banner load info:', e.message);
         }

@@ -184,11 +184,22 @@
 
     <!-- Shorts Mode Fullscreen Container -->
     <div id="shorts-container" class="shorts-hidden">
-        <div class="shorts-top-header">
-            <button class="shorts-back-btn" id="btn-exit-shorts-mode" title="플레이리스트로 돌아가기">
-                <i class="fa-solid fa-chevron-left"></i> 플레이리스트
-            </button>
-            <span class="shorts-top-title">ANDREW YOUTH SHORTS</span>
+        <!-- Shorts Top Header with D-Day Promo & Mode Toggle -->
+        <div class="shorts-top-header-wrap">
+            <div class="shorts-top-bar">
+                <button class="shorts-mode-switch-btn" id="btn-exit-shorts-mode" title="플레이리스트 모드로 전환">
+                    <i class="fa-solid fa-music"></i> 플레이리스트로 변환
+                </button>
+                <span class="shorts-top-title">ANDREW YOUTH SHORTS</span>
+            </div>
+            <!-- 쇼츠 모드 상단 D-Day & 타이틀 메시지 배너 -->
+            <div id="shorts-promo-banner" class="promo-banner-card shorts-promo-card hidden">
+                <div class="promo-dday-badge" id="shorts-promo-dday-badge">D-DAY</div>
+                <div class="promo-content">
+                    <h3 id="shorts-promo-main-title" class="promo-main-title"></h3>
+                    <p id="shorts-promo-sub-text" class="promo-sub-text"></p>
+                </div>
+            </div>
         </div>
         <div class="shorts-viewport">
             <div class="shorts-slide shorts-active">
