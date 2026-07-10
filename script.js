@@ -20,6 +20,7 @@ $(document).ready(function () {
 
     /* ─── Shorts State ─── */
     let isShortsMode = false;
+    let isShortsMuted = false;
     let shortsList = [];
     let shortsOrder = []; // 셔플된 재생 순서 인덱스 배열
     let curShortsOrderIdx = 0; // 현재 셔플 순서 상의 인덱스
@@ -843,7 +844,6 @@ $(document).ready(function () {
         });
 
         /* === Shorts Mute Toggle === */
-        let isShortsMuted = false;
         $('#shorts-mute-btn').on('click', function(e) {
             e.stopPropagation();
             isShortsMuted = !isShortsMuted;
