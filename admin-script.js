@@ -14,6 +14,8 @@ $(document).ready(function () {
 
     $('#btn-admin-logout').on('click', function () {
         if (confirm('로그아웃 하시겠습니까?')) {
+            localStorage.removeItem('andre_youth_admin_token');
+            localStorage.removeItem('adminUser');
             window.location.href = 'index.html';
         }
     });

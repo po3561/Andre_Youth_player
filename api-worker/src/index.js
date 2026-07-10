@@ -22,18 +22,22 @@ async function signToken(payload) {
 }
 
 async function verifyToken(token) {
-  if (!token) return false;
-  const parts = token.split('.');
-  if (parts.length !== 3) return false;
-  const [header, body, sigBase64] = parts;
-  const dataToVerify = `${header}.${body}`;
-  const key = await crypto.subtle.importKey(
-    "raw", new TextEncoder().encode(JWT_SECRET),
-    { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
-  );
-  const sigBuffer = new Uint8Array(atob(sigBase64).split('').map(c => c.charCodeAt(0)));
-  const isValid = await crypto.subtle.verify("HMAC", key, sigBuffer, new TextEncoder().encode(dataToVerify));
-  return isValid ? JSON.parse(atob(body)) : false;
+  try {
+    if (!token) return false;
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const [header, body, sigBase64] = parts;
+    const dataToVerify = `${header}.${body}`;
+    const key = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(JWT_SECRET),
+      { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
+    );
+    const sigBuffer = new Uint8Array(atob(sigBase64).split('').map(c => c.charCodeAt(0)));
+    const isValid = await crypto.subtle.verify("HMAC", key, sigBuffer, new TextEncoder().encode(dataToVerify));
+    return isValid ? JSON.parse(atob(body)) : false;
+  } catch(e) {
+    return false;
+  }
 }
 
 export default {
@@ -60,14 +64,20 @@ export default {
     const requiresAdmin = [
         { path: '/playlist', methods: ['POST', 'PUT', 'DELETE'] },
         { path: '/settings', methods: ['POST'] },
-        { path: '/users', methods: ['PUT', 'DELETE'] },
         { path: '/upload', methods: ['PUT'] },
         { path: '/reset', methods: ['DELETE'] },
         { path: '/init', methods: ['POST'] }
     ];
 
-    const needsAuth = requiresAdmin.some(r => path.startsWith(r.path) && r.methods.includes(request.method));
-    if (needsAuth) {
+    // 인증 제외 경로 (회원가입/로그인은 누구나 접근 가능)
+    const publicPaths = ['/users/signup', '/users/login'];
+    const isPublic = publicPaths.some(p => path === p);
+
+    // /users/{id} PUT/DELETE는 관리자 전용
+    const isUserAdmin = path.startsWith('/users/') && !isPublic && ['PUT', 'DELETE'].includes(request.method);
+
+    const needsAuth = requiresAdmin.some(r => path.startsWith(r.path) && r.methods.includes(request.method)) || isUserAdmin;
+    if (needsAuth && !isPublic) {
         if (!currentUser || currentUser.role !== 'admin') {
             return Response.json({ success: false, error: 'Unauthorized: Invalid or missing token' }, { status: 401, headers: corsHeaders });
         }
