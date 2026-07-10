@@ -943,8 +943,6 @@ $(document).ready(function () {
         $('#btn-scrap').toggleClass('active', isFav);
     }
 
-    }
-
     /* ─── Shorts Mode Logic ─── */
     async function initShortsMode() {
         if (!window.CloudflareAPI || !window.CloudflareAPI.D1) return;
