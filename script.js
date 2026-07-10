@@ -93,6 +93,7 @@ $(document).ready(function () {
                         }
                     }
                 }
+                initPromoBanner();
             } else {
                 console.warn("Cloudflare 플레이리스트가 비어있습니다.");
                 $('#song-list-container').html('<div style="padding:40px;text-align:center;color:rgba(255,255,255,0.4);">등록된 곡이 없습니다.<br>관리자 페이지에서 곡을 추가해주세요.</div>');
@@ -1054,6 +1055,9 @@ $(document).ready(function () {
 
         // 다음 영상 미리 로드 (프리로딩)
         preloadNextVideo();
+
+        // 쇼츠 비디오 하단 탐색 진행바(Scrubber) 실시간 연동
+        bindShortsScrubber(video);
     }
 
     function preloadNextVideo() {
@@ -1140,6 +1144,75 @@ $(document).ready(function () {
         } else {
             $icon.removeClass('fa-volume-xmark').addClass('fa-volume-high');
             $label.text('소리켬');
+        }
+    }
+
+    let isShortsScrubbing = false;
+    function bindShortsScrubber(video) {
+        if (!video) return;
+        const $slider = $('#shorts-seek-slider');
+        const $curTime = $('#shorts-cur-time');
+        const $durTime = $('#shorts-dur-time');
+
+        $(video).off('timeupdate.shorts').on('timeupdate.shorts', function() {
+            if (isShortsScrubbing || !video.duration || isNaN(video.duration)) return;
+            const pct = (video.currentTime / video.duration) * 100;
+            $slider.val(pct);
+            $curTime.text(formatTime(video.currentTime));
+            $durTime.text(formatTime(video.duration));
+        });
+
+        $slider.off('input.shorts change.shorts').on('input.shorts', function() {
+            isShortsScrubbing = true;
+            if (video.duration && !isNaN(video.duration)) {
+                $curTime.text(formatTime((this.value / 100) * video.duration));
+            }
+        }).on('change.shorts', function(e) {
+            e.stopPropagation();
+            if (video.duration && !isNaN(video.duration)) {
+                video.currentTime = (this.value / 100) * video.duration;
+            }
+            isShortsScrubbing = false;
+        });
+
+        $('#shorts-progress-zone').off('click.shorts').on('click.shorts', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    async function initPromoBanner() {
+        try {
+            let config = null;
+            if (window.CloudflareAPI && window.CloudflareAPI.D1) {
+                config = await window.CloudflareAPI.D1.getSettings().catch(() => null);
+            }
+            if (!config || !config.promoActive) {
+                $('#promo-banner-card').addClass('hidden');
+                return;
+            }
+
+            let badgeText = "D-DAY";
+            if (config.promoDate) {
+                const target = new Date(config.promoDate);
+                target.setHours(0, 0, 0, 0);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24));
+                if (diffDays > 0) {
+                    badgeText = `D-${diffDays}`;
+                } else if (diffDays === 0) {
+                    badgeText = `D-DAY`;
+                } else {
+                    badgeText = `D+${Math.abs(diffDays)}`;
+                }
+            }
+
+            $('#promo-dday-badge').text(badgeText);
+            $('#promo-main-title').text(config.promoTitle || '');
+            $('#promo-sub-text').text(config.promoText || '');
+            $('#promo-banner-card').removeClass('hidden');
+        } catch (e) {
+            console.log('Promo banner load info:', e.message);
         }
     }
 

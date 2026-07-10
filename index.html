@@ -57,6 +57,15 @@
             <i class="fa-solid fa-volume-high"></i>
         </div>
 
+        <!-- Promo / D-Day Banner Card -->
+        <div id="promo-banner-card" class="promo-banner-card hidden">
+            <div class="promo-dday-badge" id="promo-dday-badge">D-DAY</div>
+            <div class="promo-content">
+                <h3 id="promo-main-title" class="promo-main-title">2026 북부기도회</h3>
+                <p id="promo-sub-text" class="promo-sub-text">믿음으로 기대하며 함께 찬양합시다!</p>
+            </div>
+        </div>
+
         <!-- Main Player -->
         <main class="player-content">
             <div class="album-section" id="album-trigger">
@@ -206,6 +215,13 @@
                     <div class="shorts-info">
                         <h3 class="shorts-title"></h3>
                         <p class="shorts-desc"></p>
+                    </div>
+                    <!-- Shorts Bottom Scrubber Bar -->
+                    <div class="shorts-progress-bar-wrap" id="shorts-progress-zone">
+                        <input type="range" id="shorts-seek-slider" class="shorts-seek-slider" min="0" max="100" value="0" step="0.1">
+                        <div class="shorts-time-badge">
+                            <span id="shorts-cur-time">0:00</span> / <span id="shorts-dur-time">0:00</span>
+                        </div>
                     </div>
                 </div>
             </div>

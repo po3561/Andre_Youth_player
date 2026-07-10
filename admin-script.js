@@ -1209,7 +1209,11 @@ $(document).ready(function () {
             title: ($('#setting-playlist-title').val() || '').trim(),
             subtitle: ($('#setting-playlist-subtitle').val() || '').trim(),
             popupEnabled: $('#setting-popup-enabled').is(':checked'),
-            popupImageUrl: $('#setting-popup-url').val() || ''
+            popupImageUrl: $('#setting-popup-url').val() || '',
+            promoActive: $('#setting-promo-enabled').is(':checked'),
+            promoDate: $('#setting-promo-date').val() || '',
+            promoTitle: ($('#setting-promo-title').val() || '').trim(),
+            promoText: ($('#setting-promo-text').val() || '').trim()
         };
     }
 
@@ -1226,6 +1230,11 @@ $(document).ready(function () {
             $('#setting-popup-url').val('');
             $('#setting-popup-preview').attr('src', '').hide();
         }
+
+        $('#setting-promo-enabled').prop('checked', !!settings.promoActive);
+        $('#setting-promo-date').val(settings.promoDate || '');
+        $('#setting-promo-title').val(settings.promoTitle || '');
+        $('#setting-promo-text').val(settings.promoText || '');
     }
 
     // 팝업 이미지 미리보기 (로컬)
@@ -1249,8 +1258,12 @@ $(document).ready(function () {
                 writeSettingsForm({ 
                     title: settings.mainTitle || '', 
                     subtitle: settings.subTitle || '',
-                    popupEnabled: settings.popupEnabled,
-                    popupImageUrl: settings.popupImageUrl
+                    popupEnabled: settings.popupEnabled === 'true' || settings.popupEnabled === true,
+                    popupImageUrl: settings.popupImageUrl,
+                    promoActive: settings.promoActive === 'true' || settings.promoActive === true,
+                    promoDate: settings.promoDate || '',
+                    promoTitle: settings.promoTitle || '',
+                    promoText: settings.promoText || ''
                 });
                 $status.text('설정을 불러왔습니다.');
             }
@@ -1280,7 +1293,11 @@ $(document).ready(function () {
                     mainTitle: data.title, 
                     subTitle: data.subtitle,
                     popupEnabled: data.popupEnabled,
-                    popupImageUrl: data.popupImageUrl
+                    popupImageUrl: data.popupImageUrl,
+                    promoActive: data.promoActive,
+                    promoDate: data.promoDate,
+                    promoTitle: data.promoTitle,
+                    promoText: data.promoText
                 });
                 $status.text('설정 저장 완료. 플레이어 새로고침 시 반영됩니다.');
             }
