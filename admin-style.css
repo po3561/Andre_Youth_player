@@ -1,16 +1,26 @@
 /* admin-style.css */
 .admin-container { 
-    position: relative; width: 100%; max-width: 600px; min-height: 100dvh; margin: 0 auto; 
-    display: flex; flex-direction: column; overflow-x: hidden; 
+    position: relative; 
+    width: 100%; 
+    max-width: 600px; 
+    min-height: 100vh; 
+    margin: 0 auto; 
+    display: flex; 
+    flex-direction: column; 
+    overflow-x: hidden;
+    background: #090a0f;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
 }
 
 body.admin-page {
-    background: #090a0f;
-    min-height: 100dvh;
+    background: #020204;
+    min-height: 100vh;
     height: auto;
     overflow-x: hidden;
     overflow-y: auto;
     font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
 .admin-header { 
@@ -730,21 +740,24 @@ body.admin-page {
 /* === Admin Mobile Renewal Tab Bar === */
 .admin-tab-bar {
     display: flex;
+    flex-wrap: nowrap;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border-glass);
     border-radius: 20px;
     padding: 6px;
     margin: 0 25px 20px 25px;
-    gap: 6px;
+    gap: 4px;
     backdrop-filter: blur(20px);
+    flex-shrink: 0;
 }
 .tab-btn {
     flex: 1;
+    min-width: 0;
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.55);
-    padding: 12px 8px;
-    font-size: 0.85rem;
+    padding: 10px 4px;
+    font-size: 0.72rem;
     font-weight: 700;
     font-family: 'Outfit', sans-serif;
     border-radius: 15px;
@@ -752,11 +765,14 @@ body.admin-page {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .tab-btn i {
-    font-size: 16px;
+    font-size: 14px;
 }
 .tab-btn.active {
     background: rgba(255, 255, 255, 0.08);
