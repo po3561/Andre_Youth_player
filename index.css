@@ -893,48 +893,84 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* === Shorts Top Header Wrap & Mode Switch Button === */
-.shorts-top-header-wrap {
+/* === Shorts Top Compact Single-Line Header === */
+.shorts-top-compact-bar {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     z-index: 100;
     display: flex;
-    flex-direction: column;
-    background: linear-gradient(180deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.45) 75%, transparent 100%);
-    padding: 18px 16px 10px 16px;
-}
-.shorts-top-bar {
-    display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    gap: 8px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.35) 75%, transparent 100%);
+    padding: 12px 14px 8px 14px;
 }
-.shorts-mode-switch-btn {
-    background: linear-gradient(135deg, rgba(0, 242, 254, 0.2) 0%, rgba(79, 172, 254, 0.2) 100%);
-    border: 1px solid #00f2fe;
+.shorts-mode-pill-btn {
+    background: linear-gradient(135deg, rgba(0, 242, 254, 0.22) 0%, rgba(79, 172, 254, 0.22) 100%);
+    border: 1px solid rgba(0, 242, 254, 0.85);
     color: #fff;
-    padding: 7px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 700;
+    padding: 6px 11px;
+    border-radius: 18px;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.35);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+.shorts-mode-pill-btn:hover, .shorts-mode-pill-btn:active {
+    background: #00f2fe;
+    color: #0d1117;
+    transform: scale(0.97);
+}
+.shorts-promo-pill {
     display: flex;
     align-items: center;
     gap: 6px;
-    cursor: pointer;
-    box-shadow: 0 0 12px rgba(0, 242, 254, 0.35);
-    transition: all 0.25s ease;
+    background: rgba(13, 17, 23, 0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 242, 254, 0.35);
+    padding: 4px 10px;
+    border-radius: 18px;
+    overflow: hidden;
+    max-width: calc(100% - 110px);
 }
-.shorts-mode-switch-btn:hover, .shorts-mode-switch-btn:active {
-    background: #00f2fe;
+.shorts-promo-pill.hidden {
+    display: none !important;
+}
+.shorts-promo-badge {
+    background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
     color: #0d1117;
-    transform: scale(0.98);
+    font-size: 10px;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 8px;
+    flex-shrink: 0;
 }
-.shorts-promo-card {
-    margin: 4px 0 8px 0 !important;
-    background: rgba(13, 17, 23, 0.75) !important;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(0, 242, 254, 0.4) !important;
+.shorts-promo-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.shorts-promo-sep {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    flex-shrink: 0;
+}
+.shorts-promo-sub {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
