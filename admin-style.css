@@ -726,3 +726,108 @@ body.admin-page {
     font-size: 1.2rem;
     font-weight: 800;
 }
+
+/* === Admin Mobile Renewal Tab Bar === */
+.admin-tab-bar {
+    display: flex;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    padding: 6px;
+    margin: 0 25px 20px 25px;
+    gap: 6px;
+    backdrop-filter: blur(20px);
+}
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.55);
+    padding: 12px 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    border-radius: 15px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tab-btn i {
+    font-size: 16px;
+}
+.tab-btn.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--primary);
+    box-shadow: inset 0 0 10px rgba(0, 242, 254, 0.1);
+}
+
+/* === Tab Content Control === */
+.tab-content {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeInTab 0.35s ease;
+}
+.tab-content.active {
+    display: flex;
+}
+@keyframes fadeInTab {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Popup Trigger Action Card === */
+.popup-trigger-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+.popup-trigger-card:active {
+    transform: scale(0.97);
+    background: rgba(255, 255, 255, 0.06);
+}
+.popup-trigger-card i {
+    font-size: 32px;
+    color: var(--primary);
+    text-shadow: 0 0 12px var(--primary-glow);
+}
+.popup-trigger-card span {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #fff;
+}
+.popup-trigger-card p {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    margin: 0;
+}
+
+/* === IOS Popup Scroll Customizing === */
+.admin-edit-body {
+    max-height: 70vh !important;
+    overflow-y: auto;
+}
+.admin-song-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+.admin-song-list::-webkit-scrollbar {
+    width: 4px;
+}
+.admin-song-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+}
+

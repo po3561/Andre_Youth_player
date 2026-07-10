@@ -3,7 +3,11 @@ $(document).ready(function () {
     // then verify Firebase Auth state asynchronously
     function checkAuth() {
         const adminUser = JSON.parse(localStorage.getItem('adminUser') || 'null');
-        if (!adminUser || !adminUser.isApproved) {
+        const token = localStorage.getItem('andre_youth_admin_token');
+        if (!adminUser || !adminUser.isApproved || !token) {
+            alert('보안 세션이 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.');
+            localStorage.removeItem('adminUser');
+            localStorage.removeItem('andre_youth_admin_token');
             window.location.href = 'index.html';
             return false;
         }
@@ -1809,4 +1813,40 @@ $(document).ready(function () {
 
     // 최초 로드 시 쇼츠 목록 로드
     fetchShorts();
+
+    // === Admin Mobile Tab Switching ===
+    $('.tab-btn').on('click', function() {
+        const targetTab = $(this).data('tab');
+        $('.tab-btn').removeClass('active');
+        $(this).addClass('active');
+        
+        $('.tab-content').removeClass('active');
+        $(`#${targetTab}`).addClass('active');
+    });
+
+    // === Admin Popup Modal Trigger ===
+    $('#btn-open-songs-popup').on('click', function() {
+        $('#modal-song-list').addClass('active').attr('aria-hidden', 'false');
+        fetchSongs();
+    });
+
+    $('#btn-open-shorts-popup').on('click', function() {
+        $('#modal-shorts-list').addClass('active').attr('aria-hidden', 'false');
+        fetchShorts();
+    });
+
+    $('#btn-open-users-popup').on('click', function() {
+        $('#modal-user-list').addClass('active').attr('aria-hidden', 'false');
+        fetchUsers();
+    });
+
+    $('#btn-open-inquiries-popup').on('click', function() {
+        $('#modal-inquiry-list').addClass('active').attr('aria-hidden', 'false');
+        fetchInquiries();
+    });
+
+    // 팝업창 닫기 버튼들 처리
+    $(document).on('click', '.btn-close-popup', function() {
+        $(this).closest('.ios-popup').removeClass('active').attr('aria-hidden', 'true');
+    });
 });
