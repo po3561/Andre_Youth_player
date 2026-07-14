@@ -736,6 +736,8 @@ $(document).ready(function () {
                     localStorage.setItem('adminUser', JSON.stringify({ 
                         id: res.user.id, name: res.user.name, isApproved: true, isAdmin: res.user.role === 'admin' 
                     }));
+                    // 세션 활동 타임스탬프 초기화
+                    localStorage.setItem('andre_admin_last_activity', Date.now().toString());
                     closeAllModals();
                     window.location.href = 'admin.html';
                 } else {

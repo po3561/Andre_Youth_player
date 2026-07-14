@@ -14,10 +14,16 @@ function getAuthHeaders(extraHeaders = {}) {
 
 async function checkResponse(res, defaultErrMsg) {
     if (res.status === 401) {
-        localStorage.removeItem('andre_youth_admin_token');
-        localStorage.removeItem('adminUser');
-        alert('보안 인증 세션이 만료되었습니다. 다시 로그인해 주세요.');
-        if (window.location.pathname.includes('admin.html')) {
+        // 토큰이 진짜 만료된 경우에만 세션 파괴
+        const token = localStorage.getItem('andre_youth_admin_token');
+        if (token) {
+            localStorage.removeItem('andre_youth_admin_token');
+            localStorage.removeItem('adminUser');
+            localStorage.removeItem('andre_admin_last_activity');
+        }
+        // 관리자 페이지에서만 리다이렉트 (일반 페이지에서는 조용히 실패)
+        if (window.location.pathname.includes('admin')) {
+            alert('보안 인증 세션이 만료되었습니다. 다시 로그인해 주세요.');
             window.location.href = 'index.html';
         }
         throw new Error('401 Unauthorized: 세션이 만료되었습니다.');

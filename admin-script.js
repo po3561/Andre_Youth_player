@@ -1,34 +1,94 @@
 $(document).ready(function () {
-    // Login Protection: check localStorage first (synchronous guard),
-    // then verify Firebase Auth state asynchronously
+    /* ═══════════════════════════════════════════════════════════
+       SESSION MANAGEMENT: 1-hour Inactivity Auto-Logout
+       ═══════════════════════════════════════════════════════════ */
+    const SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 1시간 (밀리초)
+    const SESSION_WARN_MS = 55 * 60 * 1000; // 55분 후 경고
+    let sessionTimer = null;
+    let sessionWarnTimer = null;
+    let isUploading = false; // 업로드 중일 때 세션 보호 플래그
+
+    function resetSessionTimer() {
+        // 마지막 활동 시각 갱신
+        localStorage.setItem('andre_admin_last_activity', Date.now().toString());
+
+        if (sessionTimer) clearTimeout(sessionTimer);
+        if (sessionWarnTimer) clearTimeout(sessionWarnTimer);
+
+        // 55분 후 경고
+        sessionWarnTimer = setTimeout(() => {
+            if (!isUploading) {
+                const extend = confirm('세션이 5분 후 만료됩니다.\n계속 사용하시려면 [확인]을 눌러주세요.');
+                if (extend) {
+                    resetSessionTimer();
+                }
+            } else {
+                // 업로드 중이면 자동으로 세션 연장
+                resetSessionTimer();
+            }
+        }, SESSION_WARN_MS);
+
+        // 1시간 후 자동 로그아웃
+        sessionTimer = setTimeout(() => {
+            if (isUploading) {
+                // 업로드 중이면 추가 10분 연장
+                resetSessionTimer();
+                return;
+            }
+            performLogout('비활성 상태로 1시간이 경과하여 보안상 자동 로그아웃되었습니다.');
+        }, SESSION_TIMEOUT_MS);
+    }
+
+    function performLogout(message) {
+        localStorage.removeItem('andre_youth_admin_token');
+        localStorage.removeItem('adminUser');
+        localStorage.removeItem('andre_admin_last_activity');
+        if (message) alert(message);
+        window.location.href = 'index.html';
+    }
+
+    // 사용자 활동 감지 — 마우스/키보드/터치/스크롤 시 타이머 리셋
+    const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    let activityThrottleTimer = null;
+    ACTIVITY_EVENTS.forEach(evt => {
+        document.addEventListener(evt, () => {
+            if (activityThrottleTimer) return; // 1초 내 중복 갱신 방지
+            activityThrottleTimer = setTimeout(() => { activityThrottleTimer = null; }, 1000);
+            resetSessionTimer();
+        }, { passive: true });
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+       AUTH CHECK: verify localStorage token + session freshness
+       ═══════════════════════════════════════════════════════════ */
     function checkAuth() {
         const adminUser = JSON.parse(localStorage.getItem('adminUser') || 'null');
         const token = localStorage.getItem('andre_youth_admin_token');
         if (!adminUser || !adminUser.isApproved || !token) {
-            alert('보안 세션이 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.');
-            localStorage.removeItem('adminUser');
-            localStorage.removeItem('andre_youth_admin_token');
-            window.location.href = 'index.html';
+            performLogout('보안 세션이 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.');
+            return false;
+        }
+        // 마지막 활동으로부터 1시간 이상 경과했는지 확인
+        const lastActivity = parseInt(localStorage.getItem('andre_admin_last_activity') || '0');
+        if (lastActivity && (Date.now() - lastActivity > SESSION_TIMEOUT_MS)) {
+            performLogout('장시간 비활동으로 세션이 만료되었습니다. 다시 로그인해 주세요.');
             return false;
         }
         return true;
     }
 
     if (!checkAuth()) return;
+    resetSessionTimer(); // 세션 타이머 시작
 
     $('#btn-refresh-token').on('click', function () {
         if (confirm('보안 권한 세션을 새로 갱신하시겠습니까?\n세션 재인증을 위해 로그인 화면으로 이동합니다.')) {
-            localStorage.removeItem('andre_youth_admin_token');
-            localStorage.removeItem('adminUser');
-            window.location.href = 'index.html';
+            performLogout(null);
         }
     });
 
     $('#btn-admin-logout').on('click', function () {
         if (confirm('로그아웃 하시겠습니까?')) {
-            localStorage.removeItem('andre_youth_admin_token');
-            localStorage.removeItem('adminUser');
-            window.location.href = 'index.html';
+            performLogout(null);
         }
     });
 
@@ -54,6 +114,7 @@ $(document).ready(function () {
         if (!file || !window.CloudflareAPI || !window.CloudflareAPI.D1) return null;
         
         const fileName = `${folder}/${Date.now()}_${file.name}`;
+        isUploading = true; // 업로드 중 세션 보호 활성화
         
         try {
             const result = await window.CloudflareAPI.D1.uploadFile(fileName, file);
@@ -64,6 +125,9 @@ $(document).ready(function () {
         } catch(err) {
             console.error("R2 Upload Error:", err);
             throw err;
+        } finally {
+            isUploading = false; // 업로드 완료 후 보호 해제
+            resetSessionTimer(); // 활동 갱신
         }
     }
 
