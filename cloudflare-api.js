@@ -242,8 +242,15 @@ const D1 = {
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(data)
         });
-        if (!res.ok) throw new Error('Failed to add shorts');
-        return await res.json();
+        return await checkResponse(res, '쇼츠를 등록하지 못했습니다.');
+    },
+    async updateShorts(id, data) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(data)
+        });
+        return await checkResponse(res, '쇼츠 정보를 수정하지 못했습니다.');
     },
     async deleteShorts(id) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${id}`, {

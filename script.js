@@ -54,11 +54,23 @@ $(document).ready(function () {
 
             bindEvents();
             fetchData();
+            checkAdminLoginState();
             const vol = localStorage.getItem('player_vol') || 80;
             $('#volume-slider').val(vol);
             if (audio) audio.volume = vol / 100;
         } catch (e) {
             console.error("Initialization error:", e);
+        }
+    }
+
+    /* ─── 관리자 세션 유지 상태 확인 ─── */
+    function checkAdminLoginState() {
+        const token = localStorage.getItem('andre_youth_admin_token');
+        const adminUser = localStorage.getItem('adminUser');
+        if (token && adminUser) {
+            $('#btn-admin-login').html('<i class="fa-solid fa-user-shield" style="color: #00ff88;"></i>').attr('title', '관리자 페이지로 이동');
+        } else {
+            $('#btn-admin-login').html('<i class="fa-solid fa-lock"></i>').attr('title', '관리자');
         }
     }
 
@@ -663,6 +675,12 @@ $(document).ready(function () {
         /* Admin Login */
         $('#btn-admin-login').on('click', () => {
             closeAllModals();
+            const token = localStorage.getItem('andre_youth_admin_token');
+            const adminUser = localStorage.getItem('adminUser');
+            if (token && adminUser) {
+                window.location.href = 'admin.html';
+                return;
+            }
             $('#modal-container, #admin-popup').addClass('active');
         });
 

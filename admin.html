@@ -496,6 +496,66 @@
         </div>
     </div>
 
+    <!-- Shorts Edit Modal Overlay -->
+    <div id="modal-edit-shorts" class="ios-popup" aria-hidden="true">
+        <div class="popup-card glass-card admin-edit-card" role="dialog" aria-modal="true" aria-label="쇼츠 수정">
+            <div class="popup-header">
+                <span>쇼츠 영상 수정</span>
+                <button id="btn-shorts-edit-close" class="close-x" type="button" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="popup-body admin-edit-body">
+                <div class="admin-edit-meta">
+                    <div class="admin-edit-meta-text">
+                        <div class="admin-edit-id-row">
+                            <span class="admin-song-chip" style="background: #ff0055;">SHORTS ID</span>
+                            <span id="edit-shorts-id" class="admin-edit-id"></span>
+                        </div>
+                        <div class="sync-help" style="margin-top:6px;">영상 파일은 새로 선택한 경우에만 R2에 업로드되어 교체됩니다.</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-shorts-title">쇼츠 제목</label>
+                    <input type="text" id="edit-shorts-title" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-shorts-desc">쇼츠 설명 / 아티스트</label>
+                    <input type="text" id="edit-shorts-desc" placeholder="예: ANDREW YOUTH LIVE" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-shorts-video-url">영상 URL (직접 입력 또는 아래 파일 선택)</label>
+                    <input type="text" id="edit-shorts-video-url" placeholder="https://... 형식의 mp4 영상 링크" autocomplete="off">
+                </div>
+
+                <div class="drop-zone-container" style="margin-top: 10px;">
+                    <div class="drop-zone" id="edit-drop-shorts-video" data-type="edit-shorts-video" style="grid-column: span 2;">
+                        <input type="file" id="edit-file-shorts-video" accept="video/mp4,video/*" hidden>
+                        <i class="fa-solid fa-video" style="color: #ff0055;"></i>
+                        <p>영상 파일 교체 (선택)</p>
+                        <span class="file-info" id="edit-shorts-file-info">드래그 또는 클릭 (MP4)</span>
+                    </div>
+                </div>
+
+                <div id="edit-shorts-progress" class="upload-progress-container" style="display:none; margin-top: 15px;">
+                    <div class="progress-bar-wrap">
+                        <div id="edit-shorts-progress-fill" class="progress-bar-fill" style="width: 0%; background: linear-gradient(90deg, #ff0055, #ff5500);"></div>
+                    </div>
+                    <div class="progress-info-text">
+                        <span id="edit-shorts-status-text">업로드 준비 중...</span>
+                        <span id="edit-shorts-progress-percent">0%</span>
+                    </div>
+                </div>
+
+                <button id="btn-shorts-edit-save" class="primary-btn" type="button" style="margin-top: 15px;">
+                    <i class="fa-solid fa-floppy-disk"></i> 저장
+                </button>
+                <p id="edit-shorts-status" class="sync-help" role="status" aria-live="polite"></p>
+            </div>
+        </div>
+    </div>
+
     <!-- Sync Maker Modal Overlay (iOS Popup Style) -->
     <div id="sync-maker-overlay" class="ios-popup" aria-hidden="true" style="z-index: 10000;">
         <div class="popup-content admin-edit-card" style="height: 85vh; max-width: 600px; display: flex; flex-direction: column;">

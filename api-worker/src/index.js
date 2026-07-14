@@ -12,7 +12,7 @@ async function signToken(payload, env) {
   const enhancedPayload = {
       ...payload,
       iat: Date.now(),
-      exp: Date.now() + 2 * 60 * 60 * 1000 // 2시간 유지 (Sliding Session으로 자동 갱신 지원)
+      exp: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30일 유지 (로그아웃 버튼 클릭 전까지 세션 유지)
   };
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const body = btoa(JSON.stringify(enhancedPayload));
@@ -88,8 +88,9 @@ export default {
 
     // /users/{id} PUT/DELETE는 관리자 전용
     const isUserAdmin = path.startsWith('/users/') && !isPublic && ['PUT', 'DELETE'].includes(request.method);
+    const isShortsAdminPut = path.startsWith('/shorts/') && !path.includes('/view') && !path.includes('/share') && !path.includes('/like') && !path.includes('/comments') && request.method === 'PUT';
 
-    const needsAuth = requiresAdmin.some(r => path.startsWith(r.path) && r.methods.includes(request.method)) || isUserAdmin;
+    const needsAuth = requiresAdmin.some(r => path.startsWith(r.path) && r.methods.includes(request.method)) || isUserAdmin || isShortsAdminPut;
     if (needsAuth && !isPublic) {
         if (!currentUser) {
             return Response.json({ success: false, error: 'Unauthorized: Invalid or missing token' }, { status: 401, headers: corsHeaders });
@@ -254,6 +255,7 @@ export default {
 
       // Shorts
       if (path === '/shorts/stats' && request.method === 'GET') {
+        await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_stats (id TEXT PRIMARY KEY, shortsId TEXT, actionType TEXT, userId TEXT, timestamp INTEGER)").run();
         const { results: shortsList } = await env.DB.prepare('SELECT * FROM shorts ORDER BY createdAt DESC').all();
         const { results: commentsCount } = await env.DB.prepare('SELECT shortsId, COUNT(*) as cnt FROM shorts_comments GROUP BY shortsId').all();
         
@@ -300,6 +302,9 @@ export default {
       if (path.startsWith('/shorts/') && path.endsWith('/view') && request.method === 'PUT') {
         const id = path.split('/')[2];
         await env.DB.prepare('UPDATE shorts SET views = COALESCE(views, 0) + 1 WHERE id = ?').bind(id).run();
+        await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_stats (id TEXT PRIMARY KEY, shortsId TEXT, actionType TEXT, userId TEXT, timestamp INTEGER)").run();
+        const statId = 'stat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        await env.DB.prepare("INSERT INTO shorts_stats (id, shortsId, actionType, userId, timestamp) VALUES (?, ?, ?, ?, ?)").bind(statId, id, 'view', currentUser ? currentUser.id : 'anonymous', Date.now()).run();
         const updated = await env.DB.prepare('SELECT views FROM shorts WHERE id = ?').bind(id).first();
         return Response.json({ success: true, views: updated?.views || 1 }, { headers: corsHeaders });
       }
@@ -307,6 +312,9 @@ export default {
       if (path.startsWith('/shorts/') && path.endsWith('/share') && request.method === 'PUT') {
         const id = path.split('/')[2];
         await env.DB.prepare('UPDATE shorts SET shares = COALESCE(shares, 0) + 1 WHERE id = ?').bind(id).run();
+        await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_stats (id TEXT PRIMARY KEY, shortsId TEXT, actionType TEXT, userId TEXT, timestamp INTEGER)").run();
+        const statId = 'stat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        await env.DB.prepare("INSERT INTO shorts_stats (id, shortsId, actionType, userId, timestamp) VALUES (?, ?, ?, ?, ?)").bind(statId, id, 'share', currentUser ? currentUser.id : 'anonymous', Date.now()).run();
         const updated = await env.DB.prepare('SELECT shares FROM shorts WHERE id = ?').bind(id).first();
         return Response.json({ success: true, shares: updated?.shares || 1 }, { headers: corsHeaders });
       }
@@ -314,6 +322,9 @@ export default {
       if (path.startsWith('/shorts/') && path.endsWith('/like') && request.method === 'PUT') {
         const id = path.split('/')[2];
         await env.DB.prepare('UPDATE shorts SET likes = COALESCE(likes, 0) + 1 WHERE id = ?').bind(id).run();
+        await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_stats (id TEXT PRIMARY KEY, shortsId TEXT, actionType TEXT, userId TEXT, timestamp INTEGER)").run();
+        const statId = 'stat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        await env.DB.prepare("INSERT INTO shorts_stats (id, shortsId, actionType, userId, timestamp) VALUES (?, ?, ?, ?, ?)").bind(statId, id, 'like', currentUser ? currentUser.id : 'anonymous', Date.now()).run();
         const updated = await env.DB.prepare('SELECT likes FROM shorts WHERE id = ?').bind(id).first();
         return Response.json({ success: true, likes: updated?.likes || 0 }, { headers: corsHeaders });
       }
@@ -333,6 +344,15 @@ export default {
         return Response.json({ success: true }, { headers: corsHeaders });
       }
 
+      if (path.startsWith('/shorts/') && !path.includes('/like') && !path.includes('/view') && !path.includes('/share') && !path.includes('/comments') && request.method === 'PUT') {
+        const id = path.split('/').pop();
+        const data = await request.json();
+        await env.DB.prepare('UPDATE shorts SET title = ?, description = ?, videoUrl = ? WHERE id = ?').bind(
+          data.title || '', data.description || '', data.videoUrl || '', id
+        ).run();
+        return Response.json({ success: true }, { headers: corsHeaders });
+      }
+
       if (path.startsWith('/shorts/') && !path.includes('/like') && !path.includes('/view') && !path.includes('/share') && !path.includes('/comments') && request.method === 'DELETE') {
         const id = path.split('/').pop();
         await env.DB.prepare('DELETE FROM shorts WHERE id = ?').bind(id).run();
@@ -348,6 +368,7 @@ export default {
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, password TEXT, name TEXT, phone TEXT, company TEXT, position TEXT, isApproved INTEGER, role TEXT, createdAt INTEGER)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts (id TEXT PRIMARY KEY, title TEXT, description TEXT, videoUrl TEXT, likes INTEGER DEFAULT 0, views INTEGER DEFAULT 0, shares INTEGER DEFAULT 0, createdAt INTEGER)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_comments (id TEXT PRIMARY KEY, shortsId TEXT, content TEXT, nickname TEXT, timestamp INTEGER)").run();
+          await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_stats (id TEXT PRIMARY KEY, shortsId TEXT, actionType TEXT, userId TEXT, timestamp INTEGER)").run();
           
           // 기존 테이블 호환성을 위한 ALTER (실패 시 무시)
           try { await env.DB.prepare("ALTER TABLE users ADD COLUMN phone TEXT").run(); } catch(e) {}

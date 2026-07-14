@@ -2,11 +2,7 @@ $(document).ready(function () {
     /* ═══════════════════════════════════════════════════════════
        SESSION MANAGEMENT: 1-hour Inactivity Auto-Logout
        ═══════════════════════════════════════════════════════════ */
-    const SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 1시간 (밀리초)
-    const SESSION_WARN_MS = 55 * 60 * 1000; // 55분 후 경고
-    let sessionTimer = null;
-    let sessionWarnTimer = null;
-    let isUploading = false; // 업로드 중일 때 세션 보호 플래그
+    let isUploading = false; // 업로드 중 보호 플래그
 
     function resetSessionTimer() {
         // 마지막 활동 시각 갱신
@@ -24,32 +20,6 @@ $(document).ready(function () {
                 }).catch(() => {});
             }
         }
-
-        if (sessionTimer) clearTimeout(sessionTimer);
-        if (sessionWarnTimer) clearTimeout(sessionWarnTimer);
-
-        // 55분 후 경고
-        sessionWarnTimer = setTimeout(() => {
-            if (!isUploading) {
-                const extend = confirm('세션이 5분 후 만료됩니다.\n계속 사용하시려면 [확인]을 눌러주세요.');
-                if (extend) {
-                    resetSessionTimer();
-                }
-            } else {
-                // 업로드 중이면 자동으로 세션 연장
-                resetSessionTimer();
-            }
-        }, SESSION_WARN_MS);
-
-        // 1시간 후 자동 로그아웃
-        sessionTimer = setTimeout(() => {
-            if (isUploading) {
-                // 업로드 중이면 추가 10분 연장
-                resetSessionTimer();
-                return;
-            }
-            performLogout('비활성 상태로 1시간이 경과하여 보안상 자동 로그아웃되었습니다.');
-        }, SESSION_TIMEOUT_MS);
     }
 
     function performLogout(message) {
@@ -60,7 +30,7 @@ $(document).ready(function () {
         window.location.href = 'index.html';
     }
 
-    // 사용자 활동 감지 — 마우스/키보드/터치/스크롤 시 타이머 리셋
+    // 사용자 활동 감지 — 마지막 활동 갱신 및 토큰 자동 연장 (로그아웃 버튼 전까지 무기한 유지)
     const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
     let activityThrottleTimer = null;
     ACTIVITY_EVENTS.forEach(evt => {
@@ -72,7 +42,7 @@ $(document).ready(function () {
     });
 
     /* ═══════════════════════════════════════════════════════════
-       AUTH CHECK: verify localStorage token + session freshness
+       AUTH CHECK: verify localStorage token presence
        ═══════════════════════════════════════════════════════════ */
     function checkAuth() {
         const adminUser = JSON.parse(localStorage.getItem('adminUser') || 'null');
@@ -81,17 +51,11 @@ $(document).ready(function () {
             performLogout('보안 세션이 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.');
             return false;
         }
-        // 마지막 활동으로부터 1시간 이상 경과했는지 확인
-        const lastActivity = parseInt(localStorage.getItem('andre_admin_last_activity') || '0');
-        if (lastActivity && (Date.now() - lastActivity > SESSION_TIMEOUT_MS)) {
-            performLogout('장시간 비활동으로 세션이 만료되었습니다. 다시 로그인해 주세요.');
-            return false;
-        }
         return true;
     }
 
     if (!checkAuth()) return;
-    resetSessionTimer(); // 세션 타이머 시작
+    resetSessionTimer(); // 초기 활동 시각 갱신
 
     $('#btn-refresh-token').on('click', function () {
         if (confirm('보안 권한 세션을 새로 갱신하시겠습니까?\n세션 재인증을 위해 로그인 화면으로 이동합니다.')) {
@@ -1810,6 +1774,16 @@ $(document).ready(function () {
 
             $info.append($video, $titleWrapper);
 
+            const $editButton = $('<button>')
+                .addClass('btn-edit-song btn-edit-shorts')
+                .attr('type', 'button')
+                .attr('aria-label', '수정')
+                .data('id', s.id)
+                .data('title', s.title || '')
+                .data('desc', s.description || '')
+                .data('url', s.videoUrl || '')
+                .html('<i class="fa-solid fa-pen-to-square"></i>');
+
             const $deleteButton = $('<button>')
                 .addClass('btn-delete-song')
                 .attr('type', 'button')
@@ -1818,7 +1792,7 @@ $(document).ready(function () {
                 .html('<i class="fa-solid fa-trash-can"></i>');
 
             const $actions = $('<div>').addClass('admin-song-actions');
-            $actions.append($deleteButton);
+            $actions.append($editButton, $deleteButton);
             $item.append($info, $actions);
             $list.append($item);
         });
@@ -1896,6 +1870,7 @@ $(document).ready(function () {
                 $progressContainer.hide();
                 $btn.prop('disabled', false);
                 fetchShorts();
+                fetchAndRenderShortsStats();
                 alert('쇼츠가 성공적으로 등록되었습니다!');
             }, 1000);
 
@@ -1920,6 +1895,7 @@ $(document).ready(function () {
                 const res = await window.CloudflareAPI.D1.deleteShorts(id);
                 if (res.success) {
                     fetchShorts();
+                    fetchAndRenderShortsStats();
                     alert('삭제되었습니다.');
                 }
             } catch(e) {
@@ -1928,8 +1904,133 @@ $(document).ready(function () {
         }
     });
 
+    // 쇼츠 수정 처리 (모달 및 핸들러)
+    let editShortsFile = null;
+
+    $('#edit-drop-shorts-video').on('click', function() {
+        $('#edit-file-shorts-video').click();
+    }).on('dragover', function(e) {
+        e.preventDefault();
+        $(this).addClass('dragover');
+    }).on('dragleave drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+    });
+
+    $('#edit-drop-shorts-video').on('drop', function(e) {
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length > 0) handleEditShortsFileSelect(files[0]);
+    });
+    $('#edit-file-shorts-video').on('change', function(e) {
+        if (this.files.length > 0) handleEditShortsFileSelect(this.files[0]);
+    });
+
+    function handleEditShortsFileSelect(file) {
+        editShortsFile = file;
+        $('#edit-shorts-file-info').text(`${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB)`).css('opacity', '1');
+    }
+
+    // 쇼츠 수정 버튼 클릭 (목록에서)
+    $(document).on('click', '#admin-shorts-list .btn-edit-shorts', function() {
+        const id = $(this).data('id');
+        const title = $(this).data('title');
+        const desc = $(this).data('desc');
+        const url = $(this).data('url');
+
+        $('#edit-shorts-id').text(id);
+        $('#edit-shorts-title').val(title);
+        $('#edit-shorts-desc').val(desc);
+        $('#edit-shorts-video-url').val(url);
+        editShortsFile = null;
+        $('#edit-shorts-file-info').text('드래그 또는 클릭 (MP4)').css('opacity', '0.5');
+        $('#edit-shorts-progress').hide();
+        $('#edit-shorts-status').text('');
+
+        $('#modal-edit-shorts').addClass('active');
+    });
+
+    $('#btn-shorts-edit-close').on('click', function() {
+        $('#modal-edit-shorts').removeClass('active');
+    });
+
+    // 쇼츠 수정 저장 버튼 클릭
+    $('#btn-shorts-edit-save').on('click', async function() {
+        const id = $('#edit-shorts-id').text();
+        const title = $('#edit-shorts-title').val().trim();
+        const desc = $('#edit-shorts-desc').val().trim();
+        let videoUrl = $('#edit-shorts-video-url').val().trim();
+
+        if (!title || !videoUrl) {
+            alert('제목과 영상 URL(또는 새 영상 선택)은 필수입니다.');
+            return;
+        }
+
+        const $btn = $(this);
+        const $progress = $('#edit-shorts-progress');
+        const $fill = $('#edit-shorts-progress-fill');
+        const $percent = $('#edit-shorts-progress-percent');
+        const $statusText = $('#edit-shorts-status-text');
+        const $statusMsg = $('#edit-shorts-status');
+
+        $btn.prop('disabled', true);
+        $statusMsg.text('');
+
+        try {
+            if (editShortsFile) {
+                $progress.show();
+                $statusText.text('새 영상 파일 R2 업로드 중...');
+                $fill.css('width', '10%');
+                $percent.text('10%');
+
+                const uploadRes = await window.CloudflareAPI.D1.uploadFile(`shorts/${Date.now()}_${editShortsFile.name}`, editShortsFile, (p) => {
+                    const currentP = Math.round(10 + p * 0.85);
+                    $fill.css('width', currentP + '%');
+                    $percent.text(currentP + '%');
+                    $statusText.text(`새 영상 파일 R2 업로드 중... (${p}%)`);
+                });
+
+                if (!uploadRes.success || !uploadRes.url) {
+                    throw new Error(uploadRes.error || 'Video upload failed');
+                }
+                videoUrl = uploadRes.url;
+                $fill.css('width', '95%');
+                $percent.text('95%');
+            }
+
+            $statusText.text('DB 정보 수정 중...');
+            const res = await window.CloudflareAPI.D1.updateShorts(id, {
+                title: title,
+                description: desc,
+                videoUrl: videoUrl
+            });
+
+            if (res && res.success) {
+                if (editShortsFile) {
+                    $fill.css('width', '100%');
+                    $percent.text('100%');
+                }
+                $statusMsg.text('수정이 완료되었습니다!').css('color', '#00ff88');
+                fetchShorts();
+                fetchAndRenderShortsStats();
+                setTimeout(() => {
+                    $('#modal-edit-shorts').removeClass('active');
+                    $btn.prop('disabled', false);
+                }, 800);
+            } else {
+                throw new Error(res ? res.error : '수정 실패');
+            }
+        } catch (e) {
+            if (editShortsFile) $fill.css({ 'background': '#ff3b30' });
+            $statusMsg.text('수정 실패: ' + e.message).css('color', '#ff3b30');
+            $btn.prop('disabled', false);
+        }
+    });
+
     // 쇼츠 새로고침 버튼
-    $('#btn-refresh-shorts').on('click', fetchShorts);
+    $('#btn-refresh-shorts').on('click', function() {
+        fetchShorts();
+        fetchAndRenderShortsStats();
+    });
 
     // 최초 로드 시 쇼츠 목록 로드
     fetchShorts();
