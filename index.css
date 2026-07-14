@@ -561,6 +561,9 @@ body {
     width: 100%;
     height: 100%;
     background: #000;
+    overflow: hidden;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
 }
 .shorts-slide {
     position: absolute;
@@ -570,6 +573,10 @@ body {
     left: 0;
     display: none;
     background: #000;
+    will-change: transform;
+    transform: translateY(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 .shorts-slide.shorts-active {
     display: block;

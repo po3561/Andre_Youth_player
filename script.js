@@ -859,16 +859,82 @@ $(document).ready(function () {
             updateShortsMuteUI();
         });
 
-        /* === Shorts Swipe & Control Events === */
+        /* === YouTube-Style Shorts Swipe Engine === */
         const $shortsContainer = $('#shorts-container');
-        
-        $shortsContainer.on('touchstart', function(e) {
-            touchStartY = e.originalEvent.touches[0].clientY;
-        });
+        const $shortsViewport = $shortsContainer.find('.shorts-viewport');
+        let swipeTouchStartY = 0;
+        let swipeTouchDeltaY = 0;
+        let swipeIsDragging = false;
+        let swipeStartTime = 0;
 
-        $shortsContainer.on('touchend', function(e) {
-            touchEndY = e.originalEvent.changedTouches[0].clientY;
-            handleShortsSwipe();
+        // --- Mobile Touch: real-time drag with visual feedback ---
+        $shortsViewport[0].addEventListener('touchstart', function(e) {
+            if (isShortsTransitioning) return;
+            // Ignore if user is interacting with the seek slider
+            if ($(e.target).closest('#shorts-progress-zone, .shorts-action-btn, .shorts-mode-pill-btn').length) return;
+            swipeTouchStartY = e.touches[0].clientY;
+            swipeTouchDeltaY = 0;
+            swipeIsDragging = true;
+            swipeStartTime = Date.now();
+            const $slide = $shortsViewport.find('.shorts-slide');
+            $slide.css('transition', 'none');
+        }, { passive: true });
+
+        $shortsViewport[0].addEventListener('touchmove', function(e) {
+            if (!swipeIsDragging || isShortsTransitioning) return;
+            swipeTouchDeltaY = e.touches[0].clientY - swipeTouchStartY;
+            const $slide = $shortsViewport.find('.shorts-slide');
+            // Dampen overscroll at edges
+            let translateY = swipeTouchDeltaY;
+            const isAtStart = curShortsOrderIdx <= 0 && swipeTouchDeltaY > 0;
+            if (isAtStart) translateY = swipeTouchDeltaY * 0.3; // rubber-band effect
+            $slide.css('transform', `translateY(${translateY}px)`);
+        }, { passive: true });
+
+        $shortsViewport[0].addEventListener('touchend', function(e) {
+            if (!swipeIsDragging || isShortsTransitioning) return;
+            swipeIsDragging = false;
+            const elapsed = Date.now() - swipeStartTime;
+            const velocity = Math.abs(swipeTouchDeltaY) / Math.max(elapsed, 1);
+            const threshold = velocity > 0.4 ? 30 : 80; // fast flick = lower threshold
+
+            if (swipeTouchDeltaY < -threshold && shortsList.length > 0) {
+                navigateShorts('next');
+            } else if (swipeTouchDeltaY > threshold && curShortsOrderIdx > 0) {
+                navigateShorts('prev');
+            } else {
+                // Snap back to current position
+                const $slide = $shortsViewport.find('.shorts-slide');
+                $slide.css({ transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)', transform: 'translateY(0)' });
+            }
+        }, { passive: true });
+
+        // --- PC: Mouse Wheel (debounced snap scroll) ---
+        let wheelCooldown = false;
+        $shortsContainer[0].addEventListener('wheel', function(e) {
+            if (wheelCooldown || isShortsTransitioning || !shortsList.length) return;
+            e.preventDefault();
+            wheelCooldown = true;
+            if (e.deltaY > 30) {
+                navigateShorts('next');
+            } else if (e.deltaY < -30) {
+                navigateShorts('prev');
+            }
+            setTimeout(() => { wheelCooldown = false; }, 500);
+        }, { passive: false });
+
+        // --- PC: Keyboard Arrow Keys ---
+        $(document).on('keydown.shorts', function(e) {
+            if (!$shortsContainer.is(':visible') || isShortsTransitioning || !shortsList.length) return;
+            // Don't hijack if user is typing in an input
+            if ($(e.target).is('input, textarea, select')) return;
+            if (e.key === 'ArrowDown' || e.key === 'j') {
+                e.preventDefault();
+                navigateShorts('next');
+            } else if (e.key === 'ArrowUp' || e.key === 'k') {
+                e.preventDefault();
+                navigateShorts('prev');
+            }
         });
 
         // 비디오 터치 시 재생/일시정지 토글
@@ -1085,48 +1151,66 @@ $(document).ready(function () {
         }
     }
 
-    function handleShortsSwipe() {
+    /* === YouTube-Style Shorts Navigation Engine === */
+    function navigateShorts(direction) {
         if (!shortsList.length || isShortsTransitioning) return;
-        const diff = touchStartY - touchEndY;
 
-        if (diff > 50) {
-            // 위로 스와이프: 다음 영상 (인스타/유튜브와 동일하게 전체합에서 무한 순환)
+        if (direction === 'next') {
             isShortsTransitioning = true;
             curShortsOrderIdx++;
-            
             if (curShortsOrderIdx >= shortsList.length) {
-                // 마지막 영상 통과 시 다시 셔플하여 무한 연결
                 shuffleShortsList();
                 curShortsOrderIdx = 0;
             }
-
-            animateShortsSlide('up', () => {
+            smoothShortsTransition('up', () => {
                 playShortsVideo(shortsOrder[curShortsOrderIdx]);
                 isShortsTransitioning = false;
             });
-
-        } else if (diff < -50) {
-            // 아래로 스와이프: 이전 영상
+        } else if (direction === 'prev') {
             if (curShortsOrderIdx > 0) {
                 isShortsTransitioning = true;
                 curShortsOrderIdx--;
-                animateShortsSlide('down', () => {
+                smoothShortsTransition('down', () => {
                     playShortsVideo(shortsOrder[curShortsOrderIdx]);
                     isShortsTransitioning = false;
                 });
+            } else {
+                // Rubber-band snap back at top
+                const $slide = $('.shorts-slide');
+                $slide.css({ transition: 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)', transform: 'translateY(0)' });
             }
         }
     }
 
-    function animateShortsSlide(direction, callback) {
+    function smoothShortsTransition(direction, callback) {
         const $slide = $('.shorts-slide');
-        const animationClassIn = direction === 'up' ? 'slide-up-in' : 'slide-down-in';
-        
-        $slide.addClass(animationClassIn);
+        const viewportH = $slide.parent().height() || window.innerHeight;
+        const exitY = direction === 'up' ? -viewportH : viewportH;
+
+        // Phase 1: Slide current video OUT
+        $slide.css({
+            transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+            transform: `translateY(${exitY}px)`
+        });
+
         setTimeout(() => {
-            $slide.removeClass('slide-up-in slide-down-in');
+            // Phase 2: Load new video (callback), reset position instantly
             if (callback) callback();
-        }, 350);
+
+            // Instantly jump to entrance position (no transition)
+            const enterY = direction === 'up' ? viewportH : -viewportH;
+            $slide.css({ transition: 'none', transform: `translateY(${enterY}px)` });
+
+            // Phase 3: Slide new video IN (next frame)
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    $slide.css({
+                        transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+                        transform: 'translateY(0)'
+                    });
+                });
+            });
+        }, 300);
     }
 
     function updateShortsLikeUI(isLiked) {
