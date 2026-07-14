@@ -12,6 +12,19 @@ $(document).ready(function () {
         // 마지막 활동 시각 갱신
         localStorage.setItem('andre_admin_last_activity', Date.now().toString());
 
+        // Sliding Session: 마지막 토큰 발급 후 30분이 지났으면 백그라운드 토큰 갱신
+        const lastTokenIssued = parseInt(localStorage.getItem('andre_token_issued_at') || '0');
+        if (!lastTokenIssued || (Date.now() - lastTokenIssued > 30 * 60 * 1000)) {
+            localStorage.setItem('andre_token_issued_at', Date.now().toString());
+            if (window.CloudflareAPI && window.CloudflareAPI.D1 && window.CloudflareAPI.D1.refreshToken) {
+                window.CloudflareAPI.D1.refreshToken().then(res => {
+                    if (res.success && res.token) {
+                        localStorage.setItem('andre_youth_admin_token', res.token);
+                    }
+                }).catch(() => {});
+            }
+        }
+
         if (sessionTimer) clearTimeout(sessionTimer);
         if (sessionWarnTimer) clearTimeout(sessionWarnTimer);
 
@@ -110,14 +123,14 @@ $(document).ready(function () {
     }
 
     // Cloudflare R2 Upload Function
-    async function uploadFileToStorage(file, folder) {
+    async function uploadFileToStorage(file, folder, onProgress) {
         if (!file || !window.CloudflareAPI || !window.CloudflareAPI.D1) return null;
         
         const fileName = `${folder}/${Date.now()}_${file.name}`;
         isUploading = true; // 업로드 중 세션 보호 활성화
         
         try {
-            const result = await window.CloudflareAPI.D1.uploadFile(fileName, file);
+            const result = await window.CloudflareAPI.D1.uploadFile(fileName, file, onProgress);
             if (result.success && result.url) {
                 return result.url;
             }
@@ -1085,14 +1098,18 @@ $(document).ready(function () {
 
             let finalAudioUrl = audioUrlInput;
             if (!finalAudioUrl && state.audioFile) {
-                updateProgress(30, '음원 업로드 중 (Cloudflare R2)...');
-                finalAudioUrl = await uploadFileToStorage(state.audioFile, 'audio');
+                updateProgress(10, '음원 업로드 중 (Cloudflare R2)...');
+                finalAudioUrl = await uploadFileToStorage(state.audioFile, 'audio', (p) => {
+                    updateProgress(10 + Math.round(p * 0.45), `음원 업로드 중 (${p}%)`);
+                });
             }
 
             let finalCoverUrl = coverUrlInput;
             if (!finalCoverUrl && state.image) {
-                updateProgress(50, '커버 업로드 중 (Cloudflare R2)...');
-                finalCoverUrl = await uploadFileToStorage(state.image, 'covers');
+                updateProgress(55, '커버 업로드 중 (Cloudflare R2)...');
+                finalCoverUrl = await uploadFileToStorage(state.image, 'covers', (p) => {
+                    updateProgress(55 + Math.round(p * 0.25), `커버 업로드 중 (${p}%)`);
+                });
             }
 
             const skipAi = $('#sync-skip-ai').is(':checked');
@@ -1831,18 +1848,23 @@ $(document).ready(function () {
         $btn.prop('disabled', true);
         $progressContainer.show();
         $progressStatus.text('R2 서버에 영상 업로드 중...');
-        $progressFill.css('width', '10%');
-        $progressPercent.text('10%');
+        $progressFill.css('width', '5%');
+        $progressPercent.text('5%');
 
         try {
-            // 1. R2 업로드 (D1.uploadFile 프록시 API 사용)
-            const uploadRes = await window.CloudflareAPI.D1.uploadFile(`shorts/${Date.now()}_${file.name}`, file);
+            // 1. R2 업로드 (D1.uploadFile 프록시 API 사용, 실시간 진행률 연동)
+            const uploadRes = await window.CloudflareAPI.D1.uploadFile(`shorts/${Date.now()}_${file.name}`, file, (p) => {
+                const currentP = Math.round(5 + p * 0.85);
+                $progressFill.css('width', currentP + '%');
+                $progressPercent.text(currentP + '%');
+                $progressStatus.text(`R2 서버에 영상 업로드 중... (${p}%)`);
+            });
             if (!uploadRes.success || !uploadRes.url) {
                 throw new Error(uploadRes.error || 'Video upload failed');
             }
 
-            $progressFill.css('width', '70%');
-            $progressPercent.text('70%');
+            $progressFill.css('width', '92%');
+            $progressPercent.text('92%');
             $progressStatus.text('DB에 정보 저장 중...');
 
             // 2. D1 DB 저장
@@ -1913,6 +1935,7 @@ $(document).ready(function () {
     fetchShorts();
 
     // === Admin Mobile Tab Switching ===
+    let currentStatsData = null;
     $('.tab-btn').on('click', function() {
         const targetTab = $(this).data('tab');
         $('.tab-btn').removeClass('active');
@@ -1920,7 +1943,66 @@ $(document).ready(function () {
         
         $('.tab-content').removeClass('active');
         $(`#${targetTab}`).addClass('active');
+
+        if (targetTab === 'tab-stats') {
+            fetchAndRenderShortsStats();
+        }
     });
+
+    $('#btn-refresh-stats').on('click', function() {
+        fetchAndRenderShortsStats();
+    });
+
+    $('#stats-sort-select').on('change', function() {
+        if (currentStatsData && currentStatsData.list) {
+            renderShortsStatsTable(currentStatsData.list, $(this).val());
+        }
+    });
+
+    async function fetchAndRenderShortsStats() {
+        try {
+            $('#stats-table-body').html('<tr><td colspan="6" style="padding: 30px; text-align: center; color: #888;"><i class="fa-solid fa-spinner fa-spin"></i> 통계 데이터를 불러오는 중...</td></tr>');
+            const res = await window.CloudflareAPI.D1.getShortsStats();
+            if (!res || !res.success) throw new Error('Failed to load stats');
+            
+            currentStatsData = res;
+            $('#stat-total-views').text((res.summary?.totalViews || 0).toLocaleString());
+            $('#stat-total-likes').text((res.summary?.totalLikes || 0).toLocaleString());
+            $('#stat-total-comments').text((res.summary?.totalComments || 0).toLocaleString());
+            $('#stat-total-shares').text((res.summary?.totalShares || 0).toLocaleString());
+
+            const sortKey = $('#stats-sort-select').val() || 'views';
+            renderShortsStatsTable(res.list || [], sortKey);
+        } catch (e) {
+            console.error(e);
+            $('#stats-table-body').html('<tr><td colspan="6" style="padding: 30px; text-align: center; color: #ff5252;">통계 데이터를 불러오지 못했습니다.</td></tr>');
+        }
+    }
+
+    function renderShortsStatsTable(list, sortKey) {
+        const sorted = [...list].sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+        if (!sorted.length) {
+            $('#stats-table-body').html('<tr><td colspan="6" style="padding: 30px; text-align: center; color: #888;">등록된 쇼츠 영상이 없습니다.</td></tr>');
+            return;
+        }
+
+        const html = sorted.map((s, idx) => `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); transition: background 0.2s;">
+                <td style="padding: 12px; font-weight: 700; color: ${idx < 3 ? 'var(--primary)' : '#aaa'};">${idx + 1}</td>
+                <td style="padding: 12px; font-weight: 600; color: #fff;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-play" style="font-size: 0.75rem; color: var(--primary);"></i>
+                        <span>${s.title || '제목 없음'}</span>
+                    </div>
+                </td>
+                <td style="padding: 12px; text-align: right; font-weight: 700; color: #64b5f6;">${(s.views || 0).toLocaleString()}</td>
+                <td style="padding: 12px; text-align: right; color: #ff5252;">${(s.likes || 0).toLocaleString()}</td>
+                <td style="padding: 12px; text-align: right; color: #81c784;">${(s.commentsCount || 0).toLocaleString()}</td>
+                <td style="padding: 12px; text-align: right; color: #ffd54f;">${(s.shares || 0).toLocaleString()}</td>
+            </tr>
+        `).join('');
+        $('#stats-table-body').html(html);
+    }
 
     // === Admin Popup Modal Trigger ===
     $('#btn-open-songs-popup').on('click', function() {

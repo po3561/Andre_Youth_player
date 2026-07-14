@@ -26,6 +26,8 @@ $(document).ready(function () {
     let curShortsOrderIdx = 0; // 현재 셔플 순서 상의 인덱스
     let likedShorts = JSON.parse(localStorage.getItem('andre_liked_shorts') || '[]');
     let isShortsTransitioning = false;
+    let viewedShorts = []; // 이번 세션에서 조회수 카운트 완료한 쇼츠 ID 배열
+    let shortsViewTimer = null; // 3초 시청 카운트다운 타이머
     
     // 터치 스와이프용 변수
     let touchStartY = 0;
@@ -736,8 +738,9 @@ $(document).ready(function () {
                     localStorage.setItem('adminUser', JSON.stringify({ 
                         id: res.user.id, name: res.user.name, isApproved: true, isAdmin: res.user.role === 'admin' 
                     }));
-                    // 세션 활동 타임스탬프 초기화
+                    // 세션 활동 및 토큰 발급 타임스탬프 초기화
                     localStorage.setItem('andre_admin_last_activity', Date.now().toString());
+                    localStorage.setItem('andre_token_issued_at', Date.now().toString());
                     closeAllModals();
                     window.location.href = 'admin.html';
                 } else {
@@ -1007,6 +1010,11 @@ $(document).ready(function () {
             const curShorts = shortsList[shortsOrder[curShortsOrderIdx]];
             if (!curShorts) return;
 
+            // 백그라운드 공유수 집계 API 호출
+            if (window.CloudflareAPI && window.CloudflareAPI.D1 && window.CloudflareAPI.D1.shareShorts) {
+                window.CloudflareAPI.D1.shareShorts(curShorts.id).catch(() => {});
+            }
+
             const shareUrl = `${window.location.origin}${window.location.pathname}#shorts/${curShorts.id}`;
             
             if (navigator.share) {
@@ -1129,6 +1137,18 @@ $(document).ready(function () {
 
         // 쇼츠 비디오 하단 탐색 진행바(Scrubber) 실시간 연동
         bindShortsScrubber(video);
+
+        // 3초 이상 시청 시 조회수 집계 타이머
+        if (shortsViewTimer) clearTimeout(shortsViewTimer);
+        if (!viewedShorts.includes(shorts.id)) {
+            shortsViewTimer = setTimeout(() => {
+                if (window.CloudflareAPI && window.CloudflareAPI.D1 && window.CloudflareAPI.D1.viewShorts) {
+                    window.CloudflareAPI.D1.viewShorts(shorts.id)
+                        .then(() => { viewedShorts.push(shorts.id); })
+                        .catch(() => {});
+                }
+            }, 3000);
+        }
     }
 
     function preloadNextVideo() {
@@ -1146,6 +1166,7 @@ $(document).ready(function () {
     }
 
     function stopAllShortsVideos() {
+        if (shortsViewTimer) clearTimeout(shortsViewTimer);
         const video = $('.shorts-slide').find('.shorts-video')[0];
         if (video) {
             video.pause();

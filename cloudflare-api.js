@@ -157,6 +157,13 @@ const D1 = {
         });
         return await res.json();
     },
+    async refreshToken() {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/users/refresh-token`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        return await res.json();
+    },
     async getUsers() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/users`, { headers: getAuthHeaders() });
         if (!res.ok) throw new Error('Failed to fetch users');
@@ -177,19 +184,57 @@ const D1 = {
         });
         return await res.json();
     },
-    // --- File Upload (R2 Proxy) ---
-    async uploadFile(filename, fileBlob) {
-        const res = await fetch(`${CF_CONFIG.WORKER_URL}/upload?filename=${encodeURIComponent(filename)}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: fileBlob
+    // --- File Upload (R2 Proxy with Real-time Progress) ---
+    uploadFile(filename, fileBlob, onProgress) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const url = `${CF_CONFIG.WORKER_URL}/upload?filename=${encodeURIComponent(filename)}`;
+            
+            xhr.open('PUT', url, true);
+            const headers = getAuthHeaders();
+            for (const key in headers) {
+                xhr.setRequestHeader(key, headers[key]);
+            }
+
+            if (xhr.upload && typeof onProgress === 'function') {
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        onProgress(percentComplete);
+                    }
+                };
+            }
+
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response);
+                    } catch(e) {
+                        resolve({ success: true, url: xhr.responseText });
+                    }
+                } else if (xhr.status === 401) {
+                    reject(new Error('인증이 만료되었습니다. 다시 로그인해 주세요.'));
+                } else {
+                    reject(new Error('파일 업로드에 실패했습니다: ' + xhr.statusText));
+                }
+            };
+
+            xhr.onerror = function() {
+                reject(new Error('네트워크 오류로 파일 업로드에 실패했습니다.'));
+            };
+
+            xhr.send(fileBlob);
         });
-        return await checkResponse(res, '파일 업로드에 실패했습니다.');
     },
     // --- Shorts ---
     async getShorts() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts`, { headers: getAuthHeaders() });
         return await checkResponse(res, '쇼츠 목록을 불러오지 못했습니다.');
+    },
+    async getShortsStats() {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/stats`, { headers: getAuthHeaders() });
+        return await checkResponse(res, '쇼츠 통계를 불러오지 못했습니다.');
     },
     async addShorts(data) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts`, {
@@ -206,6 +251,20 @@ const D1 = {
             headers: getAuthHeaders()
         });
         if (!res.ok) throw new Error('Failed to delete shorts');
+        return await res.json();
+    },
+    async viewShorts(id) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${id}/view`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        });
+        return await res.json();
+    },
+    async shareShorts(id) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${id}/share`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        });
         return await res.json();
     },
     async likeShorts(id) {
