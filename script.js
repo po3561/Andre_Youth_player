@@ -377,11 +377,18 @@ $(document).ready(function () {
     }
 
     function updateActiveInList() {
-        $('.song-item').removeClass('active is-playing');
-        $('.song-item .playing-badge').remove();
-        const $current = $(`.song-item[data-index="${curIdx}"]`);
+        $('.song-item, .track-item').removeClass('active is-playing');
+        $('.playing-badge').remove();
+        const $current = $(`.song-item[data-index="${curIdx}"], .track-item[data-index="${curIdx}"]`);
         $current.addClass('active is-playing');
-        $current.find('h4').append(' <span class="playing-badge">▶ 재생 중</span>');
+        $current.find('h4, .track-title').append(' <span class="playing-badge">▶ 재생 중</span>');
+
+        // PC & 모바일 동일하게 현재 재생 트랙 위치로 부드러운 스크롤 통일
+        if ($current.length > 0 && $current[0].scrollIntoView) {
+            try {
+                $current[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } catch(e) {}
+        }
     }
 
     /* ─── Format Time ─── */
@@ -1068,19 +1075,27 @@ $(document).ready(function () {
             }
         });
 
-        // 쇼츠 댓글 버튼 (바텀 시트 열기)
+        // 쇼츠 댓글 버튼 (유튜브형 비디오 상단 축소 & 바텀 시트 열기)
         $('#shorts-comment-btn').on('click', function(e) {
             e.stopPropagation();
             if (!shortsList.length) return;
             const curShorts = shortsList[shortsOrder[curShortsOrderIdx]];
             if (!curShorts) return;
 
-            $('#shorts-comments-sheet').addClass('active');
-            fetchShortsComments(curShorts.id);
+            const isOpen = $('#shorts-comments-sheet').hasClass('active');
+            if (isOpen) {
+                $('.shorts-viewport').removeClass('comments-open');
+                $('#shorts-comments-sheet').removeClass('active');
+            } else {
+                $('.shorts-viewport').addClass('comments-open');
+                $('#shorts-comments-sheet').addClass('active');
+                fetchShortsComments(curShorts.id);
+            }
         });
 
-        // 바텀 시트 닫기
+        // 바텀 시트 닫기 및 풀스크린 복귀
         $('.bottom-sheet-close, .bottom-sheet-backdrop').on('click', function() {
+            $('.shorts-viewport').removeClass('comments-open');
             $('#shorts-comments-sheet').removeClass('active');
         });
 
@@ -1155,8 +1170,13 @@ $(document).ready(function () {
             $('.shorts-empty-state').hide();
             $('.shorts-viewport').show();
 
-            // 셔플 알고리즘 적용
-            shuffleShortsList();
+            // 관리자 재생 방식 설정(playbackMode) 연동
+            if (window.appPlaybackMode === 'random') {
+                shuffleShortsList();
+            } else {
+                // 순차재생 (sequential): 최신 업로드/정렬순 그대로 재생
+                shortsOrder = Array.from({ length: shortsList.length }, (_, i) => i);
+            }
 
             // URL 해시(#shorts/아이디) 탐색 시 해당 쇼츠를 가장 먼저 재생하도록 순서 조정
             const hash = window.location.hash;

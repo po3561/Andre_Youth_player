@@ -572,6 +572,14 @@ body {
     overflow: hidden;
     touch-action: pan-x;
     -webkit-overflow-scrolling: touch;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.4s ease, filter 0.4s ease;
+    transform-origin: center top;
+}
+.shorts-viewport.comments-open {
+    transform: scale(0.86) translateY(-24px);
+    border-radius: 24px;
+    filter: brightness(0.85);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
 }
 .shorts-slide {
     position: absolute;
