@@ -899,6 +899,14 @@ $(document).ready(function () {
             }
         });
 
+        $('.shorts-toggle').off('click').on('click', function(e) {
+            const $chk = $('#shorts-mode-toggle');
+            if (e.target !== $chk[0]) {
+                e.preventDefault();
+                $chk.prop('checked', !$chk.is(':checked')).trigger('change');
+            }
+        });
+
         $('#shorts-mode-toggle').on('change', function() {
             isShortsMode = $(this).is(':checked');
             if (isShortsMode) {
@@ -908,7 +916,7 @@ $(document).ready(function () {
                     $('#btn-play-pause').html('<i class="fa-solid fa-play"></i>');
                 }
                 $('#app-container').hide();
-                $('#shorts-container').removeClass('shorts-hidden');
+                $('#shorts-container').removeClass('shorts-hidden').css('display', 'flex');
                 try {
                     history.pushState({ mode: 'shorts' }, '', '#shorts');
                     isShortsHistoryPushed = true;
@@ -1119,7 +1127,14 @@ $(document).ready(function () {
 
     /* ─── Shorts Mode Logic ─── */
     async function initShortsMode() {
-        if (!window.CloudflareAPI || !window.CloudflareAPI.D1) return;
+        $('#app-container').hide();
+        $('#shorts-container').removeClass('shorts-hidden').css('display', 'flex');
+
+        if (!window.CloudflareAPI || !window.CloudflareAPI.D1) {
+            $('.shorts-viewport').hide();
+            $('.shorts-empty-state').show().find('p').text('서버 데이터 준비 중입니다.');
+            return;
+        }
 
         try {
             const data = await window.CloudflareAPI.D1.getShorts();
@@ -1127,7 +1142,7 @@ $(document).ready(function () {
             
             if (shortsList.length === 0) {
                 $('.shorts-viewport').hide();
-                $('.shorts-empty-state').show();
+                $('.shorts-empty-state').show().find('p').text('등록된 쇼츠 영상이 없습니다.');
                 return;
             }
 
@@ -1143,7 +1158,6 @@ $(document).ready(function () {
                 const targetId = hash.replace('#shorts/', '');
                 const foundIdx = shortsList.findIndex(s => s.id === targetId);
                 if (foundIdx !== -1) {
-                    // targetId를 가진 인덱스를 셔플 순서의 맨 앞으로 보냄
                     const orderIdx = shortsOrder.indexOf(foundIdx);
                     if (orderIdx !== -1) {
                         shortsOrder.splice(orderIdx, 1);
@@ -1158,7 +1172,7 @@ $(document).ready(function () {
         } catch (err) {
             console.error("Fetch shorts error:", err);
             $('.shorts-viewport').hide();
-            $('.shorts-empty-state').show().find('p').text('영상 목록을 가져오지 못했습니다.');
+            $('.shorts-empty-state').show().find('p').text('영상 목록을 가져오지 못했습니다: ' + err.message);
         }
     }
 

@@ -500,13 +500,19 @@ body {
     cursor: pointer;
     margin: 2px 0 0 0;
     vertical-align: middle;
-    overflow: hidden;
+    overflow: visible;
     transition: all 0.3s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.shorts-toggle * {
+    pointer-events: none;
 }
 .shorts-toggle input {
     opacity: 0;
     width: 0;
     height: 0;
+    pointer-events: none;
 }
 .shorts-toggle-slider {
     position: absolute;
@@ -518,6 +524,7 @@ body {
     border-radius: 50%;
     transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 1;
+    pointer-events: none;
 }
 .shorts-toggle input:checked + .shorts-toggle-slider {
     transform: translateX(50px);
@@ -531,6 +538,7 @@ body {
     color: var(--text-dim);
     z-index: 0;
     transition: color 0.3s;
+    pointer-events: none;
 }
 .shorts-toggle input:checked ~ .shorts-toggle-icon {
     color: var(--primary);
