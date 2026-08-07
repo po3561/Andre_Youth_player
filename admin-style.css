@@ -168,38 +168,67 @@ body.admin-page {
 
 .admin-song-list { display: flex; flex-direction: column; gap: 10px; }
 .admin-song-item { 
-    display: flex; justify-content: space-between; align-items: center; 
-    padding: 15px 20px; background: rgba(255,255,255,0.08); border-radius: 15px; 
-    border: 1px solid rgba(255,255,255,0.1); transition: 0.3s;
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 12px 16px; 
+    background: rgba(255,255,255,0.08); 
+    border-radius: 14px; 
+    border: 1px solid rgba(255,255,255,0.1); 
+    transition: 0.3s;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
 }
-.admin-song-item:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
-.admin-song-info { display: flex; align-items: center; gap: 15px; color: #fff; min-width: 0; }
-.admin-song-info strong { font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-song-item:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.25); }
+
+.admin-song-info { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    color: #fff; 
+    flex: 1;
+    min-width: 0; 
+    overflow: hidden;
+}
+
+.admin-song-info strong { 
+    font-size: 0.95rem; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap; 
+    display: block;
+    max-width: 100%;
+}
+
 .admin-song-meta {
     display: flex;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
+    flex: 1;
+    overflow: hidden;
 }
 .admin-song-chip {
     width: fit-content;
-    padding: 3px 8px;
+    padding: 2px 7px;
     border-radius: 999px;
     background: rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.76);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.02em;
 }
 
 .migration-badge {
     display: inline-block;
-    padding: 3px 8px;
+    padding: 2px 7px;
     border-radius: 6px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    margin-top: 4px;
+    margin-top: 3px;
+    width: fit-content;
 }
 .badge-drive {
     background: rgba(255, 149, 0, 0.15);
@@ -212,33 +241,36 @@ body.admin-page {
     border: 1px solid rgba(0, 255, 136, 0.3);
 }
 
-.song-cover-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: rgba(255,255,255,0.08); }
+.song-cover-thumb { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: rgba(255,255,255,0.08); }
 .admin-song-item.read-only { border-style: dashed; }
 .admin-song-item.read-only .btn-delete-song { opacity: 0.45; cursor: not-allowed; transform: none; }
 .admin-song-item.read-only .btn-delete-song:hover { background: rgba(255,59,48,0.2); color: #ff3b30; transform: none; }
 
-.btn-delete-song { 
-    background: rgba(255,59,48,0.2); color: #ff3b30; border: none; 
-    width: 35px; height: 35px; border-radius: 10px; cursor: pointer; transition: 0.3s; 
-}
-.btn-delete-song:hover { background: #ff3b30; color: #fff; transform: scale(1.1); }
-
 .admin-song-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
+    margin-left: auto;
 }
+
+.btn-delete-song { 
+    background: rgba(255,59,48,0.2); color: #ff3b30; border: none; 
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer; transition: 0.2s; 
+    display: flex; align-items: center; justify-content: center;
+}
+.btn-delete-song:hover { background: #ff3b30; color: #fff; transform: scale(1.08); }
 
 .btn-edit-song {
     background: rgba(33, 204, 249, 0.18);
     color: rgba(255,255,255,0.92);
     border: 1px solid rgba(33, 204, 249, 0.28);
-    width: 35px;
-    height: 35px;
-    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: 0.3s;
+    transition: 0.2s;
+    display: flex; align-items: center; justify-content: center;
 }
 
 .btn-edit-song:hover {
@@ -250,9 +282,9 @@ body.admin-page {
     background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    width: 35px;
-    height: 35px;
-    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     cursor: pointer;
     transition: 0.2s ease;
     display: flex;

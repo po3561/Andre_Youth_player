@@ -1817,7 +1817,7 @@ $(document).ready(function () {
         }
 
         shorts.forEach(s => {
-            const $item = $('<div>').addClass('admin-song-item');
+            const $item = $('<div>').addClass('admin-song-item').attr('data-id', s.id);
             const $info = $('<div>').addClass('admin-song-info');
             
             // 쇼츠 비디오 요소 (작은 썸네일 미리보기)
@@ -1825,19 +1825,31 @@ $(document).ready(function () {
                 .attr('src', s.videoUrl)
                 .attr('muted', true)
                 .attr('playsinline', true)
-                .css({ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px', background: '#000' });
+                .css({ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '8px', background: '#000', flexShrink: 0 });
             
             // 호버 시 마우스 호버로 재생되도록
             $video.on('mouseenter', function() { this.play().catch(() => {}); })
                   .on('mouseleave', function() { this.pause(); });
 
-            const $titleWrapper = $('<div>').css({ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginLeft: '10px' });
+            const $titleWrapper = $('<div>').addClass('admin-song-meta');
             $titleWrapper.append($('<strong>').text(s.title || '제목 없음'));
             if (s.description) {
-                $titleWrapper.append($('<small>').text(s.description).css({ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginTop: '2px' }));
+                $titleWrapper.append($('<small>').text(s.description).css({ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }));
             }
 
             $info.append($video, $titleWrapper);
+
+            const $upButton = $('<button>')
+                .addClass('btn-move-up')
+                .attr('type', 'button')
+                .attr('title', '위로 이동')
+                .html('<i class="fa-solid fa-arrow-up"></i>');
+
+            const $downButton = $('<button>')
+                .addClass('btn-move-down')
+                .attr('type', 'button')
+                .attr('title', '아래로 이동')
+                .html('<i class="fa-solid fa-arrow-down"></i>');
 
             const $editButton = $('<button>')
                 .addClass('btn-edit-song btn-edit-shorts')
@@ -1857,11 +1869,39 @@ $(document).ready(function () {
                 .html('<i class="fa-solid fa-trash-can"></i>');
 
             const $actions = $('<div>').addClass('admin-song-actions');
-            $actions.append($editButton, $deleteButton);
+            $actions.append($upButton, $downButton, $editButton, $deleteButton);
             $item.append($info, $actions);
             $list.append($item);
         });
     }
+
+    // 쇼츠 순서 저장 (shortsOrder)
+    $('#btn-save-shorts-order').on('click', async function() {
+        const orderList = [];
+        $('#admin-shorts-list .admin-song-item').each(function(index) {
+            const id = $(this).data('id');
+            if (id) {
+                orderList.push({ id: id, shortsOrder: index + 1 });
+            }
+        });
+
+        if (orderList.length === 0) return alert('저장할 쇼츠가 없습니다.');
+
+        const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...');
+        try {
+            if (window.CloudflareAPI && window.CloudflareAPI.D1 && window.CloudflareAPI.D1.updateShortsOrder) {
+                await window.CloudflareAPI.D1.updateShortsOrder(orderList);
+                alert('쇼츠 순서가 성공적으로 저장되었습니다!');
+                fetchShorts();
+            } else {
+                throw new Error("Cloudflare API ready error");
+            }
+        } catch(e) {
+            alert('쇼츠 순서 저장 실패: ' + e.message);
+        } finally {
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk"></i> 순서 저장');
+        }
+    });
 
     // 쇼츠 업로드 버튼 핸들러
     $('#btn-upload-shorts').on('click', async function() {

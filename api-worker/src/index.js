@@ -297,14 +297,24 @@ export default {
       }
 
       if (path === '/shorts' && request.method === 'GET') {
-        const { results } = await env.DB.prepare('SELECT * FROM shorts ORDER BY createdAt DESC').all();
+        const { results } = await env.DB.prepare('SELECT * FROM shorts ORDER BY COALESCE(shortsOrder, 0) ASC, createdAt DESC').all();
         return Response.json(results || [], { headers: corsHeaders });
+      }
+
+      if (path === '/shorts/order' && request.method === 'PUT') {
+        const items = await request.json();
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            await env.DB.prepare('UPDATE shorts SET shortsOrder = ? WHERE id = ?').bind(item.shortsOrder || 0, item.id).run();
+          }
+        }
+        return Response.json({ success: true }, { headers: corsHeaders });
       }
 
       if (path === '/shorts' && request.method === 'POST') {
         const data = await request.json();
-        await env.DB.prepare('INSERT INTO shorts (id, title, description, videoUrl, likes, views, shares, createdAt) VALUES (?, ?, ?, ?, 0, 0, 0, ?)').bind(
-          data.id, data.title, data.description || '', data.videoUrl, Date.now()
+        await env.DB.prepare('INSERT INTO shorts (id, title, description, videoUrl, likes, views, shares, createdAt, shortsOrder) VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?)').bind(
+          data.id, data.title, data.description || '', data.videoUrl, Date.now(), data.shortsOrder || 0
         ).run();
         return Response.json({ success: true }, { headers: corsHeaders });
       }
@@ -386,6 +396,7 @@ export default {
           try { await env.DB.prepare("ALTER TABLE users ADD COLUMN position TEXT").run(); } catch(e) {}
           try { await env.DB.prepare("ALTER TABLE shorts ADD COLUMN views INTEGER DEFAULT 0").run(); } catch(e) {}
           try { await env.DB.prepare("ALTER TABLE shorts ADD COLUMN shares INTEGER DEFAULT 0").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE shorts ADD COLUMN shortsOrder INTEGER DEFAULT 0").run(); } catch(e) {}
           try { await env.DB.prepare("ALTER TABLE playlist ADD COLUMN playlistOrder INTEGER DEFAULT 0").run(); } catch(e) {}
           
           // 마스터 어드민(admin) 계정이 없으면 암호화된 비밀번호(1234의 해시)로 자동 주입

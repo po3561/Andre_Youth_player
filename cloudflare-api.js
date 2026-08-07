@@ -261,6 +261,14 @@ const D1 = {
         });
         return await checkResponse(res, '쇼츠 정보를 수정하지 못했습니다.');
     },
+    async updateShortsOrder(orderList) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/order`, {
+            method: 'PUT',
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(orderList)
+        });
+        return await checkResponse(res, '쇼츠 순서를 저장하지 못했습니다.');
+    },
     async deleteShorts(id) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/shorts/${id}`, {
             method: 'DELETE',
