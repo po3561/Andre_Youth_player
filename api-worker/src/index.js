@@ -70,27 +70,32 @@ export default {
     const token = authHeader ? authHeader.replace('Bearer ', '') : null;
     const currentUser = await verifyToken(token, env);
 
-    // 권한이 필요한 라우트 목록 (예: 생성/수정/삭제 등)
+    // 권한이 필요한 라우트 목록
     const requiresAdmin = [
         { path: '/playlist', methods: ['POST', 'PUT', 'DELETE'] },
         { path: '/settings', methods: ['POST'] },
         { path: '/upload', methods: ['PUT'] },
-        { path: '/shorts', methods: ['POST', 'DELETE'] },
+        { path: '/shorts', exact: true, methods: ['POST', 'DELETE'] },
         { path: '/users', methods: ['GET', 'PUT', 'DELETE'] },
         { path: '/users/refresh-token', methods: ['POST'] },
         { path: '/reset', methods: ['DELETE'] },
         { path: '/init', methods: ['POST'] }
     ];
 
-    // 인증 제외 경로 (회원가입/로그인은 누구나 접근 가능)
+    // 인증 제외 경로 (회원가입/로그인 및 쇼츠 시청/공유/좋아요/댓글)
     const publicPaths = ['/users/signup', '/users/login'];
     const isPublic = publicPaths.some(p => path === p);
 
     // /users/{id} PUT/DELETE는 관리자 전용
     const isUserAdmin = path.startsWith('/users/') && !isPublic && ['PUT', 'DELETE'].includes(request.method);
-    const isShortsAdminPut = path.startsWith('/shorts/') && !path.includes('/view') && !path.includes('/share') && !path.includes('/like') && !path.includes('/comments') && request.method === 'PUT';
+    const isShortsPublicAction = path.includes('/view') || path.includes('/share') || path.includes('/like') || path.includes('/comments');
+    const isShortsAdminPut = path.startsWith('/shorts/') && !isShortsPublicAction && request.method === 'PUT';
 
-    const needsAuth = requiresAdmin.some(r => path.startsWith(r.path) && r.methods.includes(request.method)) || isUserAdmin || isShortsAdminPut;
+    const needsAuth = (!isShortsPublicAction && requiresAdmin.some(r => {
+        if (!r.methods.includes(request.method)) return false;
+        return r.exact ? path === r.path : path.startsWith(r.path);
+    })) || isUserAdmin || isShortsAdminPut;
+
     if (needsAuth && !isPublic) {
         if (!currentUser) {
             return Response.json({ success: false, error: 'Unauthorized: Invalid or missing token' }, { status: 401, headers: corsHeaders });
@@ -319,8 +324,9 @@ export default {
         return Response.json({ success: true }, { headers: corsHeaders });
       }
 
-      if (path.startsWith('/shorts/') && path.endsWith('/view') && request.method === 'PUT') {
-        const id = path.split('/')[2];
+      const shortsViewMatch = path.match(/^\/shorts\/([^\/]+)\/view$/);
+      if (shortsViewMatch && request.method === 'PUT') {
+        const id = decodeURIComponent(shortsViewMatch[1]);
         await env.DB.prepare('UPDATE shorts SET views = COALESCE(views, 0) + 1 WHERE id = ?').bind(id).run();
         await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_stats (id TEXT PRIMARY KEY, shortsId TEXT, actionType TEXT, userId TEXT, timestamp INTEGER)").run();
         const statId = 'stat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -329,8 +335,9 @@ export default {
         return Response.json({ success: true, views: updated?.views || 1 }, { headers: corsHeaders });
       }
 
-      if (path.startsWith('/shorts/') && path.endsWith('/share') && request.method === 'PUT') {
-        const id = path.split('/')[2];
+      const shortsShareMatch = path.match(/^\/shorts\/([^\/]+)\/share$/);
+      if (shortsShareMatch && request.method === 'PUT') {
+        const id = decodeURIComponent(shortsShareMatch[1]);
         await env.DB.prepare('UPDATE shorts SET shares = COALESCE(shares, 0) + 1 WHERE id = ?').bind(id).run();
         await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_stats (id TEXT PRIMARY KEY, shortsId TEXT, actionType TEXT, userId TEXT, timestamp INTEGER)").run();
         const statId = 'stat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);

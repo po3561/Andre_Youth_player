@@ -893,9 +893,17 @@ $(document).ready(function () {
         }
         window.closeShortsMode = closeShortsMode;
 
-        window.addEventListener('popstate', function() {
-            if (isShortsMode || $('#shorts-mode-toggle').is(':checked') || !$('#shorts-container').hasClass('shorts-hidden')) {
-                closeShortsMode();
+        let isPushingShortsHistory = false;
+
+        window.addEventListener('popstate', function(e) {
+            if (isPushingShortsHistory) {
+                isPushingShortsHistory = false;
+                return;
+            }
+            if (isShortsMode || !$('#shorts-container').hasClass('shorts-hidden')) {
+                if (!e.state || e.state.mode !== 'shorts') {
+                    closeShortsMode();
+                }
             }
         });
 
@@ -915,6 +923,7 @@ $(document).ready(function () {
                 $('#app-container').hide();
                 $('#shorts-container').removeClass('shorts-hidden').css('display', 'flex');
                 try {
+                    isPushingShortsHistory = true;
                     history.pushState({ mode: 'shorts' }, '', '#shorts');
                     isShortsHistoryPushed = true;
                 } catch(e) {}
@@ -1208,9 +1217,10 @@ $(document).ready(function () {
         updateShortsMuteUI();
 
         video.play().catch(e => {
-            console.log("Unmuted auto-play blocked by browser policy, fallback to muted auto-play first.", e);
-            video.muted = true;
-            video.play().catch(() => {});
+            if (e.name !== 'AbortError') {
+                video.muted = true;
+                video.play().catch(() => {});
+            }
         });
 
         // 댓글 갯수 가져오기
