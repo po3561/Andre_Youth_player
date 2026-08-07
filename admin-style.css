@@ -1014,12 +1014,29 @@ body.admin-page {
 
 /* Mobile Header Icon-Only Mode (Prevent Vertical Stack) */
 @media (max-width: 520px) {
+    .admin-header {
+        padding: 12px 10px;
+    }
+    .nav-title .main-title {
+        font-size: 16px;
+    }
+    .nav-title .sub-title {
+        font-size: 8px;
+        letter-spacing: 1px;
+    }
     .header-btn-text {
         display: none !important;
     }
     .admin-header .icon-btn {
-        padding: 8px 12px !important;
-        border-radius: 12px !important;
+        padding: 8px 10px !important;
+        border-radius: 10px !important;
+        font-size: 0.8rem;
+    }
+    .admin-header .nav-side {
+        flex: 0 0 auto;
+    }
+    .admin-header .nav-title {
+        flex: 1;
     }
     .trigger-left {
         gap: 12px;

@@ -270,7 +270,7 @@ body {
 }
 .sheet-title { font-size: 18px; font-weight: 800; margin-bottom: 12px; flex-shrink: 0; }
 
-.song-list { overflow-y: auto; flex: 1; }
+.song-list { overflow-y: auto; flex: 1; scroll-behavior: smooth; }
 .song-list::-webkit-scrollbar { display: none; }
 
 .song-item { 
@@ -673,11 +673,11 @@ body {
     line-height: 1.4;
 }
 
-/* === Comments Bottom Sheet === */
+/* === Comments Bottom Sheet (inside #shorts-container) === */
 .bottom-sheet {
-    position: fixed;
+    position: absolute;
     top: 0; bottom: 0; left: 0; right: 0;
-    z-index: 1000;
+    z-index: 50;
     display: none;
     align-items: flex-end;
 }

@@ -271,6 +271,7 @@ export default {
       // Shorts
       if (path === '/shorts/stats' && request.method === 'GET') {
         await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_stats (id TEXT PRIMARY KEY, shortsId TEXT, actionType TEXT, userId TEXT, timestamp INTEGER)").run();
+        await env.DB.prepare("CREATE TABLE IF NOT EXISTS shorts_comments (id TEXT PRIMARY KEY, shortsId TEXT, nickname TEXT, content TEXT, timestamp INTEGER)").run();
         const { results: shortsList } = await env.DB.prepare('SELECT * FROM shorts ORDER BY createdAt DESC').all();
         const { results: commentsCount } = await env.DB.prepare('SELECT shortsId, COUNT(*) as cnt FROM shorts_comments GROUP BY shortsId').all();
         

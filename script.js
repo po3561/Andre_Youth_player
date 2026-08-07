@@ -377,14 +377,14 @@ $(document).ready(function () {
     }
 
     function updateActiveInList() {
-        $('.song-item, .track-item').removeClass('active is-playing');
+        $('.song-item').removeClass('active is-playing');
         $('.playing-badge').remove();
-        const $current = $(`.song-item[data-index="${curIdx}"], .track-item[data-index="${curIdx}"]`);
+        const $current = $(`.song-item[data-index="${curIdx}"]`);
         $current.addClass('active is-playing');
-        $current.find('h4, .track-title').append(' <span class="playing-badge">▶ 재생 중</span>');
+        $current.find('h4').append(' <span class="playing-badge">▶ 재생 중</span>');
 
         // PC & 모바일 동일하게 현재 재생 트랙 위치로 부드러운 스크롤 통일
-        if ($current.length > 0 && $current[0].scrollIntoView) {
+        if ($current.length > 0) {
             try {
                 $current[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             } catch(e) {}
@@ -972,6 +972,8 @@ $(document).ready(function () {
         // --- Mobile Touch: real-time drag with visual feedback ---
         $shortsViewport[0].addEventListener('touchstart', function(e) {
             if (isShortsTransitioning) return;
+            // 댓글 시트가 열려 있으면 스와이프 무시
+            if ($('#shorts-comments-sheet').hasClass('active')) return;
             // Ignore if user is interacting with the seek slider
             if ($(e.target).closest('#shorts-progress-zone, .shorts-action-btn, .shorts-mode-pill-btn').length) return;
             swipeTouchStartY = e.touches[0].clientY;
@@ -1015,6 +1017,7 @@ $(document).ready(function () {
         let wheelCooldown = false;
         $shortsContainer[0].addEventListener('wheel', function(e) {
             if (wheelCooldown || isShortsTransitioning || !shortsList.length) return;
+            if ($('#shorts-comments-sheet').hasClass('active')) return;
             e.preventDefault();
             wheelCooldown = true;
             if (e.deltaY > 30) {
@@ -1030,6 +1033,8 @@ $(document).ready(function () {
             if (!$shortsContainer.is(':visible') || isShortsTransitioning || !shortsList.length) return;
             // Don't hijack if user is typing in an input
             if ($(e.target).is('input, textarea, select')) return;
+            // 댓글 시트가 열려 있으면 키보드 네비게이션 무시
+            if ($('#shorts-comments-sheet').hasClass('active')) return;
             if (e.key === 'ArrowDown' || e.key === 'j') {
                 e.preventDefault();
                 navigateShorts('next');
@@ -1246,8 +1251,8 @@ $(document).ready(function () {
         // 댓글 갯수 가져오기
         fetchShortsCommentsCount(shorts.id);
 
-        // 해시 업데이트 (현재 재생영상 ID 기록)
-        window.location.hash = `shorts/${shorts.id}`;
+        // 해시 업데이트 (현재 재생영상 ID 기록) — replaceState로 popstate 연쇄 차단
+        history.replaceState({ mode: 'shorts', id: shorts.id }, '', `#shorts/${shorts.id}`);
 
         // 다음 영상 미리 로드 (프리로딩)
         preloadNextVideo();
@@ -1328,7 +1333,11 @@ $(document).ready(function () {
             isShortsTransitioning = true;
             curShortsOrderIdx++;
             if (curShortsOrderIdx >= shortsList.length) {
-                shuffleShortsList();
+                if (window.appPlaybackMode === 'random') {
+                    shuffleShortsList();
+                } else {
+                    shortsOrder = Array.from({ length: shortsList.length }, (_, i) => i);
+                }
                 curShortsOrderIdx = 0;
             }
             smoothShortsTransition('up', () => {
