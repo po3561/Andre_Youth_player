@@ -246,6 +246,25 @@ body.admin-page {
     transform: scale(1.08);
 }
 
+.btn-move-up, .btn-move-down {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    width: 35px;
+    height: 35px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-move-up:hover, .btn-move-down:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
 .admin-edit-card {
     height: 82vh;
     max-width: 520px;

@@ -42,6 +42,7 @@
                         <input type="checkbox" id="shorts-mode-toggle">
                         <span class="shorts-toggle-slider"></span>
                         <i class="fa-solid fa-clapperboard shorts-toggle-icon"></i>
+                        <span class="shorts-new-badge">✨ NEW</span>
                     </label>
                 </div>
             </div>
@@ -227,6 +228,15 @@
                     <div class="shorts-info">
                         <h3 class="shorts-title"></h3>
                         <p class="shorts-desc"></p>
+                    </div>
+
+                    <!-- Shorts Auto Next Countdown Overlay -->
+                    <div id="shorts-auto-next-card" class="shorts-auto-next-card" style="display: none;">
+                        <div class="shorts-auto-next-info">
+                            <span class="shorts-auto-next-icon"><i class="fa-solid fa-circle-play"></i></span>
+                            <span id="shorts-auto-next-text"><strong id="shorts-auto-next-sec">3</strong>초 후 다음 영상 자동 재생</span>
+                        </div>
+                        <button id="btn-cancel-auto-next" class="shorts-cancel-btn" type="button">취소</button>
                     </div>
                     <!-- Shorts Bottom Scrubber Bar -->
                     <div class="shorts-progress-bar-wrap" id="shorts-progress-zone">

@@ -110,15 +110,25 @@ export default {
 
       // Playlist
       if (path === '/playlist' && request.method === 'GET') {
-        const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY createdAt ASC').all();
+        const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY COALESCE(playlistOrder, 0) ASC, createdAt ASC').all();
         return Response.json(results || [], { headers: corsHeaders });
+      }
+
+      if (path === '/playlist/order' && request.method === 'PUT') {
+        const items = await request.json();
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            await env.DB.prepare('UPDATE playlist SET playlistOrder = ? WHERE id = ?').bind(item.playlistOrder || 0, item.id).run();
+          }
+        }
+        return Response.json({ success: true }, { headers: corsHeaders });
       }
 
       if (path === '/playlist' && request.method === 'POST') {
         const data = await request.json();
-        const sql = "INSERT INTO playlist (id, title, artist, audio, cover, lyricsData, createdAt, syncOffset) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        const sql = "INSERT INTO playlist (id, title, artist, audio, cover, lyricsData, createdAt, syncOffset, playlistOrder) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         await env.DB.prepare(sql).bind(
-          data.id, data.title, data.artist, data.audio, data.cover, data.lyricsData, data.createdAt || Date.now(), data.syncOffset || 0
+          data.id, data.title, data.artist, data.audio, data.cover, data.lyricsData, data.createdAt || Date.now(), data.syncOffset || 0, data.playlistOrder || 0
         ).run();
         return Response.json({ success: true }, { headers: corsHeaders });
       }
@@ -361,7 +371,7 @@ export default {
       }
 
       if (path === '/init' && request.method === 'POST') {
-          await env.DB.prepare("CREATE TABLE IF NOT EXISTS playlist (id TEXT PRIMARY KEY, title TEXT, artist TEXT, audio TEXT, cover TEXT, lyricsData TEXT, createdAt INTEGER, syncOffset REAL)").run();
+          await env.DB.prepare("CREATE TABLE IF NOT EXISTS playlist (id TEXT PRIMARY KEY, title TEXT, artist TEXT, audio TEXT, cover TEXT, lyricsData TEXT, createdAt INTEGER, syncOffset REAL, playlistOrder INTEGER DEFAULT 0)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS chat (id TEXT PRIMARY KEY, content TEXT, timestamp INTEGER, uid TEXT)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS inquiry (id TEXT PRIMARY KEY, title TEXT, content TEXT, contact TEXT, timestamp INTEGER)").run();
           await env.DB.prepare("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)").run();
@@ -376,11 +386,12 @@ export default {
           try { await env.DB.prepare("ALTER TABLE users ADD COLUMN position TEXT").run(); } catch(e) {}
           try { await env.DB.prepare("ALTER TABLE shorts ADD COLUMN views INTEGER DEFAULT 0").run(); } catch(e) {}
           try { await env.DB.prepare("ALTER TABLE shorts ADD COLUMN shares INTEGER DEFAULT 0").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE playlist ADD COLUMN playlistOrder INTEGER DEFAULT 0").run(); } catch(e) {}
           
           // 마스터 어드민(admin) 계정이 없으면 암호화된 비밀번호(1234의 해시)로 자동 주입
           await env.DB.prepare("INSERT OR IGNORE INTO users (id, password, name, phone, company, position, isApproved, role, createdAt) VALUES ('admin', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 'Master Admin', '', '', '', 1, 'admin', ?)").bind(Date.now()).run();
           
-          await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('mainTitle', 'ANDREW YOUTH'), ('subTitle', '믿음으로 기대하다')").run();
+          await env.DB.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('mainTitle', 'ANDREW YOUTH'), ('subTitle', '믿음으로 기대하다'), ('playbackMode', 'sequential')").run();
 
           return Response.json({ success: true, message: 'All tables initialized' }, { headers: corsHeaders });
       }

@@ -90,6 +90,7 @@ $(document).ready(function () {
                 
                 // 설정 데이터 가져오기
                 const settings = await window.CloudflareAPI.D1.getSettings();
+                window.appPlaybackMode = settings.playbackMode || 'sequential';
                 const mainTitle = settings.mainTitle || 'ANDREW YOUTH';
                 const subTitle = settings.subTitle || '믿음으로 기대하다';
                 $('#top-subtitle').text(mainTitle).css('color', '');
@@ -170,6 +171,16 @@ $(document).ready(function () {
             };
         });
 
+        // localStorage에 저장된 마지막 곡 및 재생 시각 복원
+        const savedLastSongId = localStorage.getItem('andre_last_song_id');
+        const savedLastSongIdx = parseInt(localStorage.getItem('andre_last_song_idx'));
+        if (savedLastSongId) {
+            const foundIdx = playlistData.findIndex(s => s.id === savedLastSongId);
+            if (foundIdx !== -1) curIdx = foundIdx;
+        } else if (!isNaN(savedLastSongIdx) && playlistData[savedLastSongIdx]) {
+            curIdx = savedLastSongIdx;
+        }
+
         renderPlaylist();
 
         // 현재 재생 중이던 곡이 여전히 목록에 있으면 인덱스 유지
@@ -184,6 +195,11 @@ $(document).ready(function () {
 
         if (playlistData.length > 0 && (!audio.src || !wasPlaying)) {
             playSongObject(playlistData[curIdx], false);
+
+            const savedLastTime = parseFloat(localStorage.getItem('andre_last_song_time'));
+            if (!isNaN(savedLastTime) && savedLastTime > 0) {
+                audio.currentTime = savedLastTime;
+            }
         }
     }
 
@@ -191,6 +207,9 @@ $(document).ready(function () {
     async function playSongObject(song, shouldPlay = false) {
         if (!song) return;
         currentPlayingSong = song; // 캡슐화된 상태 저장
+
+        localStorage.setItem('andre_last_song_id', song.id || '');
+        localStorage.setItem('andre_last_song_idx', curIdx);
         
         currentLoadId = Date.now();
         const myLoadId = currentLoadId;
@@ -346,10 +365,10 @@ $(document).ready(function () {
         playlistData.forEach((song, i) => {
             const isCurrent = i === curIdx;
             $container.append(`
-                <div class="song-item ${isCurrent ? 'active' : ''}" data-index="${i}">
+                <div class="song-item ${isCurrent ? 'active is-playing' : ''}" data-index="${i}">
                     <img src="${song.coverUrl}" loading="lazy" alt="cover" onerror="this.src='${MusicEngine.placeholderImage}'">
                     <div class="song-item-info">
-                        <h4>${song.title || 'Unknown'}</h4>
+                        <h4>${song.title || 'Unknown'}${isCurrent ? ' <span class="playing-badge">▶ 재생 중</span>' : ''}</h4>
                         <p>${song.artist || 'Andre Youth'}</p>
                     </div>
                 </div>
@@ -358,8 +377,11 @@ $(document).ready(function () {
     }
 
     function updateActiveInList() {
-        $('.song-item').removeClass('active');
-        $(`.song-item[data-index="${curIdx}"]`).addClass('active');
+        $('.song-item').removeClass('active is-playing');
+        $('.song-item .playing-badge').remove();
+        const $current = $(`.song-item[data-index="${curIdx}"]`);
+        $current.addClass('active is-playing');
+        $current.find('h4').append(' <span class="playing-badge">▶ 재생 중</span>');
     }
 
     /* ─── Format Time ─── */
@@ -402,7 +424,8 @@ $(document).ready(function () {
         $('#btn-next').on('click', () => {
             if (!playlistData.length) return;
             let n;
-            if (isShuffle) {
+            const isRandomMode = isShuffle || window.appPlaybackMode === 'random';
+            if (isRandomMode) {
                 n = Math.floor(Math.random() * playlistData.length);
                 if (playlistData.length > 1 && n === curIdx) n = (n + 1) % playlistData.length;
             } else {
@@ -421,6 +444,7 @@ $(document).ready(function () {
         });
 
         /* Audio Time Update */
+        let lastSavedTime = 0;
         if (audio) {
             audio.addEventListener('timeupdate', () => {
                 if (!isScrubbing && !isNaN(audio.duration) && audio.duration > 0) {
@@ -431,6 +455,12 @@ $(document).ready(function () {
                     $('#time-total').text(formatTime(audio.duration));
                 }
                 updateLyricsSync(audio.currentTime);
+
+                // 3초마다 마지막 재생 시간 localStorage 기록
+                if (Math.abs(audio.currentTime - lastSavedTime) > 3) {
+                    lastSavedTime = audio.currentTime;
+                    localStorage.setItem('andre_last_song_time', audio.currentTime);
+                }
             });
 
             /* Song Ended */
@@ -444,7 +474,8 @@ $(document).ready(function () {
                     }).catch(() => {});
                 } else {
                     let nextIdx;
-                    if (isShuffle) {
+                    const isRandomMode = isShuffle || window.appPlaybackMode === 'random';
+                    if (isRandomMode) {
                         nextIdx = Math.floor(Math.random() * playlistData.length);
                         if (playlistData.length > 1 && nextIdx === curIdx) {
                             nextIdx = (nextIdx + 1) % playlistData.length;
@@ -456,7 +487,7 @@ $(document).ready(function () {
                     if (nextIdx < playlistData.length) {
                         curIdx = nextIdx;
                         playSongObject(playlistData[nextIdx], true);
-                    } else if (repeatMode === 1) {
+                    } else if (repeatMode === 1 || isRandomMode) {
                         curIdx = 0;
                         playSongObject(playlistData[0], true);
                     } else {
@@ -845,7 +876,29 @@ $(document).ready(function () {
             syncFavoriteState();
         });
 
-        /* === Shorts Mode Toggle === */
+        /* === Shorts Mode Toggle & History API === */
+        let isShortsHistoryPushed = false;
+
+        function closeShortsMode() {
+            if (window.autoNextTimer) { clearInterval(window.autoNextTimer); window.autoNextTimer = null; }
+            $('#shorts-auto-next-card').hide();
+            $('#shorts-mode-toggle').prop('checked', false);
+            isShortsMode = false;
+            stopAllShortsVideos();
+            $('#shorts-container').addClass('shorts-hidden');
+            $('#app-container').show();
+            if (window.location.hash.startsWith('#shorts')) {
+                history.replaceState(null, '', window.location.pathname);
+            }
+        }
+        window.closeShortsMode = closeShortsMode;
+
+        window.addEventListener('popstate', function() {
+            if (isShortsMode || $('#shorts-mode-toggle').is(':checked') || !$('#shorts-container').hasClass('shorts-hidden')) {
+                closeShortsMode();
+            }
+        });
+
         $('#shorts-mode-toggle').on('change', function() {
             isShortsMode = $(this).is(':checked');
             if (isShortsMode) {
@@ -856,18 +909,23 @@ $(document).ready(function () {
                 }
                 $('#app-container').hide();
                 $('#shorts-container').removeClass('shorts-hidden');
+                try {
+                    history.pushState({ mode: 'shorts' }, '', '#shorts');
+                    isShortsHistoryPushed = true;
+                } catch(e) {}
                 initShortsMode();
             } else {
-                // 쇼츠 비디오 일시정지 및 숨김
-                stopAllShortsVideos();
-                $('#shorts-container').addClass('shorts-hidden');
-                $('#app-container').show();
+                closeShortsMode();
             }
         });
 
         /* === Shorts Exit to Playlist === */
         $('#btn-exit-shorts-mode').on('click', function() {
-            $('#shorts-mode-toggle').prop('checked', false).trigger('change');
+            if (isShortsHistoryPushed && history.state && history.state.mode === 'shorts') {
+                history.back();
+            } else {
+                closeShortsMode();
+            }
         });
 
         /* === Shorts Mute Toggle === */
@@ -1152,6 +1210,35 @@ $(document).ready(function () {
 
         // 다음 영상 미리 로드 (프리로딩)
         preloadNextVideo();
+
+        // 3초 자동 다음 영상 카운트다운 타이머 초기화
+        if (window.autoNextTimer) { clearInterval(window.autoNextTimer); window.autoNextTimer = null; }
+        $('#shorts-auto-next-card').hide();
+
+        video.loop = false; // 자동 전환을 위해 무한 반복 해제
+        video.onended = () => {
+            let autoSec = 3;
+            $('#shorts-auto-next-sec').text(autoSec);
+            $('#shorts-auto-next-card').stop(true, true).fadeIn(200);
+
+            if (window.autoNextTimer) clearInterval(window.autoNextTimer);
+            window.autoNextTimer = setInterval(() => {
+                autoSec--;
+                if (autoSec <= 0) {
+                    clearInterval(window.autoNextTimer);
+                    window.autoNextTimer = null;
+                    $('#shorts-auto-next-card').fadeOut(200);
+                    navigateShorts('next');
+                } else {
+                    $('#shorts-auto-next-sec').text(autoSec);
+                }
+            }, 1000);
+        };
+
+        $('#btn-cancel-auto-next').off('click').on('click', function() {
+            if (window.autoNextTimer) { clearInterval(window.autoNextTimer); window.autoNextTimer = null; }
+            $('#shorts-auto-next-card').fadeOut(200);
+        });
 
         // 쇼츠 비디오 하단 탐색 진행바(Scrubber) 실시간 연동
         bindShortsScrubber(video);

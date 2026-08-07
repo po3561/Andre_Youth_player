@@ -338,6 +338,23 @@
                             <input type="text" id="setting-playlist-subtitle" placeholder="청년회 사명자 수련회">
                         </label>
                     </div>
+
+                    <div style="margin-top: 20px;">
+                        <div class="setting-toggle-card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); padding: 14px 18px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <span style="font-weight: 800; color:#fff;"><i class="fa-solid fa-shuffle" style="color: var(--primary); margin-right: 6px;"></i> 플레이어 음악 재생 방식</span>
+                                <span style="font-size:0.75rem; color:rgba(255,255,255,0.6);">곡이 완곡되거나 다음 곡 재생 시 재생 방식을 지정합니다.</span>
+                            </div>
+                            <div style="display:flex; gap: 15px; align-items: center;">
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem; color:#fff;">
+                                    <input type="radio" name="setting-playback-mode" value="sequential" checked style="accent-color: var(--primary); width: 16px; height: 16px;"> 순차재생
+                                </label>
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem; color:#fff;">
+                                    <input type="radio" name="setting-playback-mode" value="random" style="accent-color: var(--primary); width: 16px; height: 16px;"> 랜덤재생
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div style="margin-top: 20px;">
                         <div class="setting-toggle-card green-card">
@@ -596,6 +613,7 @@
             </div>
             <div class="popup-body">
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:15px;">
+                    <button id="btn-save-playlist-order" class="primary-btn" style="padding:6px 14px; font-size:0.85rem; background: linear-gradient(135deg, #00f2fe, #4facfe); border:none; font-weight:700;" title="현재 화면 순서대로 플레이리스트 순서 저장"><i class="fa-solid fa-floppy-disk"></i> 순서 저장</button>
                     <button id="btn-reset-default" class="secondary-btn" style="padding:6px 12px; font-size:0.85rem;" title="기본 곡 목록으로 재설정"><i class="fa-solid fa-arrows-rotate"></i> 초기화</button>
                     <button id="btn-refresh-list" class="icon-btn" aria-label="목록 갱신"><i class="fa-solid fa-rotate"></i></button>
                 </div>

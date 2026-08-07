@@ -1015,3 +1015,109 @@ body {
     text-overflow: ellipsis;
 }
 
+/* === Shorts NEW Badge === */
+.shorts-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.shorts-new-badge {
+    position: absolute;
+    top: -8px;
+    right: -24px;
+    background: linear-gradient(135deg, #ff007f, #ff5500);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(255, 0, 127, 0.6);
+    letter-spacing: 0.5px;
+    animation: pulseBadge 2s infinite ease-in-out;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 10;
+}
+@keyframes pulseBadge {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
+    50% { transform: scale(1.1); box-shadow: 0 0 14px rgba(255, 0, 127, 0.9); }
+}
+
+/* === Currently Playing Track Highlight === */
+.track-item.is-playing, .playlist-item.is-playing, .admin-song-item.is-playing {
+    border: 1.5px solid #00f2fe !important;
+    background: linear-gradient(90deg, rgba(0, 242, 254, 0.15) 0%, rgba(79, 172, 254, 0.08) 100%) !important;
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.3) !important;
+    position: relative;
+}
+.playing-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0, 242, 254, 0.2);
+    color: #00f2fe;
+    border: 1px solid rgba(0, 242, 254, 0.4);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 800;
+    margin-left: 6px;
+}
+
+/* === Shorts Auto Next Countdown Card === */
+.shorts-auto-next-card {
+    position: absolute;
+    bottom: 75px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 242, 254, 0.4);
+    border-radius: 20px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 100;
+    min-width: 240px;
+    animation: slideUpFade 0.3s ease;
+}
+.shorts-auto-next-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+}
+.shorts-auto-next-icon {
+    color: #00f2fe;
+    font-size: 16px;
+}
+.shorts-auto-next-info strong {
+    color: #00f2fe;
+    font-size: 14px;
+}
+.shorts-cancel-btn {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.shorts-cancel-btn:hover {
+    background: rgba(255, 59, 48, 0.4);
+    border-color: #ff3b30;
+    color: #fff;
+}
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translate(-50%, 15px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+

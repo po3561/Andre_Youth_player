@@ -1173,7 +1173,21 @@ $(document).ready(function () {
                     $titleWrapper.append($(badgeHtml));
                 }
 
+                $item.attr('data-id', song.id);
+
                 $info.append($img, $titleWrapper);
+
+                const $upButton = $('<button>')
+                    .addClass('btn-move-up')
+                    .attr('type', 'button')
+                    .attr('title', '위로 이동')
+                    .html('<i class="fa-solid fa-arrow-up"></i>');
+
+                const $downButton = $('<button>')
+                    .addClass('btn-move-down')
+                    .attr('type', 'button')
+                    .attr('title', '아래로 이동')
+                    .html('<i class="fa-solid fa-arrow-down"></i>');
 
                 const $editButton = $('<button>')
                     .addClass('btn-edit-song')
@@ -1190,7 +1204,7 @@ $(document).ready(function () {
                     .html('<i class="fa-solid fa-trash-can"></i>');
 
                 const $actions = $('<div>').addClass('admin-song-actions');
-                $actions.append($editButton, $deleteButton);
+                $actions.append($upButton, $downButton, $editButton, $deleteButton);
                 $item.append($info, $actions);
                 $list.append($item);
             });
@@ -1202,6 +1216,51 @@ $(document).ready(function () {
     }
 
     $('#btn-refresh-list').click(fetchSongs);
+
+    // 플레이리스트 순서 변경 (위/아래 이동)
+    $(document).on('click', '.btn-move-up', function() {
+        const $item = $(this).closest('.admin-song-item');
+        const $prev = $item.prev('.admin-song-item');
+        if ($prev.length) {
+            $item.insertBefore($prev);
+        }
+    });
+
+    $(document).on('click', '.btn-move-down', function() {
+        const $item = $(this).closest('.admin-song-item');
+        const $next = $item.next('.admin-song-item');
+        if ($next.length) {
+            $item.insertAfter($next);
+        }
+    });
+
+    // 플레이리스트 순서 저장 (playlistOrder)
+    $('#btn-save-playlist-order').on('click', async function() {
+        const orderList = [];
+        $('#admin-song-list .admin-song-item').each(function(index) {
+            const id = $(this).data('id');
+            if (id) {
+                orderList.push({ id: id, playlistOrder: index + 1 });
+            }
+        });
+
+        if (orderList.length === 0) return alert('저장할 곡이 없습니다.');
+
+        const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...');
+        try {
+            if (window.CloudflareAPI && window.CloudflareAPI.D1 && window.CloudflareAPI.D1.updatePlaylistOrder) {
+                await window.CloudflareAPI.D1.updatePlaylistOrder(orderList);
+                alert('플레이리스트 순서가 성공적으로 저장되었습니다!');
+                fetchSongs();
+            } else {
+                throw new Error("Cloudflare API ready error");
+            }
+        } catch(e) {
+            alert('순서 저장 실패: ' + e.message);
+        } finally {
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk"></i> 순서 저장');
+        }
+    });
     $('#btn-refresh-inquiries').click(initInquiryManager);
 
     async function initInquiryManager() {
@@ -1253,6 +1312,7 @@ $(document).ready(function () {
         return {
             title: ($('#setting-playlist-title').val() || '').trim(),
             subtitle: ($('#setting-playlist-subtitle').val() || '').trim(),
+            playbackMode: $('input[name="setting-playback-mode"]:checked').val() || 'sequential',
             popupEnabled: $('#setting-popup-enabled').is(':checked'),
             popupImageUrl: $('#setting-popup-url').val() || '',
             promoActive: $('#setting-promo-enabled').is(':checked'),
@@ -1266,6 +1326,9 @@ $(document).ready(function () {
         settings = settings || {};
         $('#setting-playlist-title').val(settings.title || '');
         $('#setting-playlist-subtitle').val(settings.subtitle || '');
+
+        const mode = settings.playbackMode || 'sequential';
+        $(`input[name="setting-playback-mode"][value="${mode}"]`).prop('checked', true);
 
         const isPopup = (settings.popupEnabled === true || settings.popupEnabled === 'true' || settings.popupEnabled === 1 || settings.popupEnabled === '1');
         $('#setting-popup-enabled').prop('checked', isPopup);
@@ -1306,6 +1369,7 @@ $(document).ready(function () {
                 writeSettingsForm({ 
                     title: settings.mainTitle || '', 
                     subtitle: settings.subTitle || '',
+                    playbackMode: settings.playbackMode || 'sequential',
                     popupEnabled: settings.popupEnabled === 'true' || settings.popupEnabled === true,
                     popupImageUrl: settings.popupImageUrl,
                     promoActive: settings.promoActive === 'true' || settings.promoActive === true,
@@ -1340,6 +1404,7 @@ $(document).ready(function () {
                 await window.CloudflareAPI.D1.saveSettings({ 
                     mainTitle: data.title, 
                     subTitle: data.subtitle,
+                    playbackMode: data.playbackMode,
                     popupEnabled: data.popupEnabled,
                     popupImageUrl: data.popupImageUrl,
                     promoActive: data.promoActive,

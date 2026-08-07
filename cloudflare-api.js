@@ -63,6 +63,15 @@ const D1 = {
         if (!res.ok) throw new Error('Failed to update song');
         return await res.json();
     },
+    async updatePlaylistOrder(orderList) {
+        const res = await fetch(`${CF_CONFIG.WORKER_URL}/playlist/order`, {
+            method: 'PUT',
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(orderList)
+        });
+        if (!res.ok) throw new Error('Failed to update playlist order');
+        return await res.json();
+    },
     async deleteSong(id) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/playlist/${id}`, {
             method: 'DELETE',
