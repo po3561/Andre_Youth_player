@@ -115,8 +115,28 @@ export default {
 
       // Playlist
       if (path === '/playlist' && request.method === 'GET') {
-        const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY COALESCE(playlistOrder, 0) ASC, createdAt ASC').all();
-        return Response.json(results || [], { headers: corsHeaders });
+        try {
+          await env.DB.prepare('ALTER TABLE playlist ADD COLUMN playlistOrder INTEGER DEFAULT 0').run();
+        } catch(e) {}
+        try {
+          await env.DB.prepare('ALTER TABLE playlist ADD COLUMN syncOffset REAL DEFAULT 0').run();
+        } catch(e) {}
+        try {
+          const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY COALESCE(playlistOrder, 0) ASC, createdAt ASC').all();
+          return Response.json(results || [], { headers: corsHeaders });
+        } catch(err) {
+          try {
+            const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY createdAt ASC').all();
+            return Response.json(results || [], { headers: corsHeaders });
+          } catch(err2) {
+            try {
+              const { results } = await env.DB.prepare('SELECT * FROM playlist').all();
+              return Response.json(results || [], { headers: corsHeaders });
+            } catch(err3) {
+              return Response.json([], { headers: corsHeaders });
+            }
+          }
+        }
       }
 
       if (path === '/playlist/order' && request.method === 'PUT') {
@@ -191,12 +211,17 @@ export default {
 
       // Settings
       if (path === '/settings' && request.method === 'GET') {
-        const { results } = await env.DB.prepare('SELECT * FROM settings').all();
-        const settingsObj = {};
-        if (results) {
-            results.forEach(row => settingsObj[row.key] = row.value);
+        try {
+          await env.DB.prepare('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)').run();
+          const { results } = await env.DB.prepare('SELECT * FROM settings').all();
+          const settingsObj = {};
+          if (results) {
+              results.forEach(row => settingsObj[row.key] = row.value);
+          }
+          return Response.json(settingsObj, { headers: corsHeaders });
+        } catch(e) {
+          return Response.json({}, { headers: corsHeaders });
         }
-        return Response.json(settingsObj, { headers: corsHeaders });
       }
       if (path === '/settings' && request.method === 'POST') {
         const data = await request.json();
@@ -303,11 +328,29 @@ export default {
       }
 
       if (path === '/shorts' && request.method === 'GET') {
-        const { results } = await env.DB.prepare('SELECT * FROM shorts ORDER BY COALESCE(shortsOrder, 0) ASC, createdAt DESC').all();
-        return Response.json(results || [], { headers: corsHeaders });
+        try {
+          await env.DB.prepare('CREATE TABLE IF NOT EXISTS shorts (id TEXT PRIMARY KEY, title TEXT, description TEXT, videoUrl TEXT, likes INTEGER DEFAULT 0, views INTEGER DEFAULT 0, shares INTEGER DEFAULT 0, createdAt INTEGER, shortsOrder INTEGER DEFAULT 0)').run();
+        } catch(e) {}
+        try {
+          await env.DB.prepare('ALTER TABLE shorts ADD COLUMN shortsOrder INTEGER DEFAULT 0').run();
+        } catch(e) {}
+        try {
+          const { results } = await env.DB.prepare('SELECT * FROM shorts ORDER BY COALESCE(shortsOrder, 0) ASC, createdAt DESC').all();
+          return Response.json(results || [], { headers: corsHeaders });
+        } catch(err) {
+          try {
+            const { results } = await env.DB.prepare('SELECT * FROM shorts ORDER BY createdAt DESC').all();
+            return Response.json(results || [], { headers: corsHeaders });
+          } catch(err2) {
+            return Response.json([], { headers: corsHeaders });
+          }
+        }
       }
 
       if (path === '/shorts/order' && request.method === 'PUT') {
+        try {
+          await env.DB.prepare('ALTER TABLE shorts ADD COLUMN shortsOrder INTEGER DEFAULT 0').run();
+        } catch(e) {}
         const items = await request.json();
         if (Array.isArray(items)) {
           for (const item of items) {
@@ -318,6 +361,9 @@ export default {
       }
 
       if (path === '/shorts' && request.method === 'POST') {
+        try {
+          await env.DB.prepare('ALTER TABLE shorts ADD COLUMN shortsOrder INTEGER DEFAULT 0').run();
+        } catch(e) {}
         const data = await request.json();
         await env.DB.prepare('INSERT INTO shorts (id, title, description, videoUrl, likes, views, shares, createdAt, shortsOrder) VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?)').bind(
           data.id, data.title, data.description || '', data.videoUrl, Date.now(), data.shortsOrder || 0
