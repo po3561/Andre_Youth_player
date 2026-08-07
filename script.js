@@ -899,16 +899,13 @@ $(document).ready(function () {
             }
         });
 
-        $('.shorts-toggle').off('click').on('click', function(e) {
+        $('#shorts-toggle-btn').off('click').on('click', function(e) {
+            e.preventDefault();
             const $chk = $('#shorts-mode-toggle');
-            if (e.target !== $chk[0]) {
-                e.preventDefault();
-                $chk.prop('checked', !$chk.is(':checked')).trigger('change');
-            }
-        });
+            const nextState = !$chk.is(':checked');
+            $chk.prop('checked', nextState);
 
-        $('#shorts-mode-toggle').on('change', function() {
-            isShortsMode = $(this).is(':checked');
+            isShortsMode = nextState;
             if (isShortsMode) {
                 // 기존 음악 일시정지
                 if (audio && !audio.paused) {
