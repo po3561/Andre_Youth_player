@@ -361,9 +361,10 @@ export default {
       }
 
       if (path === '/shorts' && request.method === 'POST') {
-        try {
-          await env.DB.prepare('ALTER TABLE shorts ADD COLUMN shortsOrder INTEGER DEFAULT 0').run();
-        } catch(e) {}
+        // 기존 테이블에 누락된 컬럼들을 모두 추가 (이미 있으면 무시)
+        try { await env.DB.prepare('ALTER TABLE shorts ADD COLUMN views INTEGER DEFAULT 0').run(); } catch(e) {}
+        try { await env.DB.prepare('ALTER TABLE shorts ADD COLUMN shares INTEGER DEFAULT 0').run(); } catch(e) {}
+        try { await env.DB.prepare('ALTER TABLE shorts ADD COLUMN shortsOrder INTEGER DEFAULT 0').run(); } catch(e) {}
         const data = await request.json();
         await env.DB.prepare('INSERT INTO shorts (id, title, description, videoUrl, likes, views, shares, createdAt, shortsOrder) VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?)').bind(
           data.id, data.title, data.description || '', data.videoUrl, Date.now(), data.shortsOrder || 0
