@@ -1120,9 +1120,91 @@ $(document).ready(function () {
         }
     });
 
+    let playlistOrderSaveTimer = null;
+    let playlistOrderRevision = 0;
+    let playlistOrderSaving = false;
+    let playlistOrderSaveQueued = false;
+
+    function setPlaylistOrderStatus(message, stateName = '') {
+        $('#playlist-order-status')
+            .removeClass('is-dirty is-saving is-saved is-error')
+            .addClass(stateName ? `is-${stateName}` : '')
+            .text(message);
+    }
+
+    function collectPlaylistOrder() {
+        return $('#admin-song-list .admin-song-item').map(function(index) {
+            return { id: String($(this).data('id') || ''), playlistOrder: index + 1 };
+        }).get().filter(item => item.id);
+    }
+
+    function refreshSongOrderUi() {
+        const $items = $('#admin-song-list .admin-song-item');
+        $items.each(function(index) {
+            const $item = $(this);
+            $item.find('.admin-song-order').text(index + 1).attr('aria-label', `${index + 1}번`);
+            $item.find('.btn-move-up').prop('disabled', index === 0);
+            $item.find('.btn-move-down').prop('disabled', index === $items.length - 1);
+        });
+        $('#admin-song-count').text(`총 ${$items.length}곡 · 표시된 번호가 실제 재생 순서입니다.`);
+    }
+
+    function schedulePlaylistOrderSave() {
+        playlistOrderRevision++;
+        clearTimeout(playlistOrderSaveTimer);
+        $('#btn-save-playlist-order').prop('disabled', false).html('<i class="fa-solid fa-floppy-disk"></i> 지금 저장');
+        setPlaylistOrderStatus('순서 변경사항을 자동 저장하는 중입니다.', 'dirty');
+        playlistOrderSaveTimer = setTimeout(() => persistPlaylistOrder(), 650);
+    }
+
+    async function persistPlaylistOrder(showSuccessAlert = false) {
+        clearTimeout(playlistOrderSaveTimer);
+        const orderList = collectPlaylistOrder();
+        if (!orderList.length) return;
+
+        if (playlistOrderSaving) {
+            playlistOrderSaveQueued = true;
+            return;
+        }
+
+        playlistOrderSaving = true;
+        const savingRevision = playlistOrderRevision;
+        const $btn = $('#btn-save-playlist-order')
+            .prop('disabled', true)
+            .html('<i class="fa-solid fa-spinner fa-spin"></i> 저장 중');
+        setPlaylistOrderStatus('서버에 재생 순서를 저장하고 있습니다.', 'saving');
+
+        try {
+            if (!window.CloudflareAPI?.D1?.updatePlaylistOrder) {
+                throw new Error('Cloudflare API가 준비되지 않았습니다.');
+            }
+            await window.CloudflareAPI.D1.updatePlaylistOrder(orderList);
+
+            if (savingRevision === playlistOrderRevision) {
+                $btn.prop('disabled', true).html('<i class="fa-solid fa-check"></i> 저장됨');
+                setPlaylistOrderStatus('저장 완료 · 사용자 재생목록에도 이 순서가 적용됩니다.', 'saved');
+                if (showSuccessAlert) alert('플레이리스트 순서가 저장되었습니다.');
+            } else {
+                playlistOrderSaveQueued = true;
+            }
+        } catch (error) {
+            console.error('playlist order save failed:', error);
+            $btn.prop('disabled', false).html('<i class="fa-solid fa-rotate"></i> 다시 저장');
+            setPlaylistOrderStatus(`저장 실패 · ${error.message}`, 'error');
+        } finally {
+            playlistOrderSaving = false;
+            if (playlistOrderSaveQueued) {
+                playlistOrderSaveQueued = false;
+                clearTimeout(playlistOrderSaveTimer);
+                setTimeout(() => persistPlaylistOrder(), 0);
+            }
+        }
+    }
+
     async function fetchSongs() {
         const $list = $('#admin-song-list');
         $list.html('<div class="loading-spinner">목록 불러오는 중...</div>');
+        $('#admin-song-count').text('등록 곡 불러오는 중');
 
         try {
             let data = [];
@@ -1136,10 +1218,12 @@ $(document).ready(function () {
 
             if (!Array.isArray(data) || data.length === 0) {
                 $list.append('<div class="loading-spinner">등록된 곡이 없습니다.</div>');
+                $('#admin-song-count').text('등록된 곡 0곡');
+                $('#btn-save-playlist-order').prop('disabled', true).html('<i class="fa-solid fa-check"></i> 저장됨');
                 return;
             }
 
-            data.forEach(song => {
+            data.forEach((song, index) => {
                 const songKey = song.id ?? song.key ?? song.title ?? '';
                 const $item = $('<div>').addClass('admin-song-item').attr('data-song-key', songKey);
                 const $info = $('<div>').addClass('admin-song-info');
@@ -1205,9 +1289,19 @@ $(document).ready(function () {
 
                 const $actions = $('<div>').addClass('admin-song-actions');
                 $actions.append($upButton, $downButton, $editButton, $deleteButton);
-                $item.append($info, $actions);
+                const $order = $('<span>')
+                    .addClass('admin-song-order')
+                    .text(index + 1)
+                    .attr('aria-label', `${index + 1}번`);
+
+                $item.append($order, $info, $actions);
                 $list.append($item);
             });
+
+            playlistOrderRevision = 0;
+            refreshSongOrderUi();
+            $('#btn-save-playlist-order').prop('disabled', true).html('<i class="fa-solid fa-check"></i> 저장됨');
+            setPlaylistOrderStatus('위·아래 버튼을 누르면 변경한 순서가 자동 저장됩니다.', 'saved');
 
         } catch (error) {
             console.error("fetchSongs error:", error);
@@ -1223,6 +1317,8 @@ $(document).ready(function () {
         const $prev = $item.prev('.admin-song-item');
         if ($prev.length) {
             $item.insertBefore($prev);
+            refreshSongOrderUi();
+            schedulePlaylistOrderSave();
         }
     });
 
@@ -1231,35 +1327,14 @@ $(document).ready(function () {
         const $next = $item.next('.admin-song-item');
         if ($next.length) {
             $item.insertAfter($next);
+            refreshSongOrderUi();
+            schedulePlaylistOrderSave();
         }
     });
 
     // 플레이리스트 순서 저장 (playlistOrder)
     $('#btn-save-playlist-order').on('click', async function() {
-        const orderList = [];
-        $('#admin-song-list .admin-song-item').each(function(index) {
-            const id = $(this).data('id');
-            if (id) {
-                orderList.push({ id: id, playlistOrder: index + 1 });
-            }
-        });
-
-        if (orderList.length === 0) return alert('저장할 곡이 없습니다.');
-
-        const $btn = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...');
-        try {
-            if (window.CloudflareAPI && window.CloudflareAPI.D1 && window.CloudflareAPI.D1.updatePlaylistOrder) {
-                await window.CloudflareAPI.D1.updatePlaylistOrder(orderList);
-                alert('플레이리스트 순서가 성공적으로 저장되었습니다!');
-                fetchSongs();
-            } else {
-                throw new Error("Cloudflare API ready error");
-            }
-        } catch(e) {
-            alert('순서 저장 실패: ' + e.message);
-        } finally {
-            $btn.prop('disabled', false).html('<i class="fa-solid fa-floppy-disk"></i> 순서 저장');
-        }
+        await persistPlaylistOrder(true);
     });
     $('#btn-refresh-inquiries').click(initInquiryManager);
 

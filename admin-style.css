@@ -182,6 +182,21 @@ body.admin-page {
 }
 .admin-song-item:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.25); }
 
+.admin-song-order {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(0, 242, 254, 0.1);
+    border: 1px solid rgba(0, 242, 254, 0.25);
+    color: #00f2fe;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
 .admin-song-info { 
     display: flex; 
     align-items: center; 
@@ -295,6 +310,11 @@ body.admin-page {
     background: rgba(255, 255, 255, 0.25);
     color: #fff;
     transform: translateY(-2px);
+}
+.btn-move-up:disabled, .btn-move-down:disabled {
+    opacity: 0.28;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .admin-edit-card {
@@ -898,6 +918,53 @@ body.admin-page {
     border-radius: 10px;
 }
 
+.song-list-popup-body {
+    min-height: 0;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+}
+.song-list-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+.song-list-toolbar > div:first-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+#admin-song-count { color: #fff; font-size: 0.92rem; }
+.playlist-order-status {
+    color: rgba(255,255,255,0.58);
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+.playlist-order-status.is-dirty { color: #ffd166; }
+.playlist-order-status.is-saving { color: #64d8ff; }
+.playlist-order-status.is-saved { color: #72f1b8; }
+.playlist-order-status.is-error { color: #ff7b72; }
+.song-list-toolbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+#btn-save-playlist-order { margin-top: 0; white-space: nowrap; }
+#btn-save-playlist-order:disabled { opacity: 0.7; cursor: default; }
+.song-list-popup-body .admin-song-list {
+    max-height: none;
+    min-height: 0;
+    flex: 1;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
 /* =========================================================
    RENEWAL: Interactive Trigger Cards & Dark Premium Modal
 ========================================================= */
@@ -1044,6 +1111,62 @@ body.admin-page {
     .trigger-action-pill span {
         display: none;
     }
+
+    .admin-page .ios-popup {
+        align-items: flex-end;
+        padding: 0;
+    }
+    .admin-page .ios-popup .popup-card.glass-card {
+        width: 100%;
+        max-width: none;
+        height: min(92dvh, 760px);
+        max-height: none;
+        margin: 0;
+        border-radius: 24px 24px 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .admin-page .ios-popup .popup-header {
+        padding: 14px 16px !important;
+    }
+    .admin-page .ios-popup .popup-body {
+        padding: 14px !important;
+    }
+    .song-list-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .song-list-toolbar-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 42px;
+        width: 100%;
+    }
+    .song-list-toolbar-actions .primary-btn,
+    .song-list-toolbar-actions .secondary-btn,
+    .song-list-toolbar-actions .icon-btn {
+        min-height: 42px;
+        margin: 0 !important;
+    }
+    .admin-song-item {
+        display: grid;
+        grid-template-columns: 30px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+    }
+    .admin-song-info { grid-column: 2; gap: 10px; }
+    .admin-song-actions {
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-content: flex-end;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .admin-song-actions button {
+        width: 42px;
+        height: 42px;
+    }
+    .song-cover-thumb { width: 46px; height: 46px; }
 }
 
 /* =========================================================
@@ -1117,4 +1240,3 @@ body.admin-page {
     color: #fff !important;
     flex: 1;
 }
-

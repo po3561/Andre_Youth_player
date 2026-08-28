@@ -11,6 +11,7 @@ $(document).ready(function () {
     let repeatMode = 0; // 0=off, 1=all, 2=one
     let currentLoadId = 0; // 오디오 로딩 씹힘 방지용 ID
     let currentPlayingSong = null; // 캡슐화된 현재 곡 객체
+    let currentPlayPromise = null; // 재생 Promise 참조
     let lastActiveLyricIdx = -1;
     let isScrubbing = false;
     let pendingSeekPos = 0;
@@ -37,6 +38,9 @@ $(document).ready(function () {
     function init() {
         setTimeout(() => { $('#splash-screen').fadeOut(600); }, 1200);
         try {
+            // 이전 버전의 마지막 재생 곡 복원 값이 관리자 재생 순서를 덮어쓰지 않도록 제거한다.
+            ['andre_last_song_id', 'andre_last_song_idx', 'andre_last_song_time'].forEach(key => localStorage.removeItem(key));
+
             // Mobile Audio Unlock
             const unlockAudio = () => {
                 if (audio.paused && !audio.src) {
@@ -161,7 +165,7 @@ $(document).ready(function () {
             return {
                 ...song, // 원본 필드 유지
                 id: song.id,
-                title: song.title || 'Unknown',
+                title: song.title || '제목없음',
                 artist: song.artist || 'Andre Youth',
                 coverUrl: coverUrl,
                 originalAudioUrl: originalAudioUrl,
@@ -171,15 +175,9 @@ $(document).ready(function () {
             };
         });
 
-        // localStorage에 저장된 마지막 곡 및 재생 시각 복원
-        const savedLastSongId = localStorage.getItem('andre_last_song_id');
-        const savedLastSongIdx = parseInt(localStorage.getItem('andre_last_song_idx'));
-        if (savedLastSongId) {
-            const foundIdx = playlistData.findIndex(s => s.id === savedLastSongId);
-            if (foundIdx !== -1) curIdx = foundIdx;
-        } else if (!isNaN(savedLastSongIdx) && playlistData[savedLastSongIdx]) {
-            curIdx = savedLastSongIdx;
-        }
+        // 첫 진입은 항상 관리자가 지정한 재생목록의 첫 곡에서 시작한다.
+        // 5분 폴링 중에는 아래 prevSongId 처리로 현재 듣던 곡을 그대로 유지한다.
+        curIdx = 0;
 
         renderPlaylist();
 
@@ -195,11 +193,6 @@ $(document).ready(function () {
 
         if (playlistData.length > 0 && (!audio.src || !wasPlaying)) {
             playSongObject(playlistData[curIdx], false);
-
-            const savedLastTime = parseFloat(localStorage.getItem('andre_last_song_time'));
-            if (!isNaN(savedLastTime) && savedLastTime > 0) {
-                audio.currentTime = savedLastTime;
-            }
         }
     }
 
@@ -208,9 +201,6 @@ $(document).ready(function () {
         if (!song) return;
         currentPlayingSong = song; // 캡슐화된 상태 저장
 
-        localStorage.setItem('andre_last_song_id', song.id || '');
-        localStorage.setItem('andre_last_song_idx', curIdx);
-        
         currentLoadId = Date.now();
         const myLoadId = currentLoadId;
 
@@ -240,7 +230,7 @@ $(document).ready(function () {
         // Media Session API 설정 (백그라운드/잠금화면 컨트롤 지원)
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
-                title: song.title || 'Unknown Title',
+                title: song.title || '제목없음',
                 artist: song.artist || 'Andre Youth',
                 album: 'Andre Youth Playlist',
                 artwork: [
@@ -362,29 +352,66 @@ $(document).ready(function () {
     /* ─── Playlist Rendering ─── */
     function renderPlaylist() {
         const $container = $('#song-list-container').empty();
+        const query = ($('#playlist-search').val() || '').trim().toLocaleLowerCase('ko-KR');
+        let visibleCount = 0;
+
+        $('.sheet-title').text(`전체 재생 목록 · ${playlistData.length}곡`);
         playlistData.forEach((song, i) => {
+            const searchableText = `${song.title || ''} ${song.artist || ''}`.toLocaleLowerCase('ko-KR');
+            if (query && !searchableText.includes(query)) return;
+
+            visibleCount++;
             const isCurrent = i === curIdx;
-            $container.append(`
-                <div class="song-item ${isCurrent ? 'active is-playing' : ''}" data-index="${i}">
-                    <img src="${song.coverUrl}" loading="lazy" alt="cover" onerror="this.src='${MusicEngine.placeholderImage}'">
-                    <div class="song-item-info">
-                        <h4>${song.title || 'Unknown'}${isCurrent ? ' <span class="playing-badge">▶ 재생 중</span>' : ''}</h4>
-                        <p>${song.artist || 'Andre Youth'}</p>
-                    </div>
-                </div>
-            `);
+            const $item = $('<button>', {
+                type: 'button',
+                class: `song-item${isCurrent ? ' active is-playing' : ''}`,
+                'data-index': i,
+                'aria-label': `${i + 1}번 ${song.title || '제목없음'}, ${song.artist || 'Andre Youth'} 재생`
+            });
+            if (isCurrent) $item.attr('aria-current', 'true');
+
+            const $cover = $('<img>', {
+                src: song.coverUrl,
+                loading: 'lazy',
+                alt: ''
+            }).on('error', function () {
+                if (this.src !== MusicEngine.placeholderImage) this.src = MusicEngine.placeholderImage;
+            });
+
+            const $titleRow = $('<div>').addClass('song-title-row')
+                .append($('<h4>').text(song.title || '제목없음'));
+            if (isCurrent) $titleRow.append($('<span>').addClass('playing-badge').text('▶ 재생 중'));
+
+            const $info = $('<div>').addClass('song-item-info')
+                .append($titleRow, $('<p>').text(song.artist || 'Andre Youth'));
+
+            $item.append(
+                $('<span>').addClass('song-item-num').text(i + 1),
+                $cover,
+                $info
+            );
+            $container.append($item);
         });
+
+        $('#playlist-result-count').text(query ? `${visibleCount}곡 검색` : `총 ${playlistData.length}곡`);
+        if (!visibleCount) {
+            $container.append(
+                $('<div>').addClass('playlist-empty-state')
+                    .append($('<i>').addClass('fa-solid fa-music'), $('<span>').text('검색 결과가 없습니다.'))
+            );
+        }
     }
 
     function updateActiveInList() {
         $('.song-item').removeClass('active is-playing');
+        $('.song-item').removeAttr('aria-current');
         $('.playing-badge').remove();
         const $current = $(`.song-item[data-index="${curIdx}"]`);
-        $current.addClass('active is-playing');
-        $current.find('h4').append(' <span class="playing-badge">▶ 재생 중</span>');
+        $current.addClass('active is-playing').attr('aria-current', 'true');
+        $current.find('.song-title-row').append($('<span>').addClass('playing-badge').text('▶ 재생 중'));
 
-        // PC & 모바일 동일하게 현재 재생 트랙 위치로 부드러운 스크롤 통일
-        if ($current.length > 0) {
+        // 목록을 연 상태에서만 현재 곡 위치로 이동해 숨겨진 시트가 화면을 흔들지 않게 한다.
+        if ($current.length > 0 && $('#playlist-sheet').hasClass('active')) {
             try {
                 $current[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             } catch(e) {}
@@ -451,7 +478,6 @@ $(document).ready(function () {
         });
 
         /* Audio Time Update */
-        let lastSavedTime = 0;
         if (audio) {
             audio.addEventListener('timeupdate', () => {
                 if (!isScrubbing && !isNaN(audio.duration) && audio.duration > 0) {
@@ -462,12 +488,6 @@ $(document).ready(function () {
                     $('#time-total').text(formatTime(audio.duration));
                 }
                 updateLyricsSync(audio.currentTime);
-
-                // 3초마다 마지막 재생 시간 localStorage 기록
-                if (Math.abs(audio.currentTime - lastSavedTime) > 3) {
-                    lastSavedTime = audio.currentTime;
-                    localStorage.setItem('andre_last_song_time', audio.currentTime);
-                }
             });
 
             /* Song Ended */
@@ -596,21 +616,42 @@ $(document).ready(function () {
 
         /* ─── Playlist Sheet (swipe gesture) ─── */
         const $sheet = $('#playlist-sheet');
+        const $backdrop = $('#playlist-backdrop');
         let sheetStartY = 0;
         let sheetDragging = false;
+        let sheetReturnFocus = null;
 
-        $('#btn-open-list').on('click', () => $sheet.addClass('active'));
-        $('#sheet-handle').on('click', () => $sheet.removeClass('active'));
+        function openPlaylistSheet() {
+            sheetReturnFocus = document.activeElement;
+            $sheet.addClass('active').attr('aria-hidden', 'false');
+            $backdrop.addClass('active').attr('aria-hidden', 'false');
+            $('#btn-open-list').attr('aria-expanded', 'true');
+            updateActiveInList();
+        }
 
-        $sheet[0].addEventListener('touchstart', function(e) {
+        function closePlaylistSheet(returnFocus = true) {
+            $sheet.removeClass('active').attr('aria-hidden', 'true').css('transform', '');
+            $backdrop.removeClass('active').attr('aria-hidden', 'true');
+            $('#btn-open-list').attr('aria-expanded', 'false');
+            sheetDragging = false;
+            if (returnFocus && sheetReturnFocus && typeof sheetReturnFocus.focus === 'function') {
+                sheetReturnFocus.focus({ preventScroll: true });
+            }
+        }
+
+        $('#btn-open-list').on('click', openPlaylistSheet);
+        $('#sheet-handle, #btn-close-sheet, #playlist-backdrop').on('click', () => closePlaylistSheet());
+        $('#playlist-search').on('input', renderPlaylist);
+
+        const sheetHandle = document.getElementById('sheet-handle');
+        sheetHandle.addEventListener('touchstart', function(e) {
             sheetStartY = e.touches[0].clientY;
             sheetDragging = false;
         }, { passive: true });
 
-        $sheet[0].addEventListener('touchmove', function(e) {
+        sheetHandle.addEventListener('touchmove', function(e) {
             const diff = e.touches[0].clientY - sheetStartY;
-            const scrollTop = document.getElementById('song-list-container')?.scrollTop || 0;
-            if (diff > 10 && scrollTop <= 0) {
+            if (diff > 10) {
                 sheetDragging = true;
                 if (e.cancelable) e.preventDefault();
                 const drag = Math.min(diff, 300);
@@ -618,12 +659,16 @@ $(document).ready(function () {
             }
         }, { passive: false });
 
-        $sheet[0].addEventListener('touchend', function() {
+        sheetHandle.addEventListener('touchend', function(e) {
             if (!sheetDragging) return;
             $sheet.css('transform', '');
-            const diff = event.changedTouches ? event.changedTouches[0].clientY - sheetStartY : 0;
-            if (diff > 100) $sheet.removeClass('active');
+            const diff = e.changedTouches ? e.changedTouches[0].clientY - sheetStartY : 0;
+            if (diff > 100) closePlaylistSheet();
             sheetDragging = false;
+        });
+
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && $sheet.hasClass('active')) closePlaylistSheet();
         });
 
         /* Album art tap → lyrics open */
@@ -844,7 +889,12 @@ $(document).ready(function () {
                 curIdx = index;
                 playSongObject(playlistData[index], true);
             }
-            $('#playlist-sheet').removeClass('active');
+            closePlaylistSheet(false);
+        });
+
+        /* Modal Overlay Background Click to Close */
+        $('#modal-container').on('click', function(e) {
+            if (e.target === this) closeAllModals();
         });
 
         /* Close Modals */
@@ -1322,6 +1372,7 @@ $(document).ready(function () {
         if (video) {
             video.pause();
             video.src = '';
+            video.load();
         }
     }
 

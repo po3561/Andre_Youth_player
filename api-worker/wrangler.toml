@@ -1,6 +1,10 @@
 name = "andre-youth-api"
 main = "src/index.js"
-compatibility_date = "2024-06-13"
+compatibility_date = "2026-08-28"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
 
 [[d1_databases]]
 binding = "DB"

@@ -42,8 +42,7 @@ async function checkResponse(res, defaultErrMsg) {
 const D1 = {
     async getPlaylist() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/playlist`, { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to fetch playlist');
-        return await res.json();
+        return await checkResponse(res, '플레이리스트를 불러오지 못했습니다.');
     },
     async addSong(song) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/playlist`, {
@@ -51,8 +50,7 @@ const D1 = {
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(song)
         });
-        if (!res.ok) throw new Error('Failed to add song');
-        return await res.json();
+        return await checkResponse(res, '곡을 추가하지 못했습니다.');
     },
     async updateSong(song) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/playlist`, {
@@ -60,8 +58,7 @@ const D1 = {
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(song)
         });
-        if (!res.ok) throw new Error('Failed to update song');
-        return await res.json();
+        return await checkResponse(res, '곡 정보를 수정하지 못했습니다.');
     },
     async updatePlaylistOrder(orderList) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/playlist/order`, {
@@ -69,38 +66,33 @@ const D1 = {
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(orderList)
         });
-        if (!res.ok) throw new Error('Failed to update playlist order');
-        return await res.json();
+        return await checkResponse(res, '플레이리스트 순서를 저장하지 못했습니다.');
     },
     async deleteSong(id) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/playlist/${id}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
-        if (!res.ok) throw new Error('Failed to delete song');
-        return await res.json();
+        return await checkResponse(res, '곡을 삭제하지 못했습니다.');
     },
     async reset() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/reset`, { 
             method: 'DELETE',
             headers: getAuthHeaders() 
         });
-        if (!res.ok) throw new Error('Failed to reset playlist');
-        return await res.json();
+        return await checkResponse(res, '플레이리스트를 초기화하지 못했습니다.');
     },
     async initTable() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/init`, { 
             method: 'POST',
             headers: getAuthHeaders() 
         });
-        if (!res.ok) throw new Error('Failed to init table');
-        return await res.json();
+        return await checkResponse(res, '테이블 초기화에 실패했습니다.');
     },
     // --- Chat ---
     async getChat() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/chat`, { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to fetch chat');
-        return await res.json();
+        return await checkResponse(res, '채팅 내역을 불러오지 못했습니다.');
     },
     async sendChat(messageObj) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/chat`, {
@@ -108,14 +100,12 @@ const D1 = {
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(messageObj)
         });
-        if (!res.ok) throw new Error('Failed to send chat');
-        return await res.json();
+        return await checkResponse(res, '채팅 전송에 실패했습니다.');
     },
     // --- Inquiry ---
     async getInquiries() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/inquiry`, { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to fetch inquiries');
-        return await res.json();
+        return await checkResponse(res, '문의 목록을 불러오지 못했습니다.');
     },
     async sendInquiry(inquiryObj) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/inquiry`, {
@@ -123,22 +113,19 @@ const D1 = {
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(inquiryObj)
         });
-        if (!res.ok) throw new Error('Failed to send inquiry');
-        return await res.json();
+        return await checkResponse(res, '문의 전송에 실패했습니다.');
     },
     async deleteInquiry(id) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/inquiry/${id}`, { 
             method: 'DELETE',
             headers: getAuthHeaders()
         });
-        if (!res.ok) throw new Error('Failed to delete inquiry');
-        return await res.json();
+        return await checkResponse(res, '문의 삭제에 실패했습니다.');
     },
     // --- Settings ---
     async getSettings() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/settings`, { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to fetch settings');
-        return await res.json();
+        return await checkResponse(res, '설정을 불러오지 못했습니다.');
     },
     async saveSettings(settingsObj) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/settings`, {
@@ -146,8 +133,7 @@ const D1 = {
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(settingsObj)
         });
-        if (!res.ok) throw new Error('Failed to save settings');
-        return await res.json();
+        return await checkResponse(res, '설정 저장에 실패했습니다.');
     },
     // --- Users ---
     async signup(userObj) {
@@ -175,8 +161,7 @@ const D1 = {
     },
     async getUsers() {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/users`, { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error('Failed to fetch users');
-        return await res.json();
+        return await checkResponse(res, '사용자 목록을 불러오지 못했습니다.');
     },
     async approveUser(id) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/users/${id}`, {
@@ -184,14 +169,14 @@ const D1 = {
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ action: 'approve' })
         });
-        return await res.json();
+        return await checkResponse(res, '사용자 승인에 실패했습니다.');
     },
     async deleteUser(id) {
         const res = await fetch(`${CF_CONFIG.WORKER_URL}/users/${id}`, { 
             method: 'DELETE',
             headers: getAuthHeaders()
         });
-        return await res.json();
+        return await checkResponse(res, '사용자 삭제에 실패했습니다.');
     },
     // --- File Upload (R2 Proxy with Real-time Progress) ---
     uploadFile(filename, fileBlob, onProgress) {

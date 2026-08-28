@@ -122,11 +122,19 @@ export default {
           await env.DB.prepare('ALTER TABLE playlist ADD COLUMN syncOffset REAL DEFAULT 0').run();
         } catch(e) {}
         try {
-          const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY COALESCE(playlistOrder, 0) ASC, createdAt ASC').all();
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM playlist
+            ORDER BY
+              CASE WHEN COALESCE(playlistOrder, 0) <= 0 THEN 0 ELSE 1 END ASC,
+              CASE WHEN COALESCE(playlistOrder, 0) <= 0 THEN createdAt END ASC,
+              CASE WHEN COALESCE(playlistOrder, 0) > 0 THEN playlistOrder END ASC,
+              createdAt ASC,
+              id ASC
+          `).all();
           return Response.json(results || [], { headers: corsHeaders });
         } catch(err) {
           try {
-            const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY createdAt ASC').all();
+            const { results } = await env.DB.prepare('SELECT * FROM playlist ORDER BY createdAt ASC, id ASC').all();
             return Response.json(results || [], { headers: corsHeaders });
           } catch(err2) {
             try {
@@ -140,20 +148,43 @@ export default {
       }
 
       if (path === '/playlist/order' && request.method === 'PUT') {
+        try {
+          await env.DB.prepare('ALTER TABLE playlist ADD COLUMN playlistOrder INTEGER DEFAULT 0').run();
+        } catch(e) {}
         const items = await request.json();
-        if (Array.isArray(items)) {
-          for (const item of items) {
-            await env.DB.prepare('UPDATE playlist SET playlistOrder = ? WHERE id = ?').bind(item.playlistOrder || 0, item.id).run();
-          }
+        if (!Array.isArray(items) || items.length === 0) {
+          return Response.json({ success: false, error: '재생 순서 목록이 비어 있습니다.' }, { status: 400, headers: corsHeaders });
         }
-        return Response.json({ success: true }, { headers: corsHeaders });
+
+        const normalizedItems = items.map(item => ({
+          id: typeof item?.id === 'string' ? item.id.trim() : '',
+          playlistOrder: Number(item?.playlistOrder)
+        }));
+        const ids = normalizedItems.map(item => item.id);
+        const hasInvalidItem = normalizedItems.some(item => !item.id || !Number.isInteger(item.playlistOrder) || item.playlistOrder < 1);
+        const hasDuplicateId = new Set(ids).size !== ids.length;
+        const hasDuplicateOrder = new Set(normalizedItems.map(item => item.playlistOrder)).size !== normalizedItems.length;
+
+        if (hasInvalidItem || hasDuplicateId || hasDuplicateOrder) {
+          return Response.json({ success: false, error: '곡 ID와 재생 순서는 중복 없이 1 이상의 정수여야 합니다.' }, { status: 400, headers: corsHeaders });
+        }
+
+        const updateStatement = env.DB.prepare('UPDATE playlist SET playlistOrder = ? WHERE id = ?');
+        await env.DB.batch([
+          env.DB.prepare('UPDATE playlist SET playlistOrder = 0'),
+          ...normalizedItems.map(item => updateStatement.bind(item.playlistOrder, item.id))
+        ]);
+
+        return Response.json({ success: true, updated: normalizedItems.length }, { headers: corsHeaders });
       }
 
       if (path === '/playlist' && request.method === 'POST') {
         const data = await request.json();
+        const requestedOrder = Number(data.playlistOrder);
+        const playlistOrder = Number.isInteger(requestedOrder) && requestedOrder > 0 ? requestedOrder : 0;
         const sql = "INSERT INTO playlist (id, title, artist, audio, cover, lyricsData, createdAt, syncOffset, playlistOrder) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         await env.DB.prepare(sql).bind(
-          data.id, data.title, data.artist, data.audio, data.cover, data.lyricsData, data.createdAt || Date.now(), data.syncOffset || 0, data.playlistOrder || 0
+          data.id, data.title, data.artist, data.audio, data.cover, data.lyricsData, data.createdAt || Date.now(), data.syncOffset || 0, playlistOrder
         ).run();
         return Response.json({ success: true }, { headers: corsHeaders });
       }

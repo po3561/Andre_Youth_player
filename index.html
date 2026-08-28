@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="index.css?v=3.1">
+    <link rel="stylesheet" href="index.css?v=3.3">
 </head>
 <body>
     <!-- Splash Screen -->
@@ -87,7 +87,7 @@
 
             <div class="song-info">
                 <h2 id="disp-title">AndreW Youth</h2>
-                <p id="disp-artist">Select a song to play</p>
+                <p id="disp-artist">곡을 선택해주세요</p>
                 <button class="scrap-btn" id="btn-scrap" title="좋아요">
                     <i class="fa-regular fa-heart"></i>
                 </button>
@@ -115,9 +115,12 @@
             </div>
         </main>
 
-        <!-- Footer: 막대기(handle bar)로만 표시, 터치하면 플레이리스트 열림 -->
+        <!-- Footer: 재생목록 열기 버튼 -->
         <footer class="footer-bar">
-            <div class="footer-handle" id="btn-open-list" title="재생 목록 열기"></div>
+            <button class="footer-handle" id="btn-open-list" type="button" title="재생 목록 열기" aria-controls="playlist-sheet" aria-expanded="false">
+                <span class="footer-handle-bar"></span>
+                <span class="footer-handle-text"><i class="fa-solid fa-list-ul"></i> 전체 곡 목록 보기</span>
+            </button>
         </footer>
     </div>
     <!-- Startup Advertisement / Notice Popup -->
@@ -132,11 +135,27 @@
     </div>
 
     <!-- Playlist Sheet -->
-    <div id="playlist-sheet">
-        <div class="sheet-handle" id="sheet-handle"></div>
-        <h3 class="sheet-title">다음 재생 목록</h3>
-        <div class="song-list" id="song-list-container"></div>
-    </div>
+    <div id="playlist-backdrop" aria-hidden="true"></div>
+    <section id="playlist-sheet" role="dialog" aria-modal="true" aria-labelledby="playlist-sheet-title" aria-hidden="true">
+        <button class="sheet-drag-handle" id="sheet-handle" type="button" aria-label="재생 목록 닫기">
+            <span class="sheet-handle-bar"></span>
+        </button>
+        <div class="sheet-header-row">
+            <div>
+                <h3 class="sheet-title" id="playlist-sheet-title">전체 재생 목록</h3>
+                <p class="sheet-subtitle">관리자가 지정한 순서대로 재생됩니다.</p>
+            </div>
+            <button class="sheet-close-btn" id="btn-close-sheet" type="button" title="목록 닫기" aria-label="재생 목록 닫기"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="playlist-tools">
+            <label class="playlist-search-wrap" for="playlist-search">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input id="playlist-search" type="search" placeholder="곡 제목 또는 가수 검색" autocomplete="off">
+            </label>
+            <span id="playlist-result-count" class="playlist-result-count" aria-live="polite"></span>
+        </div>
+        <div class="song-list" id="song-list-container" aria-label="곡 목록"></div>
+    </section>
 
     <!-- Modal Popups -->
     <div id="modal-container" class="modal-overlay">
@@ -275,8 +294,8 @@
     <audio id="audio-engine" preload="metadata" playsinline></audio>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="cloudflare-api.js?v=3.1"></script>
-    <script src="music-engine.js?v=3.1"></script>
-    <script src="script.js?v=3.1"></script>
+    <script src="cloudflare-api.js?v=3.3"></script>
+    <script src="music-engine.js?v=3.3"></script>
+    <script src="script.js?v=3.3"></script>
 </body>
 </html>
